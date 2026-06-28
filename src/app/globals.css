@@ -1,0 +1,179 @@
+:root {
+  --background: #fafaf9;
+  --foreground: #2d3748;
+  --sage-green: #8FBC8F;
+  --soft-blue: #AEC6CF;
+  --soft-blue-hover: #9db5be;
+  --sage-green-hover: #7ea87e;
+  --border: #e2e8f0;
+  --radius: 8px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  background-color: var(--sage-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: var(--sage-green-hover);
+}
+
+button.secondary {
+  background-color: var(--soft-blue);
+  color: var(--foreground);
+}
+
+button.secondary:hover {
+  background-color: var(--soft-blue-hover);
+}
+
+/* Base Layout Classes */
+.app-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  /* Add padding to account for fixed bottom navigation on mobile */
+  padding-bottom: 70px;
+}
+
+@media (min-width: 768px) {
+  .app-body {
+    padding-bottom: 0;
+    /* Add padding to account for fixed side navigation on desktop */
+    padding-left: 100px;
+  }
+}
+
+.app-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Tabbed Navigation Styles */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+}
+
+.nav-list {
+  display: flex;
+  width: 100%;
+  max-width: 600px;
+  justify-content: space-around;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  position: relative;
+  width: 100%;
+}
+
+.nav-link:hover {
+  color: var(--sage-green-hover);
+}
+
+.nav-icon-wrapper {
+  margin-bottom: 4px;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nav-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.nav-link.active {
+  color: var(--sage-green);
+}
+
+.nav-link.active .nav-icon-wrapper {
+  transform: translateY(-2px) scale(1.1);
+}
+
+.nav-link.active .nav-label {
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Tablet / Desktop Sidebar approach */
+@media (min-width: 768px) {
+  .bottom-nav {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 100px;
+    height: 100vh;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.03);
+  }
+
+  .nav-list {
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+    gap: 2rem;
+  }
+}
