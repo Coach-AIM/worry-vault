@@ -30,6 +30,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           
           if (taskObj.recurrence === 'daily') {
             nextDueDate.setDate(nextDueDate.getDate() + 1);
+          } else if (taskObj.recurrence === 'twice-daily') {
+            nextDueDate.setHours(nextDueDate.getHours() + 12);
           } else if (taskObj.recurrence === 'weekly') {
             nextDueDate.setDate(nextDueDate.getDate() + 7);
           }

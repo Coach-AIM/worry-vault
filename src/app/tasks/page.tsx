@@ -363,6 +363,7 @@ export default function TasksTab() {
 
   const getTasksForDay = (date: Date) => {
     return tasks.filter(t => {
+      if (t.recurrence === 'daily' || t.recurrence === 'twice-daily') return true;
       if (!t.dueDate) return false;
       const d = new Date(t.dueDate);
       return date.getFullYear() === d.getFullYear() &&
@@ -397,7 +398,7 @@ export default function TasksTab() {
   const subTasks = tasks.filter(t => t.parentId);
 
   // Flat list of today's tasks
-  const todayTasks = tasks.filter(t => isDateToday(t.dueDate));
+  const todayTasks = tasks.filter(t => isDateToday(t.dueDate) || t.recurrence === 'daily' || t.recurrence === 'twice-daily');
 
   return (
     <div style={{ padding: '2rem 0', maxWidth: '850px', margin: '0 auto' }}>
@@ -493,6 +494,7 @@ export default function TasksTab() {
             <select value={recurrence} onChange={(e) => setRecurrence(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', backgroundColor: 'white' }}>
               <option value="none">Once</option>
               <option value="daily">Daily</option>
+              <option value="twice-daily">Twice Daily</option>
               <option value="weekly">Weekly</option>
             </select>
           </div>
@@ -572,6 +574,7 @@ export default function TasksTab() {
                               <select value={editRecurrence} onChange={(e) => setEditRecurrence(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}>
                                 <option value="none">Once</option>
                                 <option value="daily">Daily</option>
+                                <option value="twice-daily">Twice Daily</option>
                                 <option value="weekly">Weekly</option>
                               </select>
                             </div>
@@ -701,6 +704,7 @@ export default function TasksTab() {
                                       <select value={editRecurrence} onChange={(e) => setEditRecurrence(e.target.value)} style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}>
                                         <option value="none">Once</option>
                                         <option value="daily">Daily</option>
+                                        <option value="twice-daily">Twice Daily</option>
                                         <option value="weekly">Weekly</option>
                                       </select>
                                     </div>
@@ -785,6 +789,7 @@ export default function TasksTab() {
                                 <select value={subTaskRecurrence} onChange={e => setSubTaskRecurrence(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}>
                                   <option value="none">Once</option>
                                   <option value="daily">Daily</option>
+                                  <option value="twice-daily">Twice Daily</option>
                                   <option value="weekly">Weekly</option>
                                 </select>
                               </div>
