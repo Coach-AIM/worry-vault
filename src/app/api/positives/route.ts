@@ -15,12 +15,15 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { thoughtText } = await req.json();
+    const { thoughtText, category } = await req.json();
     if (!thoughtText || !thoughtText.trim()) {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
     }
 
-    await db.insert(positiveThoughts).values({ thoughtText: thoughtText.trim() });
+    await db.insert(positiveThoughts).values({ 
+      thoughtText: thoughtText.trim(),
+      category: category || 'General'
+    });
     
     return NextResponse.json({ success: true });
   } catch (error) {

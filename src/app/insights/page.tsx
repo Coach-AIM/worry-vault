@@ -6,8 +6,12 @@ import Link from 'next/link';
 type JournalEntry = {
   id: number;
   createdAt: string;
-  entryText: string;
-  insights: string | null;
+  entryType: 'negative' | 'positive';
+  situation: string;
+  emotionsJson: string;
+  automaticThought: string | null;
+  distortionsJson: string | null;
+  reframedThought: string;
 };
 
 const DISTORTION_NAMES: Record<string, string> = {
@@ -45,12 +49,10 @@ export default function InsightsPage() {
     const emotionTotals: Record<string, { totalWeight: number, count: number }> = {};
     
     journalEntries.forEach(entry => {
-      if (!entry.insights) return;
+      if (!entry.emotionsJson) return;
       try {
-        const parsed = JSON.parse(entry.insights);
-        // support both nested aiInsights.emotions and top-level emotions
-        const emotions = parsed.emotions || (parsed.aiInsights && parsed.aiInsights.emotions);
-        if (emotions && Array.isArray(emotions)) {
+        const emotions = JSON.parse(entry.emotionsJson);
+        if (Array.isArray(emotions)) {
           emotions.forEach((e: any) => {
             if (!emotionTotals[e.name]) {
               emotionTotals[e.name] = { totalWeight: 0, count: 0 };
@@ -80,11 +82,10 @@ export default function InsightsPage() {
     let totalCount = 0;
 
     journalEntries.forEach(entry => {
-      if (!entry.insights) return;
+      if (!entry.distortionsJson) return;
       try {
-        const parsed = JSON.parse(entry.insights);
-        const distortions = parsed.distortions || (parsed.aiInsights && parsed.aiInsights.distortions);
-        if (distortions && Array.isArray(distortions)) {
+        const distortions = JSON.parse(entry.distortionsJson);
+        if (Array.isArray(distortions)) {
           distortions.forEach((d: string) => {
             distortionCounts[d] = (distortionCounts[d] || 0) + 1;
             totalCount += 1;

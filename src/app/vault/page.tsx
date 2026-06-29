@@ -26,6 +26,7 @@ type Victory = {
   id: number;
   createdAt: string;
   thoughtText: string;
+  category: string;
 };
 
 export default function VaultsPage() {
@@ -42,6 +43,7 @@ export default function VaultsPage() {
   // VICTORY VAULT STATE
   const [victories, setVictories] = useState<Victory[]>([]);
   const [newVictory, setNewVictory] = useState('');
+  const [victoryCategory, setVictoryCategory] = useState<'Gratitude' | 'Strength Validation' | 'Exception to Problem' | 'General'>('General');
   const [addingVictory, setAddingVictory] = useState(false);
   const [fetchingVictories, setFetchingVictories] = useState(true);
 
@@ -162,10 +164,11 @@ export default function VaultsPage() {
       const res = await fetch('/api/positives', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ thoughtText: newVictory })
+        body: JSON.stringify({ thoughtText: newVictory, category: victoryCategory })
       });
       if (res.ok) {
         setNewVictory('');
+        setVictoryCategory('General');
         fetchVictories();
       }
     } catch (err) {
@@ -407,9 +410,8 @@ export default function VaultsPage() {
       {/* VICTORY VAULT HUB */}
       {activeVault === 'victory' && (
         <div style={{ animation: 'fadeIn 0.4s ease' }}>
-          {/* Add Victory */}
-          <form onSubmit={handleVictorySubmit} style={{ backgroundColor: '#fff', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'flex-end', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
-            <div style={{ flex: 1 }}>
+          <form onSubmit={handleVictorySubmit} style={{ backgroundColor: '#fff', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+            <div style={{ flex: '2 1 250px' }}>
               <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.4rem', color: '#555', fontWeight: 600 }}>Deposit a Win or Gratitude in your Victory Vault:</label>
               <input 
                 type="text" 
@@ -418,6 +420,19 @@ export default function VaultsPage() {
                 placeholder="E.g., Felt warm sunshine during lunch walk. Finished project draft."
                 style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.95rem' }}
               />
+            </div>
+            <div style={{ width: '160px' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.4rem', color: '#555', fontWeight: 600 }}>Category</label>
+              <select
+                value={victoryCategory}
+                onChange={e => setVictoryCategory(e.target.value as any)}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: '0.95rem', backgroundColor: '#fff' }}
+              >
+                <option value="General">General Win</option>
+                <option value="Gratitude">Gratitude</option>
+                <option value="Strength Validation">Strength</option>
+                <option value="Exception to Problem">Exception to Trap</option>
+              </select>
             </div>
             <button type="submit" disabled={addingVictory} style={{ padding: '0.75rem 1.75rem', height: '45px', backgroundColor: '#e9c46a', color: '#264653', fontWeight: 600 }}>
               {addingVictory ? 'Saving...' : 'Lock In Victory'}
@@ -445,11 +460,26 @@ export default function VaultsPage() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: '120px'
+                  minHeight: '130px'
                 }}>
-                  <p style={{ margin: '0 0 1rem 0', color: '#78350f', fontSize: '0.98rem', lineHeight: '1.5', fontWeight: 500 }}>
-                    "{v.thoughtText}"
-                  </p>
+                  <div>
+                    <span style={{ 
+                      backgroundColor: '#fef3c7', 
+                      color: '#b45309', 
+                      fontSize: '0.68rem', 
+                      padding: '0.15rem 0.4rem', 
+                      borderRadius: '6px', 
+                      fontWeight: 600,
+                      display: 'inline-block',
+                      marginBottom: '0.5rem',
+                      border: '1px solid #fde68a'
+                    }}>
+                      {v.category || 'General'}
+                    </span>
+                    <p style={{ margin: '0 0 1rem 0', color: '#78350f', fontSize: '0.98rem', lineHeight: '1.5', fontWeight: 500 }}>
+                      "{v.thoughtText}"
+                    </p>
+                  </div>
                   <span style={{ fontSize: '0.72rem', color: '#b45309', borderTop: '1px dashed #fde68a', paddingTop: '0.5rem', display: 'block' }}>
                     🏆 Saved {new Date(v.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                   </span>

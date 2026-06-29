@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 
+const DISTORTION_NAMES: Record<string, string> = {
+  "all-or-nothing": "All-or-Nothing",
+  "catastrophizing": "Catastrophizing",
+  "should-statements": "Should Statements",
+  "mind-reading": "Mind Reading",
+  "emotional-reasoning": "Emotional Reasoning",
+  "overgeneralization": "Overgeneralization"
+};
+
 export default function ExportPdfButton() {
   const [exporting, setExporting] = useState(false);
 
@@ -31,15 +40,15 @@ export default function ExportPdfButton() {
       let y = 20;
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
+      doc.setFontSize(20);
       doc.text("Momentum: Weekly Therapy Summary", 20, y);
       y += 15;
 
-      doc.setFontSize(16);
+      doc.setFontSize(15);
       doc.text("Completed Grounding Steps", 20, y);
       y += 10;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
 
       if (recentTasks.length === 0) {
         doc.text("No tasks completed this week.", 20, y);
@@ -47,7 +56,7 @@ export default function ExportPdfButton() {
       } else {
         recentTasks.forEach((t: any) => {
           doc.text(`• ${t.title} (${t.emotionalIntensity} Intensity, ${t.estimatedTime || 'N/A'})`, 25, y);
-          y += 10;
+          y += 8;
         });
       }
 
@@ -55,41 +64,76 @@ export default function ExportPdfButton() {
       if (y > 270) { doc.addPage(); y = 20; }
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text("Journal Reflections & Identified Thought Patterns", 20, y);
+      doc.setFontSize(15);
+      doc.text("Journal Reflections & Coping Patterns", 20, y);
       y += 10;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
+      doc.setFontSize(11);
 
       if (recentEntries.length === 0) {
         doc.text("No journal entries this week.", 20, y);
       } else {
         recentEntries.forEach((e: any) => {
-          if (y > 250) { doc.addPage(); y = 20; }
+          if (y > 230) { doc.addPage(); y = 20; }
           const date = new Date(e.createdAt).toLocaleDateString();
+          const isPositive = e.entryType === 'positive';
           
           doc.setFont('helvetica', 'bold');
-          doc.text(`Date: ${date}`, 20, y);
-          
-          doc.setFont('helvetica', 'normal');
-          const lines = doc.splitTextToSize(e.entryText, 170);
-          doc.text(lines, 20, y + 7);
-          y += 7 + (lines.length * 7);
+          doc.setFontSize(11);
+          doc.text(`Date: ${date} - [${isPositive ? '🏆 Victory Reflection' : '💭 CBT Thought Record'}]`, 20, y);
+          y += 7;
 
-          if (e.insights) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+          
+          // Situation
+          const sitHeader = isPositive ? "Win/Event: " : "Situation: ";
+          const sitLines = doc.splitTextToSize(`${sitHeader}${e.situation}`, 170);
+          doc.text(sitLines, 20, y);
+          y += (sitLines.length * 6) + 2;
+
+          // Automatic Thought (only negative)
+          if (!isPositive && e.automaticThought) {
+            const thoughtLines = doc.splitTextToSize(`Thought: ${e.automaticThought}`, 170);
+            doc.text(thoughtLines, 20, y);
+            y += (thoughtLines.length * 6) + 2;
+          }
+
+          // Emotions
+          if (e.emotionsJson) {
             try {
-              const parsed = JSON.parse(e.insights);
-              const aiInsights = parsed.aiInsights || parsed;
-              if (aiInsights && aiInsights.insights) {
-                const insightLines = doc.splitTextToSize(`Insight: ${aiInsights.insights}`, 160);
-                doc.setTextColor(43, 90, 43); // sage green tint
-                doc.text(insightLines, 25, y);
-                doc.setTextColor(0, 0, 0);
-                y += (insightLines.length * 7) + 5;
+              const emotions = JSON.parse(e.emotionsJson);
+              if (Array.isArray(emotions) && emotions.length > 0) {
+                const emotionNames = emotions.map((em: any) => `${em.name} (${em.weight}%)`).join(", ");
+                const emotionLines = doc.splitTextToSize(`Emotions: ${emotionNames}`, 170);
+                doc.text(emotionLines, 20, y);
+                y += (emotionLines.length * 6) + 2;
               }
             } catch (err) {}
           }
-          y += 5;
+
+          // Distortions (only negative)
+          if (!isPositive && e.distortionsJson) {
+            try {
+              const distortions = JSON.parse(e.distortionsJson);
+              if (Array.isArray(distortions) && distortions.length > 0) {
+                const distortionNames = distortions.map((id: string) => DISTORTION_NAMES[id] || id).join(", ");
+                const distortionLines = doc.splitTextToSize(`Thinking Traps: ${distortionNames}`, 170);
+                doc.setTextColor(180, 83, 9); // brown tint
+                doc.text(distortionLines, 20, y);
+                doc.setTextColor(0, 0, 0);
+                y += (distortionLines.length * 6) + 2;
+              }
+            } catch (err) {}
+          }
+
+          // Reframed Thought / Anchor
+          const reframeHeader = isPositive ? "Anchor/Strength: " : "Reframed Thought: ";
+          const reframeLines = doc.splitTextToSize(`${reframeHeader}${e.reframedThought}`, 170);
+          doc.setTextColor(43, 90, 43); // sage green tint
+          doc.text(reframeLines, 20, y);
+          doc.setTextColor(0, 0, 0);
+          y += (reframeLines.length * 6) + 8;
         });
       }
 

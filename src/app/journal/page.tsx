@@ -9,8 +9,12 @@ import { EMOTION_WHEEL, PRIMARY_EMOTIONS } from '@/lib/emotionWheel';
 type Entry = {
   id: number;
   createdAt: string;
-  entryText: string;
-  insights: string | null;
+  entryType: 'negative' | 'positive';
+  situation: string;
+  emotionsJson: string;
+  automaticThought: string | null;
+  distortionsJson: string | null;
+  reframedThought: string;
 };
 
 type SelectedEmotion = {
@@ -19,6 +23,7 @@ type SelectedEmotion = {
 };
 
 export default function CBTJournal() {
+  const [entryType, setEntryType] = useState<'negative' | 'positive'>('negative');
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   
   // Thought Record State
@@ -43,11 +48,16 @@ export default function CBTJournal() {
   
   const [history, setHistory] = useState<Entry[]>([]);
 
-  // Suggest emotions based on the situation text
+  // Default suggested emotions helper
   const getSuggestedEmotions = (situationText: string) => {
     const text = situationText.toLowerCase();
     const suggestions: string[] = [];
     
+    if (entryType === 'positive') {
+      suggestions.push("Proud", "Grateful", "Calm", "Hopeful", "Happy", "Content");
+      return suggestions;
+    }
+
     if (text.includes("work") || text.includes("boss") || text.includes("deadline") || text.includes("test") || text.includes("exam") || text.includes("fail") || text.includes("worry") || text.includes("future") || text.includes("presentation") || text.includes("meeting") || text.includes("job") || text.includes("interview")) {
       suggestions.push("Worried", "Overwhelmed", "Stressed", "Nervous");
     }
@@ -91,6 +101,7 @@ export default function CBTJournal() {
     }
     return "I can take a deep breath and look at the facts of this situation objectively, rather than letting my automatic thoughts dictate my reality.";
   };
+
   const [loading, setLoading] = useState(false);
   const [loadingEmotions, setLoadingEmotions] = useState(false);
   const [apiSuggestedEmotions, setApiSuggestedEmotions] = useState<string[]>([]);
@@ -128,10 +139,15 @@ export default function CBTJournal() {
 
   async function fetchHistory() {
     setFetching(true);
-    const res = await fetch('/api/journal');
-    const data = await res.json();
-    if (data.entries) setHistory(data.entries);
-    setFetching(false);
+    try {
+      const res = await fetch('/api/journal');
+      const data = await res.json();
+      if (data.entries) setHistory(data.entries);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFetching(false);
+    }
   }
 
   useEffect(() => {
@@ -149,7 +165,7 @@ export default function CBTJournal() {
       } else {
         setLocalDistortions([]);
       }
-    }, 500); // 500ms delay
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [thought, step]);
@@ -181,7 +197,6 @@ export default function CBTJournal() {
     
     setCrisis(false);
 
-    // 1. Safety Intercept
     if (checkSafety(thought) || checkSafety(situation)) {
       setCrisis(true);
       return;
@@ -191,7 +206,6 @@ export default function CBTJournal() {
     setLoading(true);
     
     try {
-      // 2. Try Gemini API for CBT Analysis
       const emotionsListStr = selectedEmotions.map(e => `${e.name} (${e.weight}%)`).join(", ");
       const promptToAnalyze = `Situation: ${situation}\nThought: ${thought}\nEmotions: ${emotionsListStr}`;
       
@@ -211,47 +225,41 @@ export default function CBTJournal() {
     } catch (err) {
       console.error("Insight Error", err);
       setSelectedDistortions(localDistortions.map(ld => ld.id));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleSaveEntry(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     
-    const emotionsFormatted = selectedEmotions.length > 0 
-      ? selectedEmotions.map(e => `- ${e.name}: ${e.weight}/100`).join('\n')
-      : "None selected";
-      
-    const distortionsFormatted = selectedDistortions.length > 0 
-      ? selectedDistortions.map(id => DISTORTIONS.find(d => d.id === id)?.name).join(', ')
-      : "None selected";
+    try {
+      await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          entryType,
+          situation,
+          emotionsJson: JSON.stringify(selectedEmotions),
+          automaticThought: entryType === 'negative' ? thought : null,
+          distortionsJson: entryType === 'negative' ? JSON.stringify(selectedDistortions) : null,
+          reframedThought: reframe
+        })
+      });
+    } catch (err) {
+      console.error("Failed to save entry:", err);
+    }
 
-    const finalEntryText = `**Situation:**\n${situation}\n\n**Emotions Identified:**\n${emotionsFormatted}\n\n**Automatic Thought:**\n${thought}\n\n**Identified Cognitive Distortions:**\n${distortionsFormatted}\n\n**Reframed Thought:**\n${reframe}`;
-
-    await fetch('/api/journal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        entryText: finalEntryText, 
-        insights: {
-          aiInsights: insightsData,
-          emotions: selectedEmotions,
-          distortions: selectedDistortions
-        }
-      })
-    });
-
-    // Reset state
+    // Reset wizard
     setStep(1);
     setSituation('');
     setSelectedEmotions([]);
-    setActiveCategory(null);
     setThought('');
     setSelectedDistortions([]);
     setReframe('');
     setInsightsData(null);
-    setLocalDistortions([]);
+    setApiSuggestedEmotions([]);
     fetchHistory();
     setLoading(false);
   }
@@ -259,13 +267,15 @@ export default function CBTJournal() {
   const selectedDistortionNames = selectedDistortions
     .map(id => DISTORTIONS.find(d => d.id === id)?.name)
     .filter(Boolean)
-    .join(", ");
+    .join(', ');
 
   return (
-    <div style={{ padding: '2rem 0', maxWidth: '750px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '2rem' }}>
+    <div style={{ padding: '2rem 0', maxWidth: '800px', margin: '0 auto' }}>
+      <header style={{ marginBottom: '2.5rem' }}>
         <h1 style={{ color: 'var(--sage-green)', marginBottom: '0.5rem', fontSize: '2.5rem', fontWeight: 600 }}>CBT Journal</h1>
-        <p style={{ fontSize: '1.1rem', color: '#555' }}>Guided thought record to identify and reframe cognitive distortions.</p>
+        <p style={{ fontSize: '1.1rem', color: '#555' }}>
+          Gently analyze difficult moments using Cognitive Behavioral Therapy, or log positive victories.
+        </p>
         <Link href="/" style={{ color: 'var(--soft-blue)', textDecoration: 'none', fontWeight: 600, display: 'inline-block', marginTop: '1rem' }}>&larr; Back to Dashboard</Link>
       </header>
 
@@ -279,27 +289,100 @@ export default function CBTJournal() {
 
       {/* Progress Bar */}
       <div style={{ display: 'flex', gap: '5px', marginBottom: '2rem' }}>
-        {[1, 2, 3, 4, 5].map(s => (
-          <div key={s} style={{ 
-            height: '6px', 
-            flex: 1, 
-            backgroundColor: s <= step ? 'var(--sage-green)' : '#e5e7eb',
-            borderRadius: '10px',
-            transition: 'background-color 0.3s ease'
-          }} />
-        ))}
+        {entryType === 'negative' ? (
+          [1, 2, 3, 4, 5].map(s => (
+            <div key={s} style={{ 
+              height: '6px', 
+              flex: 1, 
+              backgroundColor: s <= step ? 'var(--sage-green)' : '#e5e7eb',
+              borderRadius: '10px',
+              transition: 'background-color 0.3s ease'
+            }} />
+          ))
+        ) : (
+          [1, 2, 3].map(s => {
+            const mappedStep = s === 1 ? 1 : s === 2 ? 2 : 5;
+            return (
+              <div key={s} style={{ 
+                height: '6px', 
+                flex: 1, 
+                backgroundColor: mappedStep <= step ? 'var(--sage-green)' : '#e5e7eb',
+                borderRadius: '10px',
+                transition: 'background-color 0.3s ease'
+              }} />
+            );
+          })
+        )}
       </div>
 
       <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '3rem' }}>
         
         {step === 1 && (
           <div style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>Step 1: The Situation</h3>
-            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>What happened? Describe the event or trigger simply and objectively, without interpretation.</p>
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem', color: 'var(--foreground)' }}>Step 1: Choose Reflection Type</h3>
+            
+            {/* Entry Type Toggle */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', backgroundColor: '#f1f5f9', padding: '0.35rem', borderRadius: '10px' }}>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setEntryType('negative');
+                  setSituation('');
+                }}
+                style={{ 
+                  flex: 1, 
+                  padding: '0.6rem 1rem', 
+                  borderRadius: '8px', 
+                  border: 'none', 
+                  backgroundColor: entryType === 'negative' ? '#fff' : 'transparent',
+                  color: entryType === 'negative' ? 'var(--foreground)' : '#666',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  boxShadow: entryType === 'negative' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                💭 CBT Thought Record (Difficult Moment)
+              </button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setEntryType('positive');
+                  setSituation('');
+                }}
+                style={{ 
+                  flex: 1, 
+                  padding: '0.6rem 1rem', 
+                  borderRadius: '8px', 
+                  border: 'none', 
+                  backgroundColor: entryType === 'positive' ? '#fff' : 'transparent',
+                  color: entryType === 'positive' ? 'var(--foreground)' : '#666',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  boxShadow: entryType === 'positive' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🏆 Victory Reflection (Positive Moment)
+              </button>
+            </div>
+
+            <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>
+              {entryType === 'positive' ? 'What went well today?' : 'What happened?'}
+            </h4>
+            <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '1.25rem' }}>
+              {entryType === 'positive' 
+                ? 'Describe the positive trigger, win, or moment of peace simply and objectively.' 
+                : 'Describe the event or trigger simply and objectively, without interpretation.'}
+            </p>
             <textarea 
               value={situation}
               onChange={(e) => setSituation(e.target.value)}
-              placeholder="E.g., My boss sent me an email saying 'We need to talk' without any other context."
+              placeholder={entryType === 'positive' 
+                ? "E.g., I received warm feedback on my presentation from a coworker." 
+                : "E.g., My boss sent me an email saying 'We need to talk' without any other context."}
               rows={4}
               style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical', fontSize: '1.05rem', backgroundColor: '#fafafa', marginBottom: '1.5rem' }}
             />
@@ -311,8 +394,14 @@ export default function CBTJournal() {
 
         {step === 2 && (
           <div style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>Step 2: Emotion Wheel</h3>
-            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>Click a general emotion to reveal refined feelings. Select all that apply and weight their intensity.</p>
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>
+              {entryType === 'positive' ? 'Savoring Emotions' : 'Step 2: Emotion Wheel'}
+            </h3>
+            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>
+              {entryType === 'positive'
+                ? 'Select the positive emotions you felt and rate their intensity.'
+                : 'Click a general emotion to reveal refined feelings. Select all that apply and rate their weights.'}
+            </p>
             
             {/* Suggested Emotions Section */}
             {(() => {
@@ -404,57 +493,56 @@ export default function CBTJournal() {
               </div>
             )}
 
-            {/* Selected Emotions & Weighting */}
+            {/* Sliders for Selected Emotions */}
             {selectedEmotions.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h4 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--foreground)' }}>Weight Your Emotions</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ margin: '2rem 0', padding: '1.5rem', backgroundColor: '#fcfcfc', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>Emotional Intensity Weights:</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {selectedEmotions.map(emotion => (
-                    <div key={emotion.name} style={{ display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: '#fff', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid #eee' }}>
-                      <div style={{ minWidth: '120px', fontWeight: 500, color: '#444' }}>{emotion.name}</div>
+                    <div key={emotion.name} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                      <span style={{ width: '120px', fontWeight: 500, fontSize: '0.95rem' }}>{emotion.name}</span>
                       <input 
                         type="range" 
-                        min="1" max="100" 
+                        min="10" 
+                        max="100" 
                         value={emotion.weight} 
-                        onChange={(e) => updateEmotionWeight(emotion.name, Number(e.target.value))}
-                        style={{ flex: 1, accentColor: 'var(--soft-blue)' }}
+                        onChange={(e) => updateEmotionWeight(emotion.name, parseInt(e.target.value))} 
+                        style={{ flex: 1, accentColor: 'var(--soft-blue)' }} 
                       />
-                      <div style={{ minWidth: '40px', textAlign: 'right', color: '#666', fontSize: '0.9rem' }}>{emotion.weight}%</div>
-                      <button 
-                        type="button" 
-                        onClick={() => toggleEmotion(emotion.name)}
-                        style={{ background: 'none', border: 'none', color: '#dc3545', cursor: 'pointer', padding: '0.25rem' }}
-                        title="Remove"
-                      >
-                        ✕
-                      </button>
+                      <span style={{ width: '45px', textAlign: 'right', fontWeight: 600, fontSize: '0.9rem', color: '#666' }}>{emotion.weight}%</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem' }}>
               <button type="button" onClick={() => setStep(1)} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
-              <button type="button" onClick={() => setStep(3)} disabled={selectedEmotions.length === 0} style={{ flex: 2 }}>Continue</button>
+              <button 
+                type="button" 
+                onClick={() => setStep(entryType === 'positive' ? 5 : 3)} 
+                disabled={selectedEmotions.length === 0} 
+                style={{ flex: 2 }}
+              >
+                Continue
+              </button>
             </div>
           </div>
         )}
 
         {step === 3 && (
           <div style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>Step 3: Automatic Thoughts</h3>
-            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>What went through your mind right then? What did this situation mean to you?</p>
-            
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>Step 3: Automatic Thought</h3>
+            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>Write down the exact automatic thought or belief that went through your mind when the situation occurred.</p>
             <textarea 
               value={thought}
               onChange={(e) => setThought(e.target.value)}
-              placeholder="E.g., He's going to fire me. I always mess things up. I'm a complete failure."
-              rows={5}
-              style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical', fontSize: '1.05rem', backgroundColor: '#fafafa', marginBottom: '1rem' }}
+              placeholder="E.g., I am going to get fired, or they think my work is terrible."
+              rows={4}
+              style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical', fontSize: '1.05rem', backgroundColor: '#fafafa', marginBottom: '1.5rem' }}
             />
-
-            {/* Delayed Heuristic Highlighting Output */}
+            
+            {/* Local Heuristic warning banner */}
             {localDistortions.length > 0 && (
               <div style={{ backgroundColor: '#fff3cd', padding: '1rem', borderRadius: 'var(--radius)', borderLeft: '4px solid #ffc107', marginBottom: '1.5rem', animation: 'fadeIn 0.3s ease' }}>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: '#856404' }}>We noticed some potential thinking traps:</p>
@@ -540,122 +628,167 @@ export default function CBTJournal() {
                     );
                   })}
                 </div>
-                
+
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button type="button" onClick={() => setStep(3)} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
-                  <button type="button" onClick={() => setStep(5)} style={{ flex: 2 }}>{selectedDistortions.length > 0 ? "Continue to Reframe" : "Skip without Distortions"}</button>
+                  <button type="button" onClick={() => setStep(5)} style={{ flex: 2 }}>Continue</button>
                 </div>
               </div>
             )}
-            {/* Global style for spinner */}
-            <style dangerouslySetInnerHTML={{__html: `
-              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-              @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-            `}} />
           </div>
         )}
 
         {step === 5 && (
-          <div style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>Step 5: Alternative Thought</h3>
+          <form onSubmit={handleSaveEntry} style={{ animation: 'fadeIn 0.4s ease' }}>
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--foreground)' }}>
+              {entryType === 'positive' ? 'Step 3: Core Strength & Anchor' : 'Step 5: Alternative Thought'}
+            </h3>
             
-            {selectedDistortions.length > 0 ? (
+            {entryType === 'negative' && selectedDistortions.length > 0 ? (
                <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem', lineHeight: '1.5' }}>
                  You identified: <strong>{selectedDistortionNames}</strong>. <br/>
                  Knowing this, how can you look at this situation more realistically or compassionately?
                </p>
             ) : (
-               <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>How can you look at this situation more realistically or compassionately?</p>
+               <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                 {entryType === 'positive'
+                   ? 'What personal strengths helped bring this about? Or how can you anchor and savor this positive feeling?'
+                   : 'How can you look at this situation more realistically or compassionately?'}
+               </p>
             )}
             
             {/* Alternative Thought Suggestions */}
-            <div style={{ marginBottom: '1.5rem', animation: 'fadeIn 0.3s ease' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#444', display: 'block', marginBottom: '0.75rem' }}>
-                Context-based Sample Alternative Thoughts (Click to use and modify):
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {/* AI Reframes */}
-                {insightsData?.reframeSuggestions && insightsData.reframeSuggestions.map((suggestion, idx) => (
-                  <button 
-                    key={`ai-${idx}`}
-                    type="button"
-                    onClick={() => setReframe(suggestion)}
-                    style={{
-                      textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
-                      backgroundColor: '#f0f7f4', border: '1px solid #c2e0c6', color: '#2b5a2b',
-                      cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem', lineHeight: '1.4'
-                    }}
-                  >
-                    "{suggestion}" <span style={{ float: 'right', fontSize: '0.75rem', opacity: 0.6 }}>AI Option</span>
-                  </button>
-                ))}
-                {/* Heuristic Reframe */}
-                <button 
-                  type="button"
-                  onClick={() => setReframe(getHeuristicReframe())}
-                  style={{
-                    textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
-                    backgroundColor: '#f0f4f8', border: '1px solid #bcd0f7', color: '#1e40af',
-                    cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem', lineHeight: '1.4'
-                  }}
-                >
-                  "{getHeuristicReframe()}" <span style={{ float: 'right', fontSize: '0.75rem', opacity: 0.6 }}>Coping Option</span>
-                </button>
-              </div>
-            </div>
+            {entryType === 'negative' && (
+              <>
+                <div style={{ marginBottom: '1.5rem', animation: 'fadeIn 0.3s ease' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#444', display: 'block', marginBottom: '0.75rem' }}>
+                    Context-based Sample Alternative Thoughts (Click to use and modify):
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {/* AI Reframes */}
+                    {insightsData?.reframeSuggestions && insightsData.reframeSuggestions.map((suggestion, idx) => (
+                      <button 
+                        key={`ai-${idx}`}
+                        type="button"
+                        onClick={() => setReframe(suggestion)}
+                        style={{
+                          textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
+                          backgroundColor: '#f0f7f4', border: '1px solid #c2e0c6', color: '#2b5a2b',
+                          cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem', lineHeight: '1.4'
+                        }}
+                      >
+                        "{suggestion}" <span style={{ float: 'right', fontSize: '0.75rem', opacity: 0.6 }}>AI Option</span>
+                      </button>
+                    ))}
+                    {/* Heuristic Reframe */}
+                    <button 
+                      type="button"
+                      onClick={() => setReframe(getHeuristicReframe())}
+                      style={{
+                        textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
+                        backgroundColor: '#f0f4f8', border: '1px solid #bcd0f7', color: '#1e40af',
+                        cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem', lineHeight: '1.4'
+                      }}
+                    >
+                      "{getHeuristicReframe()}" <span style={{ float: 'right', fontSize: '0.75rem', opacity: 0.6 }}>Coping Option</span>
+                    </button>
+                  </div>
+                </div>
 
-            {/* CBT Prompts to Unlock Deeper Thinking */}
-            <div style={{ marginBottom: '1.5rem', padding: '1.25rem', backgroundColor: '#fafaf9', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#4a5d4e', display: 'block', marginBottom: '0.75rem' }}>
-                💡 CBT Prompts to Unlock Deeper Thinking (Click to copy as template):
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <button 
-                  type="button"
-                  onClick={() => setReframe(`If a close friend were in this situation, I would tell them: "This is a single event, not a reflection of your worth. You are doing the best you can and have handled hard things before."`)}
-                  style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
-                  className="prompt-card"
-                >
-                  <strong>👥 The Friend Test:</strong> What would you tell a friend who had this exact thought?
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setReframe(`Looking at the objective evidence: The fact is I made a mistake, but the evidence against it being a disaster is that I can fix it tomorrow and my overall track record is very solid.`)}
-                  style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
-                  className="prompt-card"
-                >
-                  <strong>⚖️ Fact Checking:</strong> What is the objective evidence for and against this automatic thought?
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setReframe(`Even if the worst-case scenario happened (such as the meeting going poorly), the reality is I would feel embarrassed for a day but I would recover, learn, and move on.`)}
-                  style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
-                  className="prompt-card"
-                >
-                  <strong>💭 Decatastrophizing (So What?):</strong> If the worst-case scenario happened, how would you cope?
-                </button>
+                {/* CBT Prompts to Unlock Deeper Thinking */}
+                <div style={{ marginBottom: '1.5rem', padding: '1.25rem', backgroundColor: '#fafaf9', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#4a5d4e', display: 'block', marginBottom: '0.75rem' }}>
+                    💡 CBT Prompts to Unlock Deeper Thinking (Click to copy as template):
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <button 
+                      type="button"
+                      onClick={() => setReframe(`If a close friend were in this situation, I would tell them: "This is a single event, not a reflection of your worth. You are doing the best you can and have handled hard things before."`)}
+                      style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
+                      className="prompt-card"
+                    >
+                      <strong>👥 The Friend Test:</strong> What would you tell a friend who had this exact thought?
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setReframe(`Looking at the objective evidence: The fact is I made a mistake, but the evidence against it being a disaster is that I can fix it tomorrow and my overall track record is very solid.`)}
+                      style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
+                      className="prompt-card"
+                    >
+                      <strong>⚖️ Fact Checking:</strong> What is the objective evidence for and against this automatic thought?
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setReframe(`Even if the worst-case scenario happened (such as the meeting going poorly), the reality is I would feel embarrassed for a day but I would recover, learn, and move on.`)}
+                      style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
+                      className="prompt-card"
+                    >
+                      <strong>💭 Decatastrophizing (So What?):</strong> If the worst-case scenario happened, how would you cope?
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Positive CBT Prompts for Savoring */}
+            {entryType === 'positive' && (
+              <div style={{ marginBottom: '1.5rem', padding: '1.25rem', backgroundColor: '#fffdf5', borderRadius: 'var(--radius)', border: '1px solid #fef3c7' }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#b45309', display: 'block', marginBottom: '0.75rem' }}>
+                  💡 Positive Anchoring Prompts (Click to copy as template):
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setReframe(`This positive event happened because I used my personal strengths of communication and preparation. I am capable of achieving good results when I put in focus.`)}
+                    style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fde68a', cursor: 'pointer', fontSize: '0.88rem', color: '#78350f', transition: 'all 0.2s' }}
+                    className="prompt-card"
+                  >
+                    <strong>🎯 Strength Validation:</strong> What qualities of yours made this win happen?
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setReframe(`I feel incredibly grateful for this coworker's kind feedback. It reminds me that I have supportive people around me who value my effort.`)}
+                    style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fde68a', cursor: 'pointer', fontSize: '0.88rem', color: '#78350f', transition: 'all 0.2s' }}
+                    className="prompt-card"
+                  >
+                    <strong>🙏 Gratitude:</strong> Who else contributed to this moment, and what are you thankful for?
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setReframe(`Even when work feels highly stressful, this event shows that good moments can still occur. It is an exception to my negative thoughts.`)}
+                    style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fde68a', cursor: 'pointer', fontSize: '0.88rem', color: '#78350f', transition: 'all 0.2s' }}
+                    className="prompt-card"
+                  >
+                    <strong>🔍 Exception to Problem:</strong> How does this win prove that things aren't 100% negative?
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
             
             <textarea 
               value={reframe}
               onChange={(e) => setReframe(e.target.value)}
-              placeholder="E.g., My boss might just want to discuss a normal project update. There's no evidence I'm being fired."
-              rows={5}
-              style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical', fontSize: '1.05rem', backgroundColor: '#fafafa', marginBottom: '2rem' }}
+              placeholder={entryType === 'positive'
+                ? "Describe your strengths, who you are grateful for, or how you want to remember this win."
+                : "Type your reframed, realistic thought here..."}
+              rows={4}
+              required
+              style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical', fontSize: '1.05rem', backgroundColor: '#fafafa', marginBottom: '1.5rem' }}
             />
 
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <button type="button" onClick={() => setStep(4)} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
-              <button type="button" onClick={handleSaveEntry} disabled={loading || !reframe.trim()} style={{ flex: 2 }}>{loading ? 'Saving...' : 'Finish & Save Record'}</button>
+              <button type="button" onClick={() => setStep(entryType === 'positive' ? 2 : 4)} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
+              <button type="submit" disabled={loading} style={{ flex: 2 }}>
+                {loading ? 'Saving...' : 'Save Entry & Finish'}
+              </button>
             </div>
-          </div>
+          </form>
         )}
-
       </div>
 
-      <div>
-        <h2 style={{ fontSize: '1.3rem', marginBottom: '1.5rem', color: 'var(--foreground)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Past Thought Records</h2>
+      {/* History section */}
+      <div style={{ marginTop: '3rem' }}>
+        <h2 style={{ fontSize: '1.6rem', color: 'var(--foreground)', marginBottom: '1.5rem', fontWeight: 600 }}>Reflective History</h2>
         
         {fetching ? (
           <p>Loading your journal...</p>
@@ -666,42 +799,105 @@ export default function CBTJournal() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {history.map((item) => {
-              const insights = item.insights ? JSON.parse(item.insights) : null;
+              const isPositive = item.entryType === 'positive';
+              
+              let emotions = [];
+              try {
+                emotions = item.emotionsJson ? JSON.parse(item.emotionsJson) : [];
+              } catch (e) {
+                console.error("Failed to parse emotions", e);
+              }
+
+              let distortions = [];
+              try {
+                distortions = item.distortionsJson ? JSON.parse(item.distortionsJson) : [];
+              } catch (e) {
+                console.error("Failed to parse distortions", e);
+              }
               
               return (
                 <div key={item.id} style={{ 
                   backgroundColor: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', 
-                  padding: '1.5rem', boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
+                  padding: '1.5rem', boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+                  borderLeft: isPositive ? '5px solid #e9c46a' : '5px solid var(--sage-green)'
                 }}>
-                  <div style={{ fontSize: '0.85rem', color: '#888', marginBottom: '1rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
-                    {new Date(item.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#888', marginBottom: '1rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span>{new Date(item.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    <span style={{ 
+                      backgroundColor: isPositive ? '#fffbeb' : '#f0f7f4', 
+                      color: isPositive ? '#b45309' : '#2b5a2b', 
+                      padding: '0.15rem 0.6rem', 
+                      borderRadius: '10px', 
+                      fontWeight: 600, 
+                      fontSize: '0.75rem',
+                      border: isPositive ? '1px solid #fde68a' : '1px solid #c2e0c6'
+                    }}>
+                      {isPositive ? '🏆 Victory Reflection' : '💭 CBT Thought Record'}
+                    </span>
                   </div>
-                  
-                  {/* Safely render the compiled entryText */}
-                  <div style={{ fontSize: '0.95rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: '#444', marginBottom: insights ? '1.5rem' : '0' }}>
-                    {/* Render basic bolding from markdown ** -> bold */}
-                    {item.entryText.split('\n').map((line, i) => {
-                      if (line.startsWith('**') && line.endsWith('**')) {
-                        return <strong key={i} style={{ display: 'block', marginTop: i > 0 ? '0.5rem' : 0, color: '#222' }}>{line.replace(/\*\*/g, '')}</strong>;
-                      }
-                      return <span key={i} style={{ display: 'block' }}>{line}</span>;
-                    })}
-                  </div>
-                  
-                  {insights && (insights.insights || (insights.aiInsights && insights.aiInsights.insights)) && (
-                    <div style={{ backgroundColor: '#f0f7f4', padding: '1.25rem', borderRadius: 'var(--radius)', borderLeft: '4px solid var(--sage-green)' }}>
-                      <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#2b5a2b', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI Insight</strong>
-                      <p style={{ color: '#333', fontSize: '0.95rem', margin: 0, lineHeight: '1.5' }}>
-                        {insights.insights || insights.aiInsights.insights}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '0.78rem', color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {isPositive ? 'The Win / Event' : 'The Triggering Situation'}
+                      </strong>
+                      <p style={{ margin: '0.2rem 0 0 0', color: '#222', fontSize: '0.98rem', lineHeight: '1.5' }}>{item.situation}</p>
+                    </div>
+
+                    {!isPositive && item.automaticThought && (
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '0.78rem', color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Automatic Thought</strong>
+                        <p style={{ margin: '0.2rem 0 0 0', color: '#222', fontSize: '0.98rem', lineHeight: '1.5' }}>{item.automaticThought}</p>
+                      </div>
+                    )}
+
+                    {emotions.length > 0 && (
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '0.78rem', color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Emotions</strong>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          {emotions.map((e: SelectedEmotion, idx: number) => (
+                            <span key={idx} style={{ backgroundColor: isPositive ? '#fffbeb' : '#f0f4f8', color: isPositive ? '#b45309' : '#1e40af', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.8rem', border: isPositive ? '1px solid #fde68a' : '1px solid #d0e2ff' }}>
+                              {e.name}: {e.weight}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!isPositive && distortions.length > 0 && (
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '0.78rem', color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>Thinking Traps</strong>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          {distortions.map((d: string, idx: number) => (
+                            <span key={idx} style={{ backgroundColor: '#fffdf5', color: '#b45309', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.8rem', border: '1px solid #fde68a', fontWeight: 500 }}>
+                              {DISTORTIONS.find(dist => dist.id === d)?.name || d}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '0.78rem', color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {isPositive ? 'Core Strength / Savoring Anchor' : 'Reframed Thought'}
+                      </strong>
+                      <p style={{ margin: '0.2rem 0 0 0', color: isPositive ? '#451a03' : '#1e3a1e', backgroundColor: isPositive ? '#fffdf5' : '#f0f7f4', padding: '0.75rem 1rem', borderRadius: '6px', borderLeft: isPositive ? '3px solid #e9c46a' : '3px solid var(--sage-green)', fontSize: '0.98rem', fontStyle: 'italic', lineHeight: '1.5' }}>
+                        {item.reframedThought}
                       </p>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .prompt-card { transition: all 0.2s ease-in-out; }
+        .prompt-card:hover { border-color: var(--sage-green) !important; background-color: #f6faf7 !important; }
+      `}} />
     </div>
   );
 }

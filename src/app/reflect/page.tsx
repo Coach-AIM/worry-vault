@@ -29,11 +29,15 @@ export default function EndOfDayReflection() {
       // Save positive reflection to the Journal database
       if (positive.trim()) {
         try {
-          const entryText = `**End-of-Day Gratitude:**\n${positive}`;
           await fetch('/api/journal', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ entryText, insights: null })
+            body: JSON.stringify({ 
+              entryType: 'positive',
+              situation: 'End-of-Day Reflection',
+              emotionsJson: JSON.stringify([{ name: 'Grateful', weight: 80 }]),
+              reframedThought: positive.trim()
+            })
           });
         } catch (err) {
           console.error("Failed to save night reflection:", err);

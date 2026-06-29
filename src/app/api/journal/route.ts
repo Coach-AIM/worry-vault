@@ -5,13 +5,27 @@ import { desc } from 'drizzle-orm';
 
 export async function POST(req: Request) {
   try {
-    const { entryText, insights } = await req.json();
+    const body = await req.json();
+    const { 
+      entryType, 
+      situation, 
+      emotionsJson, 
+      automaticThought, 
+      distortionsJson, 
+      reframedThought 
+    } = body;
     
-    if (!entryText) return NextResponse.json({ error: "Missing text" }, { status: 400 });
+    if (!situation || !emotionsJson || !reframedThought) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
 
     await db.insert(journalEntries).values({
-      entryText,
-      insights: insights ? JSON.stringify(insights) : null
+      entryType: entryType || 'negative',
+      situation,
+      emotionsJson: typeof emotionsJson === 'string' ? emotionsJson : JSON.stringify(emotionsJson),
+      automaticThought: automaticThought || null,
+      distortionsJson: distortionsJson ? (typeof distortionsJson === 'string' ? distortionsJson : JSON.stringify(distortionsJson)) : null,
+      reframedThought
     });
     
     return NextResponse.json({ success: true });
