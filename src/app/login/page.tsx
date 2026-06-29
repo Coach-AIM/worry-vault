@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('coach');
@@ -115,7 +116,14 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.8rem', color: '#999' }}>
+        <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.88rem' }}>
+          <span style={{ color: '#777' }}>Don't have an account? </span>
+          <Link href="/register" style={{ color: 'var(--sage-green)', fontWeight: 600, textDecoration: 'none' }}>
+            Sign Up
+          </Link>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.8rem', color: '#999', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
           Default credentials: <strong>coach</strong> / <strong>password123</strong>
         </div>
       </div>

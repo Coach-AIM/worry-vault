@@ -66,3 +66,12 @@ export const therapistContact = sqliteTable("therapist_contact", {
   email: text("email"),
   notes: text("notes"),
 });
+
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
+  username: text("username").unique().notNull(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});

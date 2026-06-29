@@ -1,5 +1,9 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { db } from "@/db/index";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { verifyPassword } from "@/lib/crypto";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -10,10 +14,26 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        // Simple credentials gate for local security lock
-        if (credentials?.username === "coach" && credentials?.password === "password123") {
+        if (!credentials?.username || !credentials?.password) return null;
+
+        // Simple default fallback credentials
+        if (credentials.username === "coach" && credentials.password === "password123") {
           return { id: "user_coach_1", name: "Coach", email: "coach@momentum.app" };
         }
+
+        try {
+          const userRows = await db.select().from(users).where(eq(users.username, credentials.username.trim().toLowerCase()));
+          if (userRows.length > 0) {
+            const user = userRows[0];
+            const isValid = verifyPassword(credentials.password, user.passwordHash);
+            if (isValid) {
+              return { id: user.id, name: user.username, email: `${user.username}@momentum.app` };
+            }
+          }
+        } catch (err) {
+          console.error("Auth Query Error:", err);
+        }
+
         return null;
       }
     })
