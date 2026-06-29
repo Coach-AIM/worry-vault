@@ -9,7 +9,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "GEMINI_API_KEY_MISSING" }, { status: 400 });
     }
     const ai = new GoogleGenAI({ apiKey });
-    const { prompt, type } = await req.json();
+    const body = await req.json();
+    const { type } = body;
+    let prompt = body.prompt;
+
+    if (typeof prompt === 'object' && prompt !== null) {
+      const situation = prompt.situation || '';
+      const thought = prompt.automaticThought || prompt.thought || '';
+      let emotions = '';
+      if (prompt.emotionsJson) {
+        try {
+          const parsed = typeof prompt.emotionsJson === 'string' ? JSON.parse(prompt.emotionsJson) : prompt.emotionsJson;
+          if (Array.isArray(parsed)) {
+            emotions = parsed.map((e: any) => `${e.name} (${e.weight}%)`).join(", ");
+          } else {
+            emotions = JSON.stringify(parsed);
+          }
+        } catch (e) {
+          emotions = String(prompt.emotionsJson);
+        }
+      }
+      prompt = `Situation: ${situation}\nThought: ${thought}\nEmotions: ${emotions}`;
+    }
     
     let systemInstruction = "";
     let responseSchema: Schema | undefined = undefined;
