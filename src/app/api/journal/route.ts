@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/index";
 import { journalEntries } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized" }), 
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const currentUserId = (session.user as any).id || "user_coach_1";
+
     const body = await request.json();
 
     // Enforce that complex structures are properly stringified for SQLite
@@ -19,6 +30,7 @@ export async function POST(request: Request) {
         ? body.distortionsJson 
         : JSON.stringify(body.distortionsJson || []),
       reframedThought: body.reframedThought,
+      userId: currentUserId,
     }).returning();
 
     return NextResponse.json({ success: true, data: insertedRow });
@@ -33,7 +45,20 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const entries = await db.select().from(journalEntries).orderBy(desc(journalEntries.createdAt));
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized" }), 
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const currentUserId = (session.user as any).id || "user_coach_1";
+
+    const entries = await db.select()
+      .from(journalEntries)
+      .where(eq(journalEntries.userId, currentUserId))
+      .orderBy(desc(journalEntries.createdAt));
+      
     return NextResponse.json({ entries });
   } catch (error: any) {
     console.error("DB Journal Fetch Error:", error);

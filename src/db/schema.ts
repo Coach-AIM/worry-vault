@@ -26,6 +26,9 @@ export const journalEntries = sqliteTable("journal_entries", {
   
   // Multi-purpose field: Acts as 'Reframed Thought' or 'Core Strength / Savoring Anchor'
   reframedThought: text("reframed_thought").notNull(),
+  
+  // Ownership Filtering
+  userId: text("user_id").default("user_coach_1").notNull(),
 });
 
 // 2. Enhanced Positive Thoughts / Gratitude Logs
