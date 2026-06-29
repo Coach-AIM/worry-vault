@@ -56,7 +56,7 @@ export default function CBTJournal() {
     const suggestions: string[] = [];
     
     if (entryType === 'positive') {
-      suggestions.push("Proud", "Grateful", "Calm", "Hopeful", "Happy", "Content");
+      suggestions.push("Proud", "Grateful", "Calm", "Hopeful", "Happy", "Content", "Energized", "Inspired");
       return suggestions;
     }
 

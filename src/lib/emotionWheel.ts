@@ -9,15 +9,17 @@ export const EMOTION_WHEEL: Record<string, string[]> = {
   ],
   "Anxiety/Fear": [
     "Worried", "Nervous", "Panicked", "Overwhelmed", "Insecure", "Terrified", 
-    "Stressed", "Restless", "Dread", "Apprehensive"
+    "Stressed", "Restless", "Dread", "Apprehensive", "Anxious"
   ],
   "Guilt/Shame": [
     "Embarrassed", "Worthless", "Remorseful", "Humiliated", "Regretful", 
     "Apologetic", "Stupid", "Burdened"
   ],
-  "Joy/Relief": [
-    "Happy", "Proud", "Optimistic", "Calm", "Grateful", "Content", 
-    "Relieved", "Hopeful", "Excited", "Peaceful"
+  "High-Activation Joy": [
+    "Excited", "Inspired", "Elated", "Happy", "Proud", "Optimistic", "Energized"
+  ],
+  "Low-Activation Joy": [
+    "Content", "Peaceful", "Serene", "Calm", "Grateful", "Relieved", "Hopeful"
   ],
   "Surprise/Confusion": [
     "Confused", "Stunned", "Lost", "Shocked", "Uncertain", "Perplexed"

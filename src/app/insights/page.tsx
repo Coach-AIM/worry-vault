@@ -123,7 +123,11 @@ export default function InsightsPage() {
           let negSum = 0, negCount = 0;
 
           emotions.forEach((em: any) => {
-            const isPos = ["Happy", "Proud", "Optimistic", "Calm", "Grateful", "Content", "Relieved", "Hopeful", "Excited", "Peaceful"].includes(em.name);
+            const isPos = [
+              "Happy", "Proud", "Optimistic", "Calm", "Grateful", "Content", 
+              "Relieved", "Hopeful", "Excited", "Peaceful", "Energized", 
+              "Inspired", "Elated", "Serene"
+            ].includes(em.name);
             if (isPos) {
               posSum += em.weight;
               posCount++;
