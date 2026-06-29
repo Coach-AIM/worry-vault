@@ -47,6 +47,19 @@ export async function POST(req: Request) {
           },
           required: ["insights", "reframeSuggestions", "suggestedDistortions"]
       };
+    } else if (type === 'emotions') {
+      systemInstruction = `You are a calm, highly empathetic mental wellness assistant. Analyze the triggering situation and generate a JSON array containing exactly 3 to 5 distinct emotions that are most likely being felt, along with a suggested starting intensity weight (between 10 and 100). Follow Calm Tech principles. Keep it focused on typical CBT emotions (e.g., Anxiety, Overwhelm, Sadness, Anger, Frustration, Guilt, Loneliness).`;
+      responseSchema = {
+          type: Type.ARRAY,
+          items: {
+              type: Type.OBJECT,
+              properties: {
+                  name: { type: Type.STRING, description: "Name of the emotion (e.g. Anxiety)" },
+                  weight: { type: Type.INTEGER, description: "Intensity weight, 10 to 100" }
+              },
+              required: ["name", "weight"]
+          }
+      };
     }
 
     const response = await ai.models.generateContent({

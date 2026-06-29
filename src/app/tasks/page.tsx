@@ -17,6 +17,14 @@ type Task = {
 
 type ViewMode = 'all' | 'today' | 'week';
 
+function parseTimeStr(timeStr: string) {
+  if (!timeStr) return { value: '15', unit: 'mins' };
+  const num = parseInt(timeStr, 10);
+  if (isNaN(num)) return { value: '15', unit: 'mins' };
+  const unit = timeStr.toLowerCase().includes('hour') || timeStr.toLowerCase().includes('hr') ? 'hours' : 'mins';
+  return { value: String(num), unit };
+}
+
 export default function TasksTab() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +32,8 @@ export default function TasksTab() {
   
   // Add top-level task form state
   const [title, setTitle] = useState('');
-  const [estimatedTime, setEstimatedTime] = useState('');
+  const [timeValue, setTimeValue] = useState('15');
+  const [timeUnit, setTimeUnit] = useState('mins');
   const [intensity, setIntensity] = useState('Low');
   const [dueDate, setDueDate] = useState('');
   const [recurrence, setRecurrence] = useState('none');
@@ -40,7 +49,8 @@ export default function TasksTab() {
   // Add sub-step state
   const [addingSubToTaskId, setAddingSubToTaskId] = useState<number | null>(null);
   const [subTaskTitle, setSubTaskTitle] = useState('');
-  const [subTaskTime, setSubTaskTime] = useState('');
+  const [subTaskTimeValue, setSubTaskTimeValue] = useState('15');
+  const [subTaskTimeUnit, setSubTaskTimeUnit] = useState('mins');
   const [subTaskIntensity, setSubTaskIntensity] = useState('Low');
   const [subTaskDueDate, setSubTaskDueDate] = useState('');
   const [subTaskRecurrence, setSubTaskRecurrence] = useState('none');
@@ -72,7 +82,7 @@ export default function TasksTab() {
       body: JSON.stringify({ 
         tasks: [{ 
           title, 
-          estimatedTime: estimatedTime || '15 mins', 
+          estimatedTime: `${timeValue} ${timeUnit}`, 
           emotionalIntensity: intensity,
           dueDate: dueDate || null,
           recurrence,
@@ -82,7 +92,8 @@ export default function TasksTab() {
     });
     
     setTitle('');
-    setEstimatedTime('');
+    setTimeValue('15');
+    setTimeUnit('mins');
     setIntensity('Low');
     setDueDate('');
     setRecurrence('none');
@@ -98,7 +109,7 @@ export default function TasksTab() {
       body: JSON.stringify({
         tasks: [{
           title: subTaskTitle,
-          estimatedTime: subTaskTime || '10 mins',
+          estimatedTime: `${subTaskTimeValue} ${subTaskTimeUnit}`,
           emotionalIntensity: subTaskIntensity,
           dueDate: subTaskDueDate || null,
           recurrence: subTaskRecurrence,
@@ -108,7 +119,8 @@ export default function TasksTab() {
     });
     
     setSubTaskTitle('');
-    setSubTaskTime('');
+    setSubTaskTimeValue('15');
+    setSubTaskTimeUnit('mins');
     setSubTaskIntensity('Low');
     setSubTaskDueDate('');
     setSubTaskRecurrence('none');
@@ -473,9 +485,25 @@ export default function TasksTab() {
             <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.3rem', color: 'var(--foreground)' }}>New Action / Project</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="E.g., Prepare for project presentation" style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
           </div>
-          <div style={{ width: '100px' }}>
+          <div style={{ width: '150px' }}>
             <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.3rem', color: 'var(--foreground)' }}>Time span</label>
-            <input type="text" value={estimatedTime} onChange={(e) => setEstimatedTime(e.target.value)} placeholder="1 hr" style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <input 
+                type="number" 
+                min="1"
+                value={timeValue} 
+                onChange={(e) => setTimeValue(e.target.value)} 
+                style={{ width: '60px', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} 
+              />
+              <select
+                value={timeUnit}
+                onChange={(e) => setTimeUnit(e.target.value)}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', backgroundColor: '#fff' }}
+              >
+                <option value="mins">Mins</option>
+                <option value="hours">Hours</option>
+              </select>
+            </div>
           </div>
           <div style={{ width: '100px' }}>
             <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.3rem', color: 'var(--foreground)' }}>Intensity</label>
@@ -557,8 +585,29 @@ export default function TasksTab() {
                             <div style={{ flex: '2 1 200px' }}>
                               <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }} />
                             </div>
-                            <div style={{ width: '80px' }}>
-                              <input type="text" value={editEstimatedTime} onChange={(e) => setEditEstimatedTime(e.target.value)} placeholder="Time" style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }} />
+                            <div style={{ width: '140px' }}>
+                              {(() => {
+                                const parsed = parseTimeStr(editEstimatedTime);
+                                return (
+                                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                    <input 
+                                      type="number" 
+                                      min="1"
+                                      value={parsed.value} 
+                                      onChange={e => setEditEstimatedTime(`${e.target.value} ${parsed.unit}`)} 
+                                      style={{ width: '60px', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }} 
+                                    />
+                                    <select
+                                      value={parsed.unit}
+                                      onChange={e => setEditEstimatedTime(`${parsed.value} ${e.target.value}`)}
+                                      style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}
+                                    >
+                                      <option value="mins">Mins</option>
+                                      <option value="hours">Hours</option>
+                                    </select>
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div style={{ width: '90px' }}>
                               <select value={editIntensity} onChange={(e) => setEditIntensity(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}>
@@ -687,8 +736,29 @@ export default function TasksTab() {
                                     <div style={{ flex: '2 1 150px' }}>
                                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border)' }} />
                                     </div>
-                                    <div style={{ width: '80px' }}>
-                                      <input type="text" value={editEstimatedTime} onChange={(e) => setEditEstimatedTime(e.target.value)} style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border)' }} />
+                                    <div style={{ width: '140px' }}>
+                                      {(() => {
+                                        const parsed = parseTimeStr(editEstimatedTime);
+                                        return (
+                                          <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                            <input 
+                                              type="number" 
+                                              min="1"
+                                              value={parsed.value} 
+                                              onChange={e => setEditEstimatedTime(`${e.target.value} ${parsed.unit}`)} 
+                                              style={{ width: '60px', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border)' }} 
+                                            />
+                                            <select
+                                              value={parsed.unit}
+                                              onChange={e => setEditEstimatedTime(`${parsed.value} ${e.target.value}`)}
+                                              style={{ flex: 1, padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}
+                                            >
+                                              <option value="mins">Mins</option>
+                                              <option value="hours">Hours</option>
+                                            </select>
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                     <div style={{ width: '80px' }}>
                                       <select value={editIntensity} onChange={(e) => setEditIntensity(e.target.value)} style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}>
@@ -768,9 +838,25 @@ export default function TasksTab() {
                                 <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.2rem', color: '#555' }}>Sub-step title</label>
                                 <input type="text" value={subTaskTitle} onChange={e => setSubTaskTitle(e.target.value)} placeholder="E.g., Outline slide deck" style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }} />
                               </div>
-                              <div style={{ width: '80px' }}>
+                              <div style={{ width: '150px' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.2rem', color: '#555' }}>Time span</label>
-                                <input type="text" value={subTaskTime} onChange={e => setSubTaskTime(e.target.value)} placeholder="15 mins" style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }} />
+                                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                  <input 
+                                    type="number" 
+                                    min="1"
+                                    value={subTaskTimeValue} 
+                                    onChange={e => setSubTaskTimeValue(e.target.value)} 
+                                    style={{ width: '60px', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }} 
+                                  />
+                                  <select
+                                    value={subTaskTimeUnit}
+                                    onChange={e => setSubTaskTimeUnit(e.target.value)}
+                                    style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}
+                                  >
+                                    <option value="mins">Mins</option>
+                                    <option value="hours">Hours</option>
+                                  </select>
+                                </div>
                               </div>
                               <div style={{ width: '80px' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.2rem', color: '#555' }}>Intensity</label>

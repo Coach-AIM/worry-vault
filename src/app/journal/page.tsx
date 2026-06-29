@@ -92,8 +92,39 @@ export default function CBTJournal() {
     return "I can take a deep breath and look at the facts of this situation objectively, rather than letting my automatic thoughts dictate my reality.";
   };
   const [loading, setLoading] = useState(false);
+  const [loadingEmotions, setLoadingEmotions] = useState(false);
+  const [apiSuggestedEmotions, setApiSuggestedEmotions] = useState<string[]>([]);
   const [fetching, setFetching] = useState(true);
   const [crisis, setCrisis] = useState(false);
+
+  async function handleGoToStep2() {
+    if (!situation.trim()) return;
+
+    if (checkSafety(situation)) {
+      setCrisis(true);
+      return;
+    }
+
+    setLoadingEmotions(true);
+    setStep(2); // Go to step 2 immediately for a responsive UI
+
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: situation, type: 'emotions' })
+      });
+      const data = await res.json();
+      if (res.ok && data.result && Array.isArray(data.result)) {
+        const names = data.result.map((item: any) => item.name);
+        setApiSuggestedEmotions(names);
+      }
+    } catch (err) {
+      console.warn("Failed to retrieve AI emotions:", err);
+    } finally {
+      setLoadingEmotions(false);
+    }
+  }
 
   async function fetchHistory() {
     setFetching(true);
@@ -272,7 +303,9 @@ export default function CBTJournal() {
               rows={4}
               style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical', fontSize: '1.05rem', backgroundColor: '#fafafa', marginBottom: '1.5rem' }}
             />
-            <button type="button" onClick={() => setStep(2)} disabled={!situation.trim()} style={{ width: '100%' }}>Continue</button>
+            <button type="button" onClick={handleGoToStep2} disabled={!situation.trim() || loadingEmotions} style={{ width: '100%' }}>
+              {loadingEmotions ? 'Analyzing Trigger...' : 'Continue'}
+            </button>
           </div>
         )}
 
@@ -282,35 +315,40 @@ export default function CBTJournal() {
             <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>Click a general emotion to reveal refined feelings. Select all that apply and weight their intensity.</p>
             
             {/* Suggested Emotions Section */}
-            {suggestedEmotions.length > 0 && (
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0f4f8', borderRadius: 'var(--radius)', border: '1px solid #d0e2ff' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#004fe6', display: 'block', marginBottom: '0.5rem' }}>Suggested emotions based on your situation:</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {suggestedEmotions.map(emotion => {
-                    const isSelected = selectedEmotions.some(e => e.name === emotion);
-                    return (
-                      <button
-                        key={emotion}
-                        type="button"
-                        onClick={() => toggleEmotion(emotion)}
-                        style={{
-                          padding: '0.3rem 0.7rem',
-                          borderRadius: '12px',
-                          border: isSelected ? '1px solid var(--soft-blue)' : '1px solid #bcd0f7',
-                          backgroundColor: isSelected ? '#e6f0ff' : '#fff',
-                          color: isSelected ? '#004fe6' : '#555',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {isSelected ? '✓ ' : '+ '}{emotion}
-                      </button>
-                    );
-                  })}
+            {(() => {
+              const suggestedList = apiSuggestedEmotions.length > 0 ? apiSuggestedEmotions : suggestedEmotions;
+              return suggestedList.length > 0 && (
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f0f4f8', borderRadius: 'var(--radius)', border: '1px solid #d0e2ff' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#004fe6', display: 'block', marginBottom: '0.5rem' }}>Suggested emotions based on your situation:</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {suggestedList.map(emotion => {
+                      const isSelected = selectedEmotions.some(e => e.name === emotion);
+                      return (
+                        <button
+                          key={emotion}
+                          type="button"
+                          onClick={() => toggleEmotion(emotion)}
+                          style={{
+                            padding: '0.4rem 0.8rem',
+                            borderRadius: '20px',
+                            border: isSelected ? '1px solid var(--soft-blue)' : '1px solid #cce0ff',
+                            backgroundColor: isSelected ? 'var(--soft-blue)' : '#fff',
+                            color: isSelected ? '#fff' : '#004fe6',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            margin: 0
+                          }}
+                        >
+                          {emotion} {isSelected ? '✓' : '+'}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             
             {/* Primary Categories */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -486,17 +524,18 @@ export default function CBTJournal() {
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                          <h4 style={{ margin: 0, color: isSelected ? '#004fe6' : '#222', fontSize: '1.05rem' }}>{distortion.name}</h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {/* Checkbox indicator */}
+                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: isSelected ? 'none' : '2px solid #ccc', backgroundColor: isSelected ? 'var(--soft-blue)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {isSelected && <span style={{ color: '#fff', fontSize: '0.75rem' }}>✓</span>}
+                            </div>
+                            <h4 style={{ margin: 0, color: isSelected ? '#004fe6' : '#222', fontSize: '1.02rem', fontWeight: 600 }}>{distortion.name}</h4>
+                          </div>
                           {isSuggested && (
                             <span style={{ backgroundColor: '#ffc107', color: '#856404', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '10px', fontWeight: 600 }}>Suggested</span>
                           )}
                         </div>
                         <p style={{ margin: 0, fontSize: '0.9rem', color: '#666', lineHeight: '1.4' }}>{distortion.description}</p>
-                        
-                        {/* Checkbox indicator */}
-                        <div style={{ position: 'absolute', bottom: '1rem', right: '1rem', width: '20px', height: '20px', borderRadius: '50%', border: isSelected ? 'none' : '2px solid #ccc', backgroundColor: isSelected ? 'var(--soft-blue)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {isSelected && <span style={{ color: '#fff', fontSize: '0.8rem' }}>✓</span>}
-                        </div>
                       </div>
                     );
                   })}

@@ -5,6 +5,14 @@ import { checkSafety } from '@/lib/safetyIntercept';
 import { FALLBACK_DICTIONARY, FALLBACK_CATEGORIES } from '@/lib/fallbackDictionary';
 import Link from 'next/link';
 
+function parseTimeStr(timeStr: string) {
+  if (!timeStr) return { value: '15', unit: 'mins' };
+  const num = parseInt(timeStr, 10);
+  if (isNaN(num)) return { value: '15', unit: 'mins' };
+  const unit = timeStr.toLowerCase().includes('hour') || timeStr.toLowerCase().includes('hr') ? 'hours' : 'mins';
+  return { value: String(num), unit };
+}
+
 type PendingTask = {
   title: string;
   estimatedTime: string;
@@ -304,14 +312,30 @@ export default function VaultsPage() {
                         </div>
                         
                         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                          <div style={{ flex: 1, minWidth: '120px' }}>
+                          <div style={{ flex: 1, minWidth: '150px' }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem', color: '#555' }}>Approx Time</label>
-                            <input 
-                              type="text" 
-                              value={task.estimatedTime} 
-                              onChange={e => updatePendingTask(index, 'estimatedTime', e.target.value)} 
-                              style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}
-                            />
+                            {(() => {
+                              const parsed = parseTimeStr(task.estimatedTime);
+                              return (
+                                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                  <input 
+                                    type="number" 
+                                    min="1"
+                                    value={parsed.value} 
+                                    onChange={e => updatePendingTask(index, 'estimatedTime', `${e.target.value} ${parsed.unit}`)} 
+                                    style={{ width: '60px', padding: '0.6rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}
+                                  />
+                                  <select
+                                    value={parsed.unit}
+                                    onChange={e => updatePendingTask(index, 'estimatedTime', `${parsed.value} ${e.target.value}`)}
+                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: '#fff' }}
+                                  >
+                                    <option value="mins">Minutes</option>
+                                    <option value="hours">Hours</option>
+                                  </select>
+                                </div>
+                              );
+                            })()}
                           </div>
                           
                           <div style={{ flex: 1, minWidth: '120px' }}>
