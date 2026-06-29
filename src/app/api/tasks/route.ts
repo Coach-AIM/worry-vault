@@ -17,6 +17,7 @@ export async function POST(req: Request) {
       emotionalIntensity: t.emotionalIntensity,
       dueDate: t.dueDate || null,
       parentId: t.parentId || null,
+      recurrence: t.recurrence || 'none',
     }));
 
     await db.insert(tasks).values(insertData);

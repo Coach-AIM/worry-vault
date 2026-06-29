@@ -17,7 +17,8 @@ export const tasks = sqliteTable('tasks', {
   dueDate: text('due_date'), // Formatted Date string
   completed: integer('completed').default(0).notNull(), // 0 = false, 1 = true
   sortOrder: integer('sort_order').default(0).notNull(),
-  parentId: integer('parent_id')
+  parentId: integer('parent_id'),
+  recurrence: text('recurrence').default('none').notNull() // 'none', 'daily', 'weekly'
 });
 
 export const therapistContact = sqliteTable('therapist_contact', {

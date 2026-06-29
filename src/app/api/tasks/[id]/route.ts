@@ -12,7 +12,36 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.estimatedTime !== undefined) updateData.estimatedTime = body.estimatedTime;
     if (body.emotionalIntensity !== undefined) updateData.emotionalIntensity = body.emotionalIntensity;
     if (body.dueDate !== undefined) updateData.dueDate = body.dueDate || null;
-    if (body.completed !== undefined) updateData.completed = body.completed;
+    if (body.recurrence !== undefined) updateData.recurrence = body.recurrence;
+    
+    if (body.completed !== undefined) {
+      updateData.completed = body.completed;
+      
+      // If task is completed and has recurrence, advance due date instead of checking off permanently
+      if (body.completed === 1) {
+        const records = await db.select().from(tasks).where(eq(tasks.id, parseInt(id, 10))).limit(1);
+        if (records.length > 0 && records[0].recurrence && records[0].recurrence !== 'none') {
+          const taskObj = records[0];
+          const currentDueDate = taskObj.dueDate ? new Date(taskObj.dueDate) : new Date();
+          
+          // Avoid getting stuck in the past: if due date was long ago, advance from today
+          const baseDate = currentDueDate < new Date() ? new Date() : currentDueDate;
+          const nextDueDate = new Date(baseDate);
+          
+          if (taskObj.recurrence === 'daily') {
+            nextDueDate.setDate(nextDueDate.getDate() + 1);
+          } else if (taskObj.recurrence === 'weekly') {
+            nextDueDate.setDate(nextDueDate.getDate() + 7);
+          }
+          
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const nextDueDateStr = `${nextDueDate.getFullYear()}-${pad(nextDueDate.getMonth() + 1)}-${pad(nextDueDate.getDate())}T${pad(nextDueDate.getHours())}:${pad(nextDueDate.getMinutes())}`;
+          
+          updateData.completed = 0;
+          updateData.dueDate = nextDueDateStr;
+        }
+      }
+    }
 
     await db.update(tasks).set(updateData).where(eq(tasks.id, parseInt(id, 10)));
     
