@@ -6,26 +6,17 @@ import { desc } from 'drizzle-orm';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { 
-      entryType, 
-      situation, 
-      emotionsJson, 
-      automaticThought, 
-      distortionsJson, 
-      reframedThought 
-    } = body;
-    
-    if (!situation || !emotionsJson || !reframedThought) {
+    if (!body.situation || !body.emotionsJson || !body.reframedThought) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     await db.insert(journalEntries).values({
-      entryType: entryType || 'negative',
-      situation,
-      emotionsJson: typeof emotionsJson === 'string' ? emotionsJson : JSON.stringify(emotionsJson),
-      automaticThought: automaticThought || null,
-      distortionsJson: distortionsJson ? (typeof distortionsJson === 'string' ? distortionsJson : JSON.stringify(distortionsJson)) : null,
-      reframedThought
+      entryType: body.entryType || 'negative',
+      situation: body.situation,
+      emotionsJson: typeof body.emotionsJson === 'string' ? body.emotionsJson : JSON.stringify(body.emotionsJson),
+      automaticThought: body.automaticThought || null,
+      distortionsJson: typeof body.distortionsJson === 'string' ? body.distortionsJson : JSON.stringify(body.distortionsJson || []),
+      reframedThought: body.reframedThought
     });
     
     return NextResponse.json({ success: true });
