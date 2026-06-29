@@ -128,12 +128,16 @@ export default function CBTJournal() {
         body: JSON.stringify({ prompt: situation, type: 'emotions' })
       });
       const data = await res.json();
-      if (res.ok && data.result && Array.isArray(data.result)) {
+      if (!res.ok) {
+        throw new Error(data.error || 'Gemini API Error');
+      }
+      if (data.result && Array.isArray(data.result)) {
         const names = data.result.map((item: any) => item.name);
         setApiSuggestedEmotions(names);
       }
-    } catch (err) {
-      console.warn("Failed to retrieve AI emotions:", err);
+    } catch (err: any) {
+      console.error("Failed to retrieve AI emotions:", err);
+      alert(`AI Emotion Analysis Failed: ${err.message || 'Gemini API Error. Check your environment variables.'}`);
     } finally {
       setLoadingEmotions(false);
     }
@@ -260,15 +264,38 @@ export default function CBTJournal() {
       });
       
       const data = await res.json();
-      if (res.ok && data.result) {
-        setInsightsData(data.result);
-        const aiDistortions = data.result.suggestedDistortions || [];
+      if (!res.ok) {
+        throw new Error(data.error || 'Gemini API Error');
+      }
+      if (data.result) {
+        const aiDistortions = (data.result.distortions || []).map((name: string) => {
+          const lower = name.toLowerCase();
+          if (lower.includes("all-or-nothing") || lower.includes("all or nothing")) return "all-or-nothing";
+          if (lower.includes("catastrophiz")) return "catastrophizing";
+          if (lower.includes("should")) return "should-statements";
+          if (lower.includes("mind")) return "mind-reading";
+          if (lower.includes("emotional")) return "emotional-reasoning";
+          if (lower.includes("overgeneral")) return "overgeneralization";
+          return name;
+        });
+
+        setInsightsData({
+          insights: "Analysis complete. Review the suggested cognitive distortions and compassionate reframes.",
+          reframeSuggestions: data.result.reframed_thought ? [data.result.reframed_thought] : [],
+          suggestedDistortions: aiDistortions
+        });
+
+        if (data.result.reframed_thought) {
+          setReframe(data.result.reframed_thought);
+        }
+
         const heuristicDistortions = localDistortions.map(ld => ld.id);
         setSelectedDistortions(Array.from(new Set([...heuristicDistortions, ...aiDistortions])));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Insight Error", err);
-      setSelectedDistortions(localDistortions.map(ld => ld.id));
+      alert(`AI CBT Analysis Failed: ${err.message || 'Gemini API Error. Verify configuration.'}`);
+      setStep(3); // Direct user back to retry
     } finally {
       setLoading(false);
     }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { checkSafety } from '@/lib/safetyIntercept';
-import { FALLBACK_DICTIONARY, FALLBACK_CATEGORIES } from '@/lib/fallbackDictionary';
 import Link from 'next/link';
 
 function parseTimeStr(timeStr: string) {
@@ -100,14 +99,9 @@ export default function VaultsPage() {
       resolvedTasks = data.result;
 
     } catch (err: any) {
-      // 3. Trigger Fallback because API failed
-      const randomCategory = FALLBACK_CATEGORIES[Math.floor(Math.random() * FALLBACK_CATEGORIES.length)];
-      const fallbackStrings = FALLBACK_DICTIONARY[randomCategory];
-      resolvedTasks = fallbackStrings.map(t => ({
-        title: t,
-        estimatedTime: '10 mins',
-        emotionalIntensity: 'Low'
-      }));
+      console.error(err);
+      alert(`AI Task Generation Failed: ${err.message || 'Gemini API Error. Ensure GEMINI_API_KEY is configured.'}`);
+      resolvedTasks = [];
     } finally {
       setLoading(false);
       if (resolvedTasks && resolvedTasks.length > 0) {

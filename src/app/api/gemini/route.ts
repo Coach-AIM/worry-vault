@@ -50,24 +50,35 @@ export async function POST(req: Request) {
           }
       };
     } else if (type === 'journal') {
-      systemInstruction = `You are a gentle CBT (Cognitive Behavioral Therapy) assistant. Analyze the entry for cognitive distortions. Return an object with 'insights' containing a supportive brief string identifying the pattern. Also return a 'reframeSuggestions' array containing 2-3 objective, compassionate reframes written from a third-party perspective. Finally, return an array of strings in 'suggestedDistortions' matching any of these exact categories if they apply: "all-or-nothing", "catastrophizing", "should-statements", "mind-reading", "emotional-reasoning", "overgeneralization".`;
+      systemInstruction = `Analyze the following user situation and thoughts for Cognitive Behavioral Therapy (CBT). You must respond with a raw JSON object containing these exact keys: "emotions", "distortions", and "reframed_thought".`;
       responseSchema = {
           type: Type.OBJECT,
           properties: {
-              insights: { type: Type.STRING, description: "The gentle analysis" },
-              reframeSuggestions: { 
+              emotions: { 
+                type: Type.OBJECT, 
+                description: "Key-value pairs of emotions and starting intensity weights e.g. {'Anxious': 90, 'Frustrated': 75}"
+              },
+              distortions: { 
                 type: Type.ARRAY, 
                 items: { type: Type.STRING },
-                description: "2-3 objective, third-party perspective reframes" 
+                description: "Cognitive distortion names, e.g. ['Catastrophizing', 'Mind Reading']"
               },
-              suggestedDistortions: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: "List of cognitive distortions identified, e.g. ['all-or-nothing', 'catastrophizing']"
+              reframed_thought: {
+                type: Type.STRING,
+                description: "Objective, compassionate reframed thought"
               }
           },
-          required: ["insights", "reframeSuggestions", "suggestedDistortions"]
+          required: ["emotions", "distortions", "reframed_thought"]
       };
+
+      prompt = `Analyze the following user situation and thoughts for Cognitive Behavioral Therapy (CBT).
+You must respond with a raw JSON object containing these exact keys:
+{
+  "emotions": { [key: string]: number }, // e.g., {"Anxious": 90, "Frustrated": 75}
+  "distortions": string[], // e.g., ["Catastrophizing", "Mind Reading"]
+  "reframed_thought": string
+}
+User Input: ${prompt}`;
     } else if (type === 'emotions') {
       systemInstruction = `You are a calm, highly empathetic mental wellness assistant. Analyze the triggering situation and generate a JSON array containing exactly 3 to 5 distinct emotions that are most likely being felt, along with a suggested starting intensity weight (between 10 and 100). Follow Calm Tech principles. Keep it focused on typical CBT emotions (e.g., Anxiety, Overwhelm, Sadness, Anger, Frustration, Guilt, Loneliness).`;
       responseSchema = {
