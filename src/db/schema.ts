@@ -46,6 +46,7 @@ export const tasks = sqliteTable("tasks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   title: text("title").notNull(),
+  description: text("description"),
   estimatedTime: text("estimated_time"),
   emotionalIntensity: text("emotional_intensity"),
   dueDate: text("due_date"),

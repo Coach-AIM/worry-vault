@@ -13,6 +13,7 @@ export async function POST(req: Request) {
 
     const insertData = tasksToInsert.map((t: any) => ({
       title: t.title,
+      description: t.description || null,
       estimatedTime: t.estimatedTime,
       emotionalIntensity: t.emotionalIntensity,
       dueDate: t.dueDate || null,

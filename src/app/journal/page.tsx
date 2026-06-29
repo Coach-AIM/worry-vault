@@ -47,6 +47,8 @@ export default function CBTJournal() {
   const [insightsData, setInsightsData] = useState<{ insights: string, reframeSuggestions?: string[], suggestedDistortions?: string[] } | null>(null);
   
   const [history, setHistory] = useState<Entry[]>([]);
+  const [positives, setPositives] = useState<any[]>([]);
+  const [counterEvidence, setCounterEvidence] = useState<string | null>(null);
 
   // Default suggested emotions helper
   const getSuggestedEmotions = (situationText: string) => {
@@ -150,9 +152,51 @@ export default function CBTJournal() {
     }
   }
 
+  async function fetchPositives() {
+    try {
+      const res = await fetch('/api/positives');
+      const data = await res.json();
+      if (data.glimmers) setPositives(data.glimmers);
+    } catch (err) {
+      console.error("Failed to fetch positives:", err);
+    }
+  }
+
   useEffect(() => {
     fetchHistory();
+    fetchPositives();
   }, []);
+
+  // Dynamic Counter-Evidence Hook
+  useEffect(() => {
+    if (step === 4 || step === 5) {
+      const options: string[] = [];
+      
+      // From historical positive journal entries
+      history.forEach(item => {
+        if (item.entryType === 'positive' && item.reframedThought) {
+          options.push(`Victory: "${item.reframedThought}" (from ${new Date(item.createdAt).toLocaleDateString()})`);
+        }
+      });
+
+      // From positive thoughts vault
+      positives.forEach(item => {
+        const matchesCat = ["Strength Validation", "Exception to Problem"].includes(item.category);
+        if (matchesCat && item.thoughtText) {
+          options.push(`${item.category}: "${item.thoughtText}" (from ${new Date(item.createdAt).toLocaleDateString()})`);
+        }
+      });
+
+      if (options.length > 0) {
+        const randomIndex = Math.floor(Math.random() * options.length);
+        setCounterEvidence(options[randomIndex]);
+      } else {
+        setCounterEvidence(null);
+      }
+    } else {
+      setCounterEvidence(null);
+    }
+  }, [step, history, positives]);
 
   // Delayed Heuristic Distortion Highlighting logic for step 3
   useEffect(() => {
@@ -629,6 +673,26 @@ export default function CBTJournal() {
                   })}
                 </div>
 
+                {counterEvidence && (
+                  <div style={{ 
+                    margin: '1.5rem 0', 
+                    padding: '1.25rem', 
+                    backgroundColor: '#fffdf5', 
+                    border: '1px solid #fde68a', 
+                    borderRadius: 'var(--radius)', 
+                    borderLeft: '5px solid #e9c46a',
+                    animation: 'fadeIn 0.3s ease'
+                  }}>
+                    <strong style={{ display: 'block', fontSize: '0.85rem', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+                      ⚖️ Objective Reality-Testing Counter-Evidence
+                    </strong>
+                    <p style={{ margin: 0, fontSize: '0.95rem', color: '#78350f', fontStyle: 'italic', lineHeight: '1.4' }}>
+                      Remember this historical strength or exception to balance your thoughts: <br/>
+                      <strong>{counterEvidence}</strong>
+                    </p>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button type="button" onClick={() => setStep(3)} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
                   <button type="button" onClick={() => setStep(5)} style={{ flex: 2 }}>Continue</button>
@@ -765,6 +829,26 @@ export default function CBTJournal() {
               </div>
             )}
             
+            {counterEvidence && (
+              <div style={{ 
+                margin: '1.5rem 0', 
+                padding: '1.25rem', 
+                backgroundColor: '#fffdf5', 
+                border: '1px solid #fde68a', 
+                borderRadius: 'var(--radius)', 
+                borderLeft: '5px solid #e9c46a',
+                animation: 'fadeIn 0.3s ease'
+              }}>
+                <strong style={{ display: 'block', fontSize: '0.85rem', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+                  ⚖️ Objective Reality-Testing Counter-Evidence
+                </strong>
+                <p style={{ margin: 0, fontSize: '0.95rem', color: '#78350f', fontStyle: 'italic', lineHeight: '1.4' }}>
+                  Remember this historical strength or exception to balance your thoughts: <br/>
+                  <strong>{counterEvidence}</strong>
+                </p>
+              </div>
+            )}
+
             <textarea 
               value={reframe}
               onChange={(e) => setReframe(e.target.value)}
@@ -885,6 +969,42 @@ export default function CBTJournal() {
                         {item.reframedThought}
                       </p>
                     </div>
+
+                    {/* Stable Counter-Evidence Box for negative history entries */}
+                    {!isPositive && (() => {
+                      const positivePool: string[] = [];
+                      history.forEach(h => {
+                        if (h.entryType === 'positive' && h.reframedThought) {
+                          positivePool.push(`Victory: "${h.reframedThought}"`);
+                        }
+                      });
+                      positives.forEach(p => {
+                        if (["Strength Validation", "Exception to Problem"].includes(p.category) && p.thoughtText) {
+                          positivePool.push(`${p.category}: "${p.thoughtText}"`);
+                        }
+                      });
+                      
+                      const poolIndex = positivePool.length > 0 ? (item.id % positivePool.length) : -1;
+                      const cardCounterEvidence = poolIndex !== -1 ? positivePool[poolIndex] : null;
+
+                      return cardCounterEvidence && (
+                        <div style={{ 
+                          marginTop: '0.5rem', 
+                          padding: '0.75rem 1rem', 
+                          backgroundColor: '#fffdf5', 
+                          border: '1px solid #fde68a', 
+                          borderRadius: '6px', 
+                          borderLeft: '3px solid #e9c46a'
+                        }}>
+                          <span style={{ display: 'block', fontSize: '0.72rem', color: '#b45309', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.2rem' }}>
+                            ⚖️ Archived Counter-Evidence
+                          </span>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#78350f', fontStyle: 'italic' }}>
+                            "{cardCounterEvidence}"
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );

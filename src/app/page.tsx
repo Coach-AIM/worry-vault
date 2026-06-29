@@ -17,11 +17,83 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [isNight, setIsNight] = useState(false);
 
-  // Form states
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
+  const [backingUp, setBackingUp] = useState(false);
+
+  async function handleDownloadBackup() {
+    const password = prompt("Set a local extraction password to encrypt your backup file:");
+    if (!password) {
+      alert("Password is required to encrypt backup.");
+      return;
+    }
+    
+    setBackingUp(true);
+    try {
+      const res = await fetch('/api/backup');
+      if (!res.ok) throw new Error("Failed to fetch backup data");
+      const data = await res.json();
+      
+      const encoder = new TextEncoder();
+      const dataString = JSON.stringify(data);
+      const dataBytes = encoder.encode(dataString);
+      
+      const salt = window.crypto.getRandomValues(new Uint8Array(16));
+      const passwordKey = await window.crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+      );
+      
+      const key = await window.crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: salt,
+          iterations: 100000,
+          hash: "SHA-256"
+        },
+        passwordKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+      );
+      
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        key,
+        dataBytes
+      );
+      
+      const backupPackage = {
+        salt: Array.from(salt),
+        iv: Array.from(iv),
+        ciphertext: Array.from(new Uint8Array(encrypted)),
+        hint: "momentum encrypted backup"
+      };
+
+      const blob = new Blob([JSON.stringify(backupPackage, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'worry_vault_backup.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      alert("Encrypted backup downloaded successfully!");
+    } catch (err) {
+      console.error("Backup failed:", err);
+      alert("Failed to create encrypted backup.");
+    } finally {
+      setBackingUp(false);
+    }
+  }
 
   async function fetchContact() {
     setLoading(true);
@@ -284,11 +356,37 @@ export default function Home() {
 
         {/* Therapy Integration */}
         <section style={{ padding: '2rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <h3 style={{ fontSize: '1.2rem', color: 'var(--foreground)', marginBottom: '0.5rem' }}>Therapy Integration</h3>
+          <h3 style={{ fontSize: '1.25rem', color: 'var(--foreground)', marginBottom: '0.5rem', fontWeight: 600 }}>Therapy Integration</h3>
           <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '1.5rem', marginInline: 'auto', maxWidth: '400px' }}>
             Export your completed grounding steps and CBT insights to review in your next session.
           </p>
           <ExportPdfButton />
+        </section>
+
+        {/* Encrypted Vault Backup Utility */}
+        <section style={{ padding: '2rem', backgroundColor: '#fffdf5', borderRadius: 'var(--radius)', border: '1px solid #fde68a', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '1.25rem', color: '#78350f', marginBottom: '0.5rem', fontWeight: 600 }}>🔒 Secure Vault Backup</h3>
+          <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '1.5rem', marginInline: 'auto', maxWidth: '400px' }}>
+            Download an encrypted local backup file of your entire wellness data (thought records, victories, tasks).
+          </p>
+          <button 
+            type="button" 
+            onClick={handleDownloadBackup} 
+            disabled={backingUp}
+            style={{ 
+              width: '100%', 
+              fontSize: '1.05rem', 
+              padding: '0.875rem', 
+              backgroundColor: '#e9c46a', 
+              color: '#264653', 
+              fontWeight: 600,
+              border: 'none',
+              borderRadius: 'var(--radius)',
+              cursor: 'pointer'
+            }}
+          >
+            {backingUp ? 'Creating Encrypted Backup...' : '🔐 Create Encrypted Backup'}
+          </button>
         </section>
       </div>
       

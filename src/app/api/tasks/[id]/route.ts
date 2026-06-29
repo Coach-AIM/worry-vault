@@ -9,6 +9,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const updateData: any = {};
     if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description || null;
     if (body.estimatedTime !== undefined) updateData.estimatedTime = body.estimatedTime;
     if (body.emotionalIntensity !== undefined) updateData.emotionalIntensity = body.emotionalIntensity;
     if (body.dueDate !== undefined) updateData.dueDate = body.dueDate || null;
