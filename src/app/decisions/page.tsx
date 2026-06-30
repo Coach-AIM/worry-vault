@@ -179,44 +179,44 @@ export default function DecisionsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 pb-20">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
+    <div className="max-w-4xl mx-auto py-8 px-4 pb-24">
+      {/* Header & Stepper */}
+      <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-5">
         <div>
-          <Link href="/" className="text-sm text-gray-500 hover:text-emerald-600 transition-colors">&larr; Back to Dashboard</Link>
+          <Link href="/" className="text-sm text-gray-500 hover:text-blue-600 transition-colors font-medium">&larr; Back to Dashboard</Link>
           <h1 className="text-3xl font-serif font-bold text-gray-800 mt-2">🤔 Decision Assistant</h1>
           <p className="text-gray-500 text-sm mt-1">Challenge biases and make structured, balanced choices.</p>
         </div>
         {/* Step Indicator */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center min-w-[120px]">
-          <span className="text-xs uppercase tracking-wider text-emerald-700 font-bold block">Progress</span>
-          <span className="text-lg font-bold text-emerald-800">Step {step} of 4</span>
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-2.5 text-center min-w-[120px] transition-all duration-300 shadow-sm">
+          <span className="text-xs uppercase tracking-wider text-blue-700 font-bold block mb-0.5">Progress</span>
+          <span className="text-lg font-extrabold text-blue-900">Step {step} of 4</span>
         </div>
       </div>
 
       {/* STEP 1: SETUP */}
       {step === 1 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6 animate-fade-in">
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-6 animate-fade-in">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">1. What decision are you facing?</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-3">1. What decision are you facing?</h2>
             <input
               type="text"
-              className="w-full border border-gray-300 rounded-lg p-3 text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full max-w-xl px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
               placeholder="e.g. Should I purchase an E-bike for commuting?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">2. Define your options</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-3">2. Define your options</h2>
               <div className="space-y-3">
                 {options.map((opt, i) => (
-                  <div key={i} className="flex gap-2 items-center">
+                  <div key={i} className="flex gap-2 items-center max-w-xl">
                     <input
                       type="text"
-                      className="flex-1 border border-gray-300 rounded-lg p-2.5"
+                      className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       value={opt.label}
                       onChange={(e) => handleOptionLabelChange(i, e.target.value)}
                       placeholder={`Option ${String.fromCharCode(65 + i)}`}
@@ -224,7 +224,7 @@ export default function DecisionsPage() {
                     {options.length > 2 && (
                       <button
                         onClick={() => handleRemoveOption(i)}
-                        className="p-2.5 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        className="p-3.5 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
                       >
                         ✕
                       </button>
@@ -233,7 +233,7 @@ export default function DecisionsPage() {
                 ))}
                 <button
                   onClick={handleAddOption}
-                  className="w-full text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-dashed border-emerald-300 rounded-lg p-2.5 font-semibold transition-colors mt-2"
+                  className="w-full max-w-xl text-blue-600 bg-blue-50 hover:bg-blue-100 border border-dashed border-blue-300 rounded-xl py-3 font-semibold transition-colors mt-2"
                 >
                   ＋ Add Option
                 </button>
@@ -241,10 +241,10 @@ export default function DecisionsPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">3. Timeframe for Follow-up</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-3">3. Timeframe for Follow-up</h2>
               <p className="text-gray-500 text-sm mb-3">When should Momentum check back on the outcome of this decision?</p>
               <select
-                className="w-full border border-gray-300 rounded-lg p-2.5 bg-white"
+                className="w-full max-w-xl border border-gray-300 rounded-xl px-4 py-3 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={timeframeDays}
                 onChange={(e) => setTimeframeDays(parseInt(e.target.value))}
               >
@@ -257,7 +257,7 @@ export default function DecisionsPage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-6 border-t border-gray-100">
             <button
               onClick={() => {
                 if (!title.trim()) {
@@ -266,7 +266,7 @@ export default function DecisionsPage() {
                 }
                 setStep(2);
               }}
-              className="bg-emerald-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
+              className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-sm"
             >
               Continue &rarr;
             </button>
@@ -278,100 +278,130 @@ export default function DecisionsPage() {
       {step === 2 && (
         <div className="space-y-6">
           {options.map((opt, i) => (
-            <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-5">
-              <h3 className="text-lg font-bold text-emerald-700 border-b border-emerald-100 pb-2">
+            <div key={i} className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-6">
+              <h3 className="text-xl font-bold text-blue-700 border-b border-blue-100 pb-3">
                 Context Check: {opt.label || `Option ${String.fromCharCode(65 + i)}`}
               </h3>
 
               {/* 6 Months Feeling Prompt */}
               <div>
-                <p className="font-semibold text-gray-800 mb-2">How will I likely feel about this choice in 6 months?</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {(["Proud", "Indifferent", "Regretful", "Unknown"] as const).map((feeling) => (
-                    <button
-                      key={feeling}
-                      onClick={() => handleOptionContextChange(i, "predictedFeeling", feeling)}
-                      className={`p-2.5 rounded-lg border text-sm font-semibold transition-all ${
-                        opt.predictedFeeling === feeling
-                          ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                          : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      {feeling}
-                    </button>
-                  ))}
+                <p className="font-semibold text-gray-800 mb-3 text-base">How will I likely feel about this choice in 6 months?</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(["Proud", "Indifferent", "Regretful", "Unknown"] as const).map((feeling) => {
+                    const isSelected = opt.predictedFeeling === feeling;
+                    return (
+                      <button
+                        key={feeling}
+                        onClick={() => handleOptionContextChange(i, "predictedFeeling", feeling)}
+                        className={`p-3.5 rounded-xl border text-sm font-semibold transition-all duration-200 ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01] shadow-sm"
+                            : "border-gray-200 bg-gray-50/50 text-gray-700 hover:bg-gray-100/70"
+                        }`}
+                      >
+                        {feeling}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Values Alignment */}
               <div>
-                <p className="font-semibold text-gray-800 mb-2">Does this option align with my core values?</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["Yes", "No", "Unsure"] as const).map((align) => (
-                    <button
-                      key={align}
-                      onClick={() => handleOptionContextChange(i, "alignsValues", align)}
-                      className={`p-2.5 rounded-lg border text-sm font-semibold transition-all ${
-                        opt.alignsValues === align
-                          ? "bg-blue-600 border-blue-600 text-white shadow-sm"
-                          : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      {align}
-                    </button>
-                  ))}
+                <p className="font-semibold text-gray-800 mb-3 text-base">Does this option align with my core values?</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {(["Yes", "No", "Unsure"] as const).map((align) => {
+                    const isSelected = opt.alignsValues === align;
+                    return (
+                      <button
+                        key={align}
+                        onClick={() => handleOptionContextChange(i, "alignsValues", align)}
+                        className={`p-3.5 rounded-xl border text-sm font-semibold transition-all duration-200 ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01] shadow-sm"
+                            : "border-gray-200 bg-gray-50/50 text-gray-700 hover:bg-gray-100/70"
+                        }`}
+                      >
+                        {align}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* External Pressure & Assumptions toggles */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-200">
                   <div>
                     <span className="font-semibold text-gray-800 block text-sm">Is there external pressure?</span>
                     <span className="text-xs text-gray-500">Feeling forced by others</span>
                   </div>
-                  <button
-                    onClick={() => handleOptionContextChange(i, "externalPressure", !opt.externalPressure)}
-                    className={`py-1.5 px-4 rounded text-xs font-bold transition-all ${
-                      opt.externalPressure
-                        ? "bg-amber-600 text-white"
-                        : "bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    {opt.externalPressure ? "YES" : "NO"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOptionContextChange(i, "externalPressure", true)}
+                      className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
+                        opt.externalPressure
+                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
+                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      YES
+                    </button>
+                    <button
+                      onClick={() => handleOptionContextChange(i, "externalPressure", false)}
+                      className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
+                        !opt.externalPressure
+                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
+                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      NO
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-200">
                   <div>
                     <span className="font-semibold text-gray-800 block text-sm">Am I making assumptions?</span>
                     <span className="text-xs text-gray-500">Deciding without verified facts</span>
                   </div>
-                  <button
-                    onClick={() => handleOptionContextChange(i, "makingAssumptions", !opt.makingAssumptions)}
-                    className={`py-1.5 px-4 rounded text-xs font-bold transition-all ${
-                      opt.makingAssumptions
-                        ? "bg-amber-600 text-white"
-                        : "bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    {opt.makingAssumptions ? "YES" : "NO"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOptionContextChange(i, "makingAssumptions", true)}
+                      className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
+                        opt.makingAssumptions
+                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
+                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      YES
+                    </button>
+                    <button
+                      onClick={() => handleOptionContextChange(i, "makingAssumptions", false)}
+                      className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
+                        !opt.makingAssumptions
+                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
+                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      NO
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
 
-          <div className="flex justify-between pt-4">
+          <div className="flex justify-between pt-6 border-t border-gray-200">
             <button
               onClick={() => setStep(1)}
-              className="bg-gray-100 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-250 transition-colors"
+              className="bg-gray-100 text-gray-700 font-bold py-3 px-8 rounded-xl hover:bg-gray-200 transition-colors"
             >
               &larr; Back
             </button>
             <button
               onClick={() => setStep(3)}
-              className="bg-emerald-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
+              className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-sm"
             >
               Continue &rarr;
             </button>
@@ -383,26 +413,26 @@ export default function DecisionsPage() {
       {step === 3 && (
         <div className="space-y-6">
           {options.map((opt, i) => (
-            <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-emerald-700 border-b border-emerald-100 pb-2">
+            <div key={i} className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-4">
+              <h3 className="text-xl font-bold text-blue-700 border-b border-blue-100 pb-3">
                 Pros & Cons: {opt.label}
               </h3>
 
               {/* Added Items List */}
               {opt.prosCons.length > 0 ? (
-                <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                   {opt.prosCons.map((pc, pcIdx) => (
                     <div
                       key={pcIdx}
-                      className={`flex flex-col md:flex-row md:items-center justify-between p-3 rounded-lg border text-sm gap-2 ${
+                      className={`flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border text-sm gap-2 ${
                         pc.type === "pro"
                           ? "bg-emerald-50/50 border-emerald-100"
                           : "bg-red-50/50 border-red-100"
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <span
-                          className={`text-xs font-bold uppercase py-0.5 px-2 rounded ${
+                          className={`text-xs font-bold uppercase py-0.5 px-2.5 rounded ${
                             pc.type === "pro"
                               ? "bg-emerald-200 text-emerald-800"
                               : "bg-red-200 text-red-800"
@@ -410,10 +440,10 @@ export default function DecisionsPage() {
                         >
                           {pc.type}
                         </span>
-                        <span className="font-semibold text-gray-800">{pc.text}</span>
+                        <span className="font-semibold text-gray-800 text-base">{pc.text}</span>
                       </div>
 
-                      <div className="flex items-center gap-3 justify-between md:justify-end">
+                      <div className="flex items-center gap-4 justify-between md:justify-end">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">Weight:</span>
                           <input
@@ -422,13 +452,13 @@ export default function DecisionsPage() {
                             max="5"
                             value={pc.weight}
                             onChange={(e) => handleWeightChange(i, pcIdx, parseInt(e.target.value))}
-                            className="w-24 accent-emerald-600"
+                            className="w-28 accent-blue-600 cursor-pointer"
                           />
                           <span className="font-bold text-gray-700 w-4 text-center">{pc.weight}</span>
                         </div>
                         <button
                           onClick={() => handleRemoveProCon(i, pcIdx)}
-                          className="text-red-500 hover:text-red-700 text-sm font-semibold ml-2"
+                          className="text-red-500 hover:text-red-700 text-sm font-semibold ml-2 hover:underline"
                         >
                           Remove
                         </button>
@@ -441,16 +471,16 @@ export default function DecisionsPage() {
               )}
 
               {/* Add Pro/Con Row */}
-              <div className="flex flex-col md:flex-row gap-2 pt-2 border-t border-gray-100 mt-2">
+              <div className="flex flex-col md:flex-row gap-2.5 pt-3 border-t border-gray-100 mt-3">
                 <input
                   type="text"
-                  className="flex-1 border border-gray-300 rounded-lg p-2.5 text-sm"
+                  className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   placeholder="e.g. Save money on fuel/parking"
                   value={newProConText[i] || ""}
                   onChange={(e) => setNewProConText({ ...newProConText, [i]: e.target.value })}
                 />
                 <select
-                  className="border border-gray-300 rounded-lg p-2.5 text-sm bg-white"
+                  className="border border-gray-300 rounded-xl px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   value={newProConType[i] || "pro"}
                   onChange={(e) => setNewProConType({ ...newProConType, [i]: e.target.value as "pro" | "con" })}
                 >
@@ -459,7 +489,7 @@ export default function DecisionsPage() {
                 </select>
                 <button
                   onClick={() => handleAddProCon(i)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-6 py-2.5 rounded-lg transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-all shadow-sm hover:scale-[1.01]"
                 >
                   ＋ Add Item
                 </button>
@@ -467,16 +497,16 @@ export default function DecisionsPage() {
             </div>
           ))}
 
-          <div className="flex justify-between pt-4">
+          <div className="flex justify-between pt-6 border-t border-gray-200">
             <button
               onClick={() => setStep(2)}
-              className="bg-gray-100 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-250 transition-colors"
+              className="bg-gray-100 text-gray-700 font-bold py-3 px-8 rounded-xl hover:bg-gray-200 transition-colors"
             >
               &larr; Back
             </button>
             <button
               onClick={() => setStep(4)}
-              className="bg-emerald-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
+              className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-sm"
             >
               Calculate Summary &rarr;
             </button>
@@ -487,100 +517,61 @@ export default function DecisionsPage() {
       {/* STEP 4: SUMMARY & SCORE OUTPUT */}
       {step === 4 && (
         <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b border-gray-100 pb-2">
+          <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-6">
+            <h2 className="text-2xl font-bold text-gray-800 border-b border-gray-100 pb-3">
               Decision Analysis: "{title}"
             </h2>
 
-            <div className="space-y-6">
-              {options.map((opt, i) => {
+            {/* DUAL COMPARISON COLUMNS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {options.slice(0, 2).map((opt, i) => {
                 const finalScore = calculateOptionScore(opt);
                 return (
-                  <div key={i} className="border border-gray-200 rounded-lg p-5 bg-gray-50/50 space-y-4">
-                    <div className="flex justify-between items-center flex-wrap gap-2">
-                      <h3 className="text-lg font-bold text-gray-800">{opt.label}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 font-medium">Net Score:</span>
-                        <span className={`text-2xl font-bold px-3 py-1 rounded-lg ${
-                          finalScore > 0
-                            ? "bg-emerald-100 text-emerald-800"
-                            : finalScore < 0
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-200 text-gray-800"
-                        }`}>
-                          {finalScore > 0 ? `+${finalScore}` : finalScore}
-                        </span>
+                  <div key={i} className="border border-gray-200 rounded-2xl p-6 bg-gray-50/50 space-y-4 shadow-sm flex flex-col justify-between">
+                    <div>
+                      {/* Score Readout (Bold & Prominent) */}
+                      <div className="border-b border-gray-200 pb-3 mb-4">
+                        <h3 className="text-xl font-bold text-gray-800 mb-1">{opt.label}</h3>
+                        <p className="text-2xl font-extrabold text-blue-900 mt-2">
+                          {opt.label} Net Score:{" "}
+                          <span className={`px-3 py-1 rounded-lg text-2xl font-black ${
+                            finalScore > 0
+                              ? "bg-emerald-100 text-emerald-800"
+                              : finalScore < 0
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-200 text-gray-800"
+                          }`}>
+                            {finalScore > 0 ? `+${finalScore}` : finalScore}
+                          </span>
+                        </p>
+                      </div>
+
+                      {/* Values & Feeling Readouts */}
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div>
+                          <strong className="text-gray-500 block text-xs uppercase tracking-wide">Values Alignment</strong>
+                          <span className="font-semibold">{`Aligns with values: ${opt.alignsValues}`}</span>
+                        </div>
+                        <div>
+                          <strong className="text-gray-500 block text-xs uppercase tracking-wide">Predicted Feeling</strong>
+                          <span className="font-semibold">{`Feeling in 6 months: ${opt.predictedFeeling}`}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Breakdown Math Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold text-gray-600 bg-white p-3 rounded-lg border border-gray-150">
-                      <div>
-                        <span className="text-gray-400 block mb-0.5">Values Align</span>
-                        <span className={opt.alignsValues === "Yes" ? "text-emerald-600" : opt.alignsValues === "No" ? "text-red-600" : "text-gray-500"}>
-                          {opt.alignsValues} ({opt.alignsValues === "Yes" ? "+2" : opt.alignsValues === "No" ? "-2" : "0"})
+                    {/* Simple Pros & Cons Weight Metrics */}
+                    <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-150 text-xs mt-4">
+                      <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3">
+                        <span className="font-bold text-emerald-800 text-xxs block uppercase tracking-wider mb-1">PROS WEIGHT</span>
+                        <span className="text-lg font-black text-emerald-700">
+                          +{opt.prosCons.filter(pc => pc.type === "pro").reduce((sum, item) => sum + item.weight, 0)}
                         </span>
                       </div>
-                      <div>
-                        <span className="text-gray-400 block mb-0.5">Ext. Pressure</span>
-                        <span className={opt.externalPressure ? "text-red-600" : "text-emerald-600"}>
-                          {opt.externalPressure ? "Yes (-1)" : "No (+1)"}
+                      <div className="bg-red-50/50 border border-red-100 rounded-xl p-3">
+                        <span className="font-bold text-red-800 text-xxs block uppercase tracking-wider mb-1">CONS WEIGHT</span>
+                        <span className="text-lg font-black text-red-700">
+                          -{opt.prosCons.filter(pc => pc.type === "con").reduce((sum, item) => sum + item.weight, 0)}
                         </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block mb-0.5">Assumptions</span>
-                        <span className={opt.makingAssumptions ? "text-red-600" : "text-emerald-600"}>
-                          {opt.makingAssumptions ? "Yes (-1)" : "No (+1)"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block mb-0.5">Predicted Feeling</span>
-                        <span className={
-                          opt.predictedFeeling === "Proud"
-                            ? "text-emerald-600"
-                            : opt.predictedFeeling === "Regretful"
-                            ? "text-red-600"
-                            : "text-gray-500"
-                        }>
-                          {opt.predictedFeeling} ({
-                            opt.predictedFeeling === "Proud" ? "+3" : opt.predictedFeeling === "Regretful" ? "-3" : "0"
-                          })
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Pros & Cons Summarized */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-3">
-                        <span className="font-bold text-emerald-800 text-xs block mb-1">PROS</span>
-                        {opt.prosCons.filter(pc => pc.type === "pro").length > 0 ? (
-                          <ul className="space-y-1 text-xs">
-                            {opt.prosCons.filter(pc => pc.type === "pro").map((item, idx) => (
-                              <li key={idx} className="flex justify-between">
-                                <span className="text-gray-700">{item.text}</span>
-                                <span className="font-bold text-emerald-700">+{item.weight}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-gray-400 text-xs italic">No pros added.</span>
-                        )}
-                      </div>
-
-                      <div className="bg-red-50/30 border border-red-100 rounded-lg p-3">
-                        <span className="font-bold text-red-800 text-xs block mb-1">CONS</span>
-                        {opt.prosCons.filter(pc => pc.type === "con").length > 0 ? (
-                          <ul className="space-y-1 text-xs">
-                            {opt.prosCons.filter(pc => pc.type === "con").map((item, idx) => (
-                              <li key={idx} className="flex justify-between">
-                                <span className="text-gray-700">{item.text}</span>
-                                <span className="font-bold text-red-700">-{item.weight}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-gray-400 text-xs italic">No cons added.</span>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -588,22 +579,51 @@ export default function DecisionsPage() {
               })}
             </div>
 
-            <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
-              💡 <strong>Grounding Tip:</strong> The option with the highest score aligns best with your values while minimizing assumptions and external pressures. Check back in <strong>{timeframeDays} days</strong> to log how you feel about your final choice!
+            {/* Handle remaining options if > 2 */}
+            {options.length > 2 && (
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wide">Additional Options</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {options.slice(2).map((opt, i) => {
+                    const finalScore = calculateOptionScore(opt);
+                    return (
+                      <div key={i} className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 flex justify-between items-center">
+                        <div>
+                          <strong className="block text-gray-800">{opt.label}</strong>
+                          <span className="text-xs text-gray-500">Values: {opt.alignsValues} | 6mo: {opt.predictedFeeling}</span>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded text-sm font-extrabold ${
+                          finalScore > 0 ? "bg-emerald-100 text-emerald-800" : finalScore < 0 ? "bg-red-100 text-red-800" : "bg-gray-200 text-gray-800"
+                        }`}>
+                          {finalScore > 0 ? `+${finalScore}` : finalScore}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* MISSING DISCLAIMER NOTICE BOX (At the bottom of the summary pane) */}
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3.5 mt-8 shadow-sm">
+              <span className="text-2xl mt-0.5 select-none" role="img" aria-label="info">ℹ️</span>
+              <p className="text-sm text-amber-900 leading-relaxed font-medium">
+                Note: This tool calculates the mathematical weight of your inputs. It does not constitute advice. The final decision is entirely your responsibility.
+              </p>
             </div>
           </div>
 
-          <div className="flex justify-between pt-4">
+          <div className="flex justify-between pt-6 border-t border-gray-200">
             <button
               onClick={() => setStep(3)}
-              className="bg-gray-100 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-250 transition-colors"
+              className="bg-gray-100 text-gray-700 font-bold py-3 px-8 rounded-xl hover:bg-gray-200 transition-colors"
             >
               &larr; Back
             </button>
             <button
               onClick={handleSaveDecision}
               disabled={saving}
-              className="bg-emerald-600 text-white font-bold py-3.5 px-10 rounded-lg hover:bg-emerald-700 transition-all shadow-md disabled:opacity-50"
+              className="bg-blue-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-md disabled:opacity-50"
             >
               {saving ? "Saving Decision..." : "💾 Save & Track Decision"}
             </button>
