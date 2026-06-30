@@ -97,8 +97,12 @@ export default function DecisionsPage() {
   };
 
   const handleOptionLabelChange = (index: number, val: string) => {
-    const updated = [...options];
-    updated[index].label = val;
+    const updated = options.map((opt, i) => {
+      if (i === index) {
+        return { ...opt, label: val };
+      }
+      return opt;
+    });
     setOptions(updated);
   };
 
@@ -107,8 +111,12 @@ export default function DecisionsPage() {
     key: K,
     val: OptionData[K]
   ) => {
-    const updated = [...options];
-    updated[index][key] = val;
+    const updated = options.map((opt, i) => {
+      if (i === index) {
+        return { ...opt, [key]: val };
+      }
+      return opt;
+    });
     setOptions(updated);
   };
 
@@ -117,11 +125,14 @@ export default function DecisionsPage() {
     if (!text) return;
     const type = newProConType[index] || "pro";
 
-    const updated = [...options];
-    updated[index].prosCons.push({
-      text,
-      weight: 3,
-      type
+    const updated = options.map((opt, i) => {
+      if (i === index) {
+        return {
+          ...opt,
+          prosCons: [...opt.prosCons, { text, weight: 3, type }]
+        };
+      }
+      return opt;
     });
     setOptions(updated);
 
@@ -130,14 +141,31 @@ export default function DecisionsPage() {
   };
 
   const handleRemoveProCon = (optIndex: number, pcIndex: number) => {
-    const updated = [...options];
-    updated[optIndex].prosCons = updated[optIndex].prosCons.filter((_, i) => i !== pcIndex);
+    const updated = options.map((opt, i) => {
+      if (i === optIndex) {
+        return {
+          ...opt,
+          prosCons: opt.prosCons.filter((_, idx) => idx !== pcIndex)
+        };
+      }
+      return opt;
+    });
     setOptions(updated);
   };
 
   const handleWeightChange = (optIndex: number, pcIndex: number, val: number) => {
-    const updated = [...options];
-    updated[optIndex].prosCons[pcIndex].weight = val;
+    const updated = options.map((opt, i) => {
+      if (i === optIndex) {
+        const newProsCons = opt.prosCons.map((pc, idx) => {
+          if (idx === pcIndex) {
+            return { ...pc, weight: val };
+          }
+          return pc;
+        });
+        return { ...opt, prosCons: newProsCons };
+      }
+      return opt;
+    });
     setOptions(updated);
   };
 
@@ -245,7 +273,7 @@ export default function DecisionsPage() {
               <p className="text-gray-500 text-sm mb-3">When should Momentum check back on the outcome of this decision?</p>
               <div className="relative max-w-xl">
                 <select
-                  className="w-full max-w-xl px-4 py-3 text-lg border border-gray-300 rounded-xl bg-white shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-10"
+                  className="w-full max-w-xl px-4 py-3 text-lg border rounded-xl bg-white shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-10"
                   value={timeframeDays}
                   onChange={(e) => setTimeframeDays(parseInt(e.target.value))}
                 >
@@ -488,7 +516,7 @@ export default function DecisionsPage() {
                 />
                 <div className="relative">
                   <select
-                    className="border border-gray-300 rounded-xl px-3 py-3 text-sm bg-white shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-8"
+                    className="w-full max-w-xl px-4 py-3 text-lg border rounded-xl bg-white shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-8"
                     value={newProConType[i] || "pro"}
                     onChange={(e) => setNewProConType({ ...newProConType, [i]: e.target.value as "pro" | "con" })}
                   >
