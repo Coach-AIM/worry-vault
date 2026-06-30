@@ -26,7 +26,7 @@ export default function DecisionsPage() {
   const [timeframeDays, setTimeframeDays] = useState(30);
   const [options, setOptions] = useState<OptionData[]>([
     {
-      label: "Option A",
+      label: "", // Starts empty to show placeholder
       predictedFeeling: "Unknown",
       alignsValues: "Unsure",
       externalPressure: false,
@@ -34,7 +34,7 @@ export default function DecisionsPage() {
       prosCons: []
     },
     {
-      label: "Option B",
+      label: "", // Starts empty to show placeholder
       predictedFeeling: "Unknown",
       alignsValues: "Unsure",
       externalPressure: false,
@@ -81,7 +81,7 @@ export default function DecisionsPage() {
     setOptions([
       ...options,
       {
-        label: `Option ${String.fromCharCode(65 + options.length)}`,
+        label: "",
         predictedFeeling: "Unknown",
         alignsValues: "Unsure",
         externalPressure: false,
@@ -147,8 +147,8 @@ export default function DecisionsPage() {
       const payload = {
         title,
         timeframeDays,
-        options: options.map((opt) => ({
-          label: opt.label,
+        options: options.map((opt, i) => ({
+          label: opt.label.trim() || `Option ${String.fromCharCode(65 + i)}`,
           predictedFeeling: opt.predictedFeeling,
           alignsValues: opt.alignsValues,
           externalPressure: opt.externalPressure,
@@ -216,10 +216,10 @@ export default function DecisionsPage() {
                   <div key={i} className="flex gap-2 items-center max-w-xl">
                     <input
                       type="text"
-                      className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      className="w-full max-w-xl px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       value={opt.label}
                       onChange={(e) => handleOptionLabelChange(i, e.target.value)}
-                      placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                      placeholder={i === 0 ? "Option A: Buy one" : i === 1 ? "Option B: Dont buy one" : `Option ${String.fromCharCode(65 + i)}`}
                     />
                     {options.length > 2 && (
                       <button
@@ -243,17 +243,24 @@ export default function DecisionsPage() {
             <div>
               <h2 className="text-xl font-bold text-gray-800 mb-3">3. Timeframe for Follow-up</h2>
               <p className="text-gray-500 text-sm mb-3">When should Momentum check back on the outcome of this decision?</p>
-              <select
-                className="w-full max-w-xl border border-gray-300 rounded-xl px-4 py-3 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                value={timeframeDays}
-                onChange={(e) => setTimeframeDays(parseInt(e.target.value))}
-              >
-                <option value={7}>1 Week (7 Days)</option>
-                <option value={14}>2 Weeks (14 Days)</option>
-                <option value={30}>1 Month (30 Days)</option>
-                <option value={90}>3 Months (90 Days)</option>
-                <option value={180}>6 Months (180 Days)</option>
-              </select>
+              <div className="relative max-w-xl">
+                <select
+                  className="w-full max-w-xl px-4 py-3 text-lg border border-gray-300 rounded-xl bg-white shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-10"
+                  value={timeframeDays}
+                  onChange={(e) => setTimeframeDays(parseInt(e.target.value))}
+                >
+                  <option value={7}>1 Week (7 Days)</option>
+                  <option value={14}>2 Weeks (14 Days)</option>
+                  <option value={30}>1 Month (30 Days)</option>
+                  <option value={90}>3 Months (90 Days)</option>
+                  <option value={180}>6 Months (180 Days)</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -295,8 +302,8 @@ export default function DecisionsPage() {
                         onClick={() => handleOptionContextChange(i, "predictedFeeling", feeling)}
                         className={`p-3.5 rounded-xl border text-sm font-semibold transition-all duration-200 ${
                           isSelected
-                            ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01] shadow-sm"
-                            : "border-gray-200 bg-gray-50/50 text-gray-700 hover:bg-gray-100/70"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                         }`}
                       >
                         {feeling}
@@ -318,8 +325,8 @@ export default function DecisionsPage() {
                         onClick={() => handleOptionContextChange(i, "alignsValues", align)}
                         className={`p-3.5 rounded-xl border text-sm font-semibold transition-all duration-200 ${
                           isSelected
-                            ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01] shadow-sm"
-                            : "border-gray-200 bg-gray-50/50 text-gray-700 hover:bg-gray-100/70"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                         }`}
                       >
                         {align}
@@ -341,8 +348,8 @@ export default function DecisionsPage() {
                       onClick={() => handleOptionContextChange(i, "externalPressure", true)}
                       className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
                         opt.externalPressure
-                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
-                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                       }`}
                     >
                       YES
@@ -351,8 +358,8 @@ export default function DecisionsPage() {
                       onClick={() => handleOptionContextChange(i, "externalPressure", false)}
                       className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
                         !opt.externalPressure
-                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
-                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                       }`}
                     >
                       NO
@@ -370,8 +377,8 @@ export default function DecisionsPage() {
                       onClick={() => handleOptionContextChange(i, "makingAssumptions", true)}
                       className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
                         opt.makingAssumptions
-                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
-                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                       }`}
                     >
                       YES
@@ -380,8 +387,8 @@ export default function DecisionsPage() {
                       onClick={() => handleOptionContextChange(i, "makingAssumptions", false)}
                       className={`py-2 px-5 rounded-lg text-xs font-bold transition-all ${
                         !opt.makingAssumptions
-                          ? "border-blue-600 bg-blue-50/50 text-blue-800 scale-[1.01]"
-                          : "border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                       }`}
                     >
                       NO
@@ -415,7 +422,7 @@ export default function DecisionsPage() {
           {options.map((opt, i) => (
             <div key={i} className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm space-y-4">
               <h3 className="text-xl font-bold text-blue-700 border-b border-blue-100 pb-3">
-                Pros & Cons: {opt.label}
+                Pros & Cons: {opt.label || `Option ${String.fromCharCode(65 + i)}`}
               </h3>
 
               {/* Added Items List */}
@@ -479,14 +486,21 @@ export default function DecisionsPage() {
                   value={newProConText[i] || ""}
                   onChange={(e) => setNewProConText({ ...newProConText, [i]: e.target.value })}
                 />
-                <select
-                  className="border border-gray-300 rounded-xl px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  value={newProConType[i] || "pro"}
-                  onChange={(e) => setNewProConType({ ...newProConType, [i]: e.target.value as "pro" | "con" })}
-                >
-                  <option value="pro">Pro (Positive)</option>
-                  <option value="con">Con (Negative)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    className="border border-gray-300 rounded-xl px-3 py-3 text-sm bg-white shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-8"
+                    value={newProConType[i] || "pro"}
+                    onChange={(e) => setNewProConType({ ...newProConType, [i]: e.target.value as "pro" | "con" })}
+                  >
+                    <option value="pro">Pro (Positive)</option>
+                    <option value="con">Con (Negative)</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                    </svg>
+                  </div>
+                </div>
                 <button
                   onClick={() => handleAddProCon(i)}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-all shadow-sm hover:scale-[1.01]"
@@ -526,14 +540,15 @@ export default function DecisionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {options.slice(0, 2).map((opt, i) => {
                 const finalScore = calculateOptionScore(opt);
+                const resolvedLabel = opt.label.trim() || (i === 0 ? "Option A" : "Option B");
                 return (
                   <div key={i} className="border border-gray-200 rounded-2xl p-6 bg-gray-50/50 space-y-4 shadow-sm flex flex-col justify-between">
                     <div>
                       {/* Score Readout (Bold & Prominent) */}
                       <div className="border-b border-gray-200 pb-3 mb-4">
-                        <h3 className="text-xl font-bold text-gray-800 mb-1">{opt.label}</h3>
+                        <h3 className="text-xl font-bold text-gray-800 mb-1">{resolvedLabel}</h3>
                         <p className="text-2xl font-extrabold text-blue-900 mt-2">
-                          {opt.label} Net Score:{" "}
+                          {i === 0 ? "Option A" : "Option B"} Net Score:{" "}
                           <span className={`px-3 py-1 rounded-lg text-2xl font-black ${
                             finalScore > 0
                               ? "bg-emerald-100 text-emerald-800"
@@ -547,14 +562,14 @@ export default function DecisionsPage() {
                       </div>
 
                       {/* Values & Feeling Readouts */}
-                      <div className="space-y-2 text-sm text-gray-700">
+                      <div className="space-y-2 text-sm text-gray-700 font-medium">
                         <div>
-                          <strong className="text-gray-500 block text-xs uppercase tracking-wide">Values Alignment</strong>
-                          <span className="font-semibold">{`Aligns with values: ${opt.alignsValues}`}</span>
+                          <strong className="text-gray-400 block text-xs uppercase tracking-wide">Values Alignment</strong>
+                          <span>{`Aligns with values: ${opt.alignsValues}`}</span>
                         </div>
                         <div>
-                          <strong className="text-gray-500 block text-xs uppercase tracking-wide">Predicted Feeling</strong>
-                          <span className="font-semibold">{`Feeling in 6 months: ${opt.predictedFeeling}`}</span>
+                          <strong className="text-gray-400 block text-xs uppercase tracking-wide">Predicted Feeling</strong>
+                          <span>{`Feeling in 6 months: ${opt.predictedFeeling}`}</span>
                         </div>
                       </div>
                     </div>
@@ -586,10 +601,11 @@ export default function DecisionsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {options.slice(2).map((opt, i) => {
                     const finalScore = calculateOptionScore(opt);
+                    const resolvedLabel = opt.label.trim() || `Option ${String.fromCharCode(67 + i)}`;
                     return (
                       <div key={i} className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 flex justify-between items-center">
                         <div>
-                          <strong className="block text-gray-800">{opt.label}</strong>
+                          <strong className="block text-gray-800">{resolvedLabel}</strong>
                           <span className="text-xs text-gray-500">Values: {opt.alignsValues} | 6mo: {opt.predictedFeeling}</span>
                         </div>
                         <span className={`px-2.5 py-0.5 rounded text-sm font-extrabold ${
@@ -604,7 +620,7 @@ export default function DecisionsPage() {
               </div>
             )}
 
-            {/* MISSING DISCLAIMER NOTICE BOX (At the bottom of the summary pane) */}
+            {/* Baseline Informational Notice Box */}
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3.5 mt-8 shadow-sm">
               <span className="text-2xl mt-0.5 select-none" role="img" aria-label="info">ℹ️</span>
               <p className="text-sm text-amber-900 leading-relaxed font-medium">
