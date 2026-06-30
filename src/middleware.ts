@@ -15,5 +15,6 @@ export const config = {
     "/vault",
     "/insights",
     "/reflect",
+    "/decisions",
   ],
 };

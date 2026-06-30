@@ -352,6 +352,34 @@ export default function Home() {
           </Link>
         </section>
 
+        {/* DECISION ASSISTANT CARD (Below Action Planner) */}
+        <section style={{ 
+          padding: '2rem', 
+          backgroundColor: '#fff', 
+          borderRadius: 'var(--radius)', 
+          border: '1px solid var(--border)',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.01)'
+        }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', color: 'var(--foreground)', fontWeight: 600 }}>🤔 Decision Assistant</h2>
+          <p style={{ color: '#666', lineHeight: 1.5, marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+            Facing a tough choice? Use our multi-step wizard to align options with your core values, calculate balanced pros/cons, and track results.
+          </p>
+          <Link href="/decisions" style={{
+            display: 'block',
+            backgroundColor: '#e6f4ea',
+            color: '#137333',
+            padding: '0.75rem 1.5rem',
+            borderRadius: 'var(--radius)',
+            textDecoration: 'none',
+            fontWeight: 600,
+            textAlign: 'center',
+            fontSize: '0.95rem',
+            transition: 'all 0.2s'
+          }}>
+            🎯 Open Decision Assistant
+          </Link>
+        </section>
+
         {/* Therapist / Support Network Card */}
         <section style={{
           padding: '2rem',

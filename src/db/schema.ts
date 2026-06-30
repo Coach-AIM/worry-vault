@@ -75,3 +75,31 @@ export const users = sqliteTable("users", {
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });
+
+export const decisions = sqliteTable("decisions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  timeframeDays: integer("timeframe_days").notNull(),
+  completed: integer("completed").default(0).notNull(),
+});
+
+export const decisionOptions = sqliteTable("decision_options", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  decisionId: integer("decision_id").notNull(),
+  label: text("label").notNull(),
+  predictedFeeling: text("predicted_feeling").notNull(), // Proud, Indifferent, Regretful, Unknown
+  alignsValues: text("aligns_values").notNull(), // Yes, No, Unsure
+  externalPressure: integer("external_pressure").default(0).notNull(),
+  makingAssumptions: integer("making_assumptions").default(0).notNull(),
+  netScore: integer("net_score").default(0).notNull(),
+});
+
+export const decisionFollowUps = sqliteTable("decision_follow_ups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  decisionId: integer("decision_id").notNull(),
+  chosenOptionId: integer("chosen_option_id").notNull(),
+  actualFeeling: text("actual_feeling").notNull(),
+  followedUpAt: text("followed_up_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});

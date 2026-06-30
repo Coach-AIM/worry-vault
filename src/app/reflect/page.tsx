@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-type ReflectStep = 'intro' | 'release' | 'plan' | 'rest';
+type ReflectStep = 'intro' | 'decision_follow_up' | 'release' | 'plan' | 'rest';
 
 export default function EndOfDayReflection() {
   const [step, setStep] = useState<ReflectStep>('intro');
@@ -18,6 +18,74 @@ export default function EndOfDayReflection() {
   const [tomorrowTask2, setTomorrowTask2] = useState('');
   const [tomorrowTask3, setTomorrowTask3] = useState('');
   const [savingPlan, setSavingPlan] = useState(false);
+
+  // Expired Decisions Check-in
+  const [expiredDecisions, setExpiredDecisions] = useState<any[]>([]);
+  const [currentExpiredIndex, setCurrentExpiredIndex] = useState(0);
+  const [chosenOptionId, setChosenOptionId] = useState<string>('');
+  const [actualFeeling, setActualFeeling] = useState<string>('Proud');
+  const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
+
+  useEffect(() => {
+    async function getExpired() {
+      try {
+        const res = await fetch('/api/decisions/expired');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.expiredDecisions) {
+            setExpiredDecisions(data.expiredDecisions);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load expired decisions:", err);
+      }
+    }
+    getExpired();
+  }, []);
+
+  const handleBegin = () => {
+    if (expiredDecisions.length > 0) {
+      setStep('decision_follow_up');
+    } else {
+      setStep('release');
+    }
+  };
+
+  async function handleSubmitFollowUp() {
+    if (!chosenOptionId) {
+      alert("Please select the option you chose.");
+      return;
+    }
+    setSubmittingFollowUp(true);
+    try {
+      const decision = expiredDecisions[currentExpiredIndex];
+      const res = await fetch('/api/decisions/expired', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          decisionId: decision.id,
+          chosenOptionId: parseInt(chosenOptionId),
+          actualFeeling
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to submit follow up");
+
+      // Move to next decision or proceed to release
+      if (currentExpiredIndex + 1 < expiredDecisions.length) {
+        setCurrentExpiredIndex(currentExpiredIndex + 1);
+        setChosenOptionId('');
+        setActualFeeling('Proud');
+      } else {
+        setStep('release');
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error submitting follow up.");
+    } finally {
+      setSubmittingFollowUp(false);
+    }
+  }
 
   async function handleReleaseWorry() {
     if (!positive.trim() && !worry.trim()) return;
@@ -79,6 +147,8 @@ export default function EndOfDayReflection() {
     setStep('rest');
   }
 
+  const currentDecision = expiredDecisions[currentExpiredIndex];
+
   return (
     <div style={{ 
       maxWidth: '600px', 
@@ -101,9 +171,78 @@ export default function EndOfDayReflection() {
           <p style={{ color: '#6e7e73', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2.5rem', maxWidth: '440px', marginInline: 'auto' }}>
             Take a few moments to offload your thoughts, release today's worries, and set a gentle path for tomorrow so your mind can rest.
           </p>
-          <button type="button" onClick={() => setStep('release')} style={{ backgroundColor: '#7da084', padding: '0.8rem 2.5rem', fontSize: '1.05rem' }}>
+          <button type="button" onClick={handleBegin} style={{ backgroundColor: '#7da084', padding: '0.8rem 2.5rem', fontSize: '1.05rem' }}>
             Begin Reflection
           </button>
+        </div>
+      )}
+
+      {/* Decision Follow-up Recap Step */}
+      {step === 'decision_follow_up' && currentDecision && (
+        <div style={{ animation: 'fadeIn 0.4s ease', display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', backgroundColor: '#e6f4ea', color: '#137333', padding: '0.2rem 0.6rem', borderRadius: '10px', fontWeight: 'bold' }}>
+              Recap check-in {currentExpiredIndex + 1} of {expiredDecisions.length}
+            </span>
+            <h2 style={{ color: '#4a5d4e', fontSize: '1.5rem', marginTop: '0.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>🎯 Decision Check-in</h2>
+            <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: 1.5 }}>
+              You recently made a decision about <strong>"{currentDecision.title}"</strong>. Which option did you choose, and how do you feel about it now?
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#5a6b5e', marginBottom: '0.4rem' }}>Which option did you choose?</label>
+              <select
+                value={chosenOptionId}
+                onChange={e => setChosenOptionId(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dcd3c4', backgroundColor: '#fff', fontSize: '0.95rem' }}
+              >
+                <option value="">-- Select Option --</option>
+                {currentDecision.options?.map((opt: any) => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#5a6b5e', marginBottom: '0.4rem' }}>How do you feel about it now?</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['Proud', 'Indifferent', 'Regretful'].map(feeling => (
+                  <button
+                    key={feeling}
+                    type="button"
+                    onClick={() => setActualFeeling(feeling)}
+                    style={{
+                      flex: 1,
+                      padding: '0.6rem',
+                      border: '1px solid #dcd3c4',
+                      borderRadius: '8px',
+                      backgroundColor: actualFeeling === feeling ? '#7da084' : '#fff',
+                      color: actualFeeling === feeling ? '#fff' : '#555',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {feeling}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
+            <button 
+              type="button" 
+              onClick={handleSubmitFollowUp} 
+              disabled={submittingFollowUp || !chosenOptionId}
+              style={{ flex: 1, backgroundColor: '#7da084', padding: '0.75rem' }}
+            >
+              {submittingFollowUp ? 'Submitting...' : 'Submit Check-in'}
+            </button>
+          </div>
         </div>
       )}
 
