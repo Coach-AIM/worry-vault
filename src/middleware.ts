@@ -16,5 +16,6 @@ export const config = {
     "/insights",
     "/reflect",
     "/decisions",
+    "/decision-assistant",
   ],
 };
