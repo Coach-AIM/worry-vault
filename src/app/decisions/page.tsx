@@ -46,6 +46,13 @@ export default function DecisionsPage() {
   const [newProConText, setNewProConText] = useState<Record<number, string>>({});
   const [newProConType, setNewProConType] = useState<Record<number, "pro" | "con">>({});
 
+  // Local state variables for Step 2 question group tracking
+  const [currentOptionIndex, setCurrentOptionIndex] = useState(0);
+  const [feeling, setFeeling] = useState<string | null>(null);
+  const [valuesAlign, setValuesAlign] = useState<string | null>(null);
+  const [pressure, setPressure] = useState<string | null>(null);
+  const [assumptions, setAssumptions] = useState<string | null>(null);
+
   // Calculations
   function calculateOptionScore(opt: OptionData): number {
     let score = 0;
@@ -106,18 +113,75 @@ export default function DecisionsPage() {
     setOptions(updated);
   };
 
-  const handleOptionContextChange = <K extends keyof OptionData>(
-    index: number,
-    key: K,
-    val: OptionData[K]
-  ) => {
-    const updated = options.map((opt, i) => {
-      if (i === index) {
-        return { ...opt, [key]: val };
+  const startStep2 = () => {
+    if (!title.trim()) {
+      alert("Please enter a decision title.");
+      return;
+    }
+    setCurrentOptionIndex(0);
+    setFeeling(options[0].predictedFeeling);
+    setValuesAlign(options[0].alignsValues);
+    setPressure(options[0].externalPressure ? "Yes" : "No");
+    setAssumptions(options[0].makingAssumptions ? "Yes" : "No");
+    setStep(2);
+  };
+
+  const handleNextOption = () => {
+    // Save current values to options state
+    const updated = options.map((opt, idx) => {
+      if (idx === currentOptionIndex) {
+        return {
+          ...opt,
+          predictedFeeling: (feeling as any) || "Unknown",
+          alignsValues: (valuesAlign as any) || "Unsure",
+          externalPressure: pressure === "Yes",
+          makingAssumptions: assumptions === "Yes"
+        };
       }
       return opt;
     });
     setOptions(updated);
+
+    if (currentOptionIndex < options.length - 1) {
+      const nextIdx = currentOptionIndex + 1;
+      setCurrentOptionIndex(nextIdx);
+      // Load next option's selections
+      setFeeling(updated[nextIdx].predictedFeeling);
+      setValuesAlign(updated[nextIdx].alignsValues);
+      setPressure(updated[nextIdx].externalPressure ? "Yes" : "No");
+      setAssumptions(updated[nextIdx].makingAssumptions ? "Yes" : "No");
+    } else {
+      setStep(3);
+    }
+  };
+
+  const handlePrevOption = () => {
+    // Save current values to options state
+    const updated = options.map((opt, idx) => {
+      if (idx === currentOptionIndex) {
+        return {
+          ...opt,
+          predictedFeeling: (feeling as any) || "Unknown",
+          alignsValues: (valuesAlign as any) || "Unsure",
+          externalPressure: pressure === "Yes",
+          makingAssumptions: assumptions === "Yes"
+        };
+      }
+      return opt;
+    });
+    setOptions(updated);
+
+    if (currentOptionIndex > 0) {
+      const prevIdx = currentOptionIndex - 1;
+      setCurrentOptionIndex(prevIdx);
+      // Load previous option's selections
+      setFeeling(updated[prevIdx].predictedFeeling);
+      setValuesAlign(updated[prevIdx].alignsValues);
+      setPressure(updated[prevIdx].externalPressure ? "Yes" : "No");
+      setAssumptions(updated[prevIdx].makingAssumptions ? "Yes" : "No");
+    } else {
+      setStep(1);
+    }
   };
 
   const handleAddProCon = (index: number) => {
@@ -209,7 +273,7 @@ export default function DecisionsPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 pb-28">
       {/* Back Button and Header */}
-      <div className="max-w-3xl mx-auto mb-8">
+      <div className="max-w-3xl mx-auto mb-8 animate-fade-in">
         <button 
           onClick={() => router.push("/")}
           className="text-sm font-medium text-slate-500 hover:text-slate-700 transition mb-6 flex items-center gap-2"
@@ -226,7 +290,7 @@ export default function DecisionsPage() {
 
       {/* STEP 1: SETUP */}
       {step === 1 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-10">
+        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-10 animate-fade-in">
           {/* Question 1 */}
           <div className="space-y-3">
             <label className="block text-2xl font-bold text-slate-900">1. What decision are you facing?</label>
@@ -255,7 +319,7 @@ export default function DecisionsPage() {
                   {options.length > 2 && (
                     <button
                       onClick={() => handleRemoveOption(i)}
-                      className="p-3.5 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors"
+                      className="p-3.5 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors animate-fade-in"
                     >
                       ✕
                     </button>
@@ -298,14 +362,8 @@ export default function DecisionsPage() {
           {/* Setup Footer */}
           <div className="flex justify-end pt-6 border-t border-slate-100">
             <button
-              onClick={() => {
-                if (!title.trim()) {
-                  alert("Please enter a decision title.");
-                  return;
-                }
-                setStep(2);
-              }}
-              className="bg-blue-600 text-white font-bold py-3.5 px-10 rounded-2xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-md"
+              onClick={startStep2}
+              className="bg-blue-600 text-white font-bold py-3.5 px-10 rounded-2xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-md animate-fade-in"
             >
               Continue &rarr;
             </button>
@@ -315,135 +373,133 @@ export default function DecisionsPage() {
 
       {/* STEP 2: CONTEXT CHECK */}
       {step === 2 && (
-        <div className="space-y-8">
-          {options.map((opt, i) => (
-            <div key={i} className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8 animate-fade-in">
-              <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
-                Context Check: {opt.label || `Option ${String.fromCharCode(65 + i)}`}
-              </h3>
+        <div className="space-y-8 animate-fade-in">
+          <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8">
+            <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
+              Context Check: {options[currentOptionIndex].label.trim() || `Option ${String.fromCharCode(65 + currentOptionIndex)}`}
+            </h3>
 
-              {/* 6 Months Feeling Prompt */}
-              <div className="space-y-3">
-                <label className="block text-lg font-bold text-slate-800">How will I likely feel about this choice in 6 months?</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {(["Proud", "Indifferent", "Regretful", "Unknown"] as const).map((feeling) => {
-                    const isSelected = opt.predictedFeeling === feeling;
-                    return (
-                      <button
-                        key={feeling}
-                        onClick={() => handleOptionContextChange(i, "predictedFeeling", feeling)}
-                        className={`p-4 rounded-2xl text-sm font-medium transition-all duration-250 ${
-                          isSelected
-                            ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                            : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                        }`}
-                      >
-                        {feeling}
-                      </button>
-                    );
-                  })}
+            {/* 6 Months Feeling Prompt */}
+            <div className="space-y-3">
+              <label className="block text-lg font-bold text-slate-800">How will I likely feel about this choice in 6 months?</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {(["Proud", "Indifferent", "Regretful", "Unknown"] as const).map((f) => {
+                  const isSelected = feeling === f;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFeeling(f)}
+                      className={`p-4 rounded-2xl text-sm font-medium transition-all duration-250 ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
+                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Values Alignment */}
+            <div className="space-y-3">
+              <label className="block text-lg font-bold text-slate-800">Does this option align with my core values?</label>
+              <div className="grid grid-cols-3 gap-3">
+                {(["Yes", "No", "Unsure"] as const).map((v) => {
+                  const isSelected = valuesAlign === v;
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => setValuesAlign(v)}
+                      className={`p-4 rounded-2xl text-sm font-medium transition-all duration-250 ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
+                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* External Pressure & Assumptions toggles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="font-semibold text-slate-800 block text-base">Is there external pressure?</span>
+                  <span className="text-sm text-slate-500">Feeling forced by others</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPressure("Yes")}
+                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
+                      pressure === "Yes"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
+                  >
+                    YES
+                  </button>
+                  <button
+                    onClick={() => setPressure("No")}
+                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
+                      pressure === "No"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
+                  >
+                    NO
+                  </button>
                 </div>
               </div>
 
-              {/* Values Alignment */}
-              <div className="space-y-3">
-                <label className="block text-lg font-bold text-slate-800">Does this option align with my core values?</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(["Yes", "No", "Unsure"] as const).map((align) => {
-                    const isSelected = opt.alignsValues === align;
-                    return (
-                      <button
-                        key={align}
-                        onClick={() => handleOptionContextChange(i, "alignsValues", align)}
-                        className={`p-4 rounded-2xl text-sm font-medium transition-all duration-250 ${
-                          isSelected
-                            ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                            : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                        }`}
-                      >
-                        {align}
-                      </button>
-                    );
-                  })}
+              <div className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="font-semibold text-slate-800 block text-base">Am I making assumptions?</span>
+                  <span className="text-sm text-slate-500">Deciding without verified facts</span>
                 </div>
-              </div>
-
-              {/* External Pressure & Assumptions toggles */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
-                  <div>
-                    <span className="font-semibold text-slate-800 block text-base">Is there external pressure?</span>
-                    <span className="text-sm text-slate-500">Feeling forced by others</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOptionContextChange(i, "externalPressure", true)}
-                      className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                        opt.externalPressure
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      YES
-                    </button>
-                    <button
-                      onClick={() => handleOptionContextChange(i, "externalPressure", false)}
-                      className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                        !opt.externalPressure
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      NO
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
-                  <div>
-                    <span className="font-semibold text-slate-800 block text-base">Am I making assumptions?</span>
-                    <span className="text-sm text-slate-500">Deciding without verified facts</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOptionContextChange(i, "makingAssumptions", true)}
-                      className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                        opt.makingAssumptions
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      YES
-                    </button>
-                    <button
-                      onClick={() => handleOptionContextChange(i, "makingAssumptions", false)}
-                      className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                        !opt.makingAssumptions
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      NO
-                    </button>
-                  </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setAssumptions("Yes")}
+                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
+                      assumptions === "Yes"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
+                  >
+                    YES
+                  </button>
+                  <button
+                    onClick={() => setAssumptions("No")}
+                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
+                      assumptions === "No"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
+                  >
+                    NO
+                  </button>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
 
           {/* Context Footer */}
           <div className="flex justify-between pt-6 max-w-3xl mx-auto border-t border-slate-200">
             <button
-              onClick={() => setStep(1)}
+              onClick={handlePrevOption}
               className="bg-slate-100 text-slate-700 font-bold py-3.5 px-10 rounded-2xl hover:bg-slate-200 transition-colors"
             >
               &larr; Back
             </button>
             <button
-              onClick={() => setStep(3)}
+              onClick={handleNextOption}
               className="bg-blue-600 text-white font-bold py-3.5 px-10 rounded-2xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-md"
             >
-              Continue &rarr;
+              {currentOptionIndex < options.length - 1 ? "Next Option &rarr;" : "Continue &rarr;"}
             </button>
           </div>
         </div>
@@ -451,9 +507,9 @@ export default function DecisionsPage() {
 
       {/* STEP 3: PROS & CONS GRID */}
       {step === 3 && (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-fade-in">
           {options.map((opt, i) => (
-            <div key={i} className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-6 animate-fade-in">
+            <div key={i} className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-6">
               <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
                 Pros & Cons: {opt.label || `Option ${String.fromCharCode(65 + i)}`}
               </h3>
@@ -547,7 +603,16 @@ export default function DecisionsPage() {
           {/* Pros/Cons Footer */}
           <div className="flex justify-between pt-6 max-w-3xl mx-auto border-t border-slate-200">
             <button
-              onClick={() => setStep(2)}
+              onClick={() => {
+                // Initialize context states for the last option before going back
+                const lastIdx = options.length - 1;
+                setCurrentOptionIndex(lastIdx);
+                setFeeling(options[lastIdx].predictedFeeling);
+                setValuesAlign(options[lastIdx].alignsValues);
+                setPressure(options[lastIdx].externalPressure ? "Yes" : "No");
+                setAssumptions(options[lastIdx].makingAssumptions ? "Yes" : "No");
+                setStep(2);
+              }}
               className="bg-slate-100 text-slate-700 font-bold py-3.5 px-10 rounded-2xl hover:bg-slate-200 transition-colors"
             >
               &larr; Back
