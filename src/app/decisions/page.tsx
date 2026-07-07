@@ -46,12 +46,18 @@ export default function DecisionsPage() {
   const [newProConText, setNewProConText] = useState<Record<number, string>>({});
   const [newProConType, setNewProConType] = useState<Record<number, "pro" | "con">>({});
 
-  // Local state variables for Step 2 question group tracking
+  // 1. Explicitly track selection states
   const [currentOptionIndex, setCurrentOptionIndex] = useState(0);
   const [feeling, setFeeling] = useState<string | null>(null);
   const [valuesAlign, setValuesAlign] = useState<string | null>(null);
   const [pressure, setPressure] = useState<string | null>(null);
   const [assumptions, setAssumptions] = useState<string | null>(null);
+
+  // 2. Dynamic class helper for instant visual feedback
+  const getButtonClass = (isSelected: boolean) => 
+    isSelected
+      ? "flex-1 px-4 py-3 text-base font-semibold rounded-xl border-2 transition-all duration-150 bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100 scale-[1.01]"
+      : "flex-1 px-4 py-3 text-base font-medium rounded-xl border transition-all duration-150 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300";
 
   // Calculations
   function calculateOptionScore(opt: OptionData): number {
@@ -121,8 +127,8 @@ export default function DecisionsPage() {
     setCurrentOptionIndex(0);
     setFeeling(options[0].predictedFeeling);
     setValuesAlign(options[0].alignsValues);
-    setPressure(options[0].externalPressure ? "Yes" : "No");
-    setAssumptions(options[0].makingAssumptions ? "Yes" : "No");
+    setPressure(options[0].externalPressure ? "YES" : "NO");
+    setAssumptions(options[0].makingAssumptions ? "YES" : "NO");
     setStep(2);
   };
 
@@ -134,8 +140,8 @@ export default function DecisionsPage() {
           ...opt,
           predictedFeeling: (feeling as any) || "Unknown",
           alignsValues: (valuesAlign as any) || "Unsure",
-          externalPressure: pressure === "Yes",
-          makingAssumptions: assumptions === "Yes"
+          externalPressure: pressure === "YES",
+          makingAssumptions: assumptions === "YES"
         };
       }
       return opt;
@@ -148,8 +154,8 @@ export default function DecisionsPage() {
       // Load next option's selections
       setFeeling(updated[nextIdx].predictedFeeling);
       setValuesAlign(updated[nextIdx].alignsValues);
-      setPressure(updated[nextIdx].externalPressure ? "Yes" : "No");
-      setAssumptions(updated[nextIdx].makingAssumptions ? "Yes" : "No");
+      setPressure(updated[nextIdx].externalPressure ? "YES" : "NO");
+      setAssumptions(updated[nextIdx].makingAssumptions ? "YES" : "NO");
     } else {
       setStep(3);
     }
@@ -163,8 +169,8 @@ export default function DecisionsPage() {
           ...opt,
           predictedFeeling: (feeling as any) || "Unknown",
           alignsValues: (valuesAlign as any) || "Unsure",
-          externalPressure: pressure === "Yes",
-          makingAssumptions: assumptions === "Yes"
+          externalPressure: pressure === "YES",
+          makingAssumptions: assumptions === "YES"
         };
       }
       return opt;
@@ -177,8 +183,8 @@ export default function DecisionsPage() {
       // Load previous option's selections
       setFeeling(updated[prevIdx].predictedFeeling);
       setValuesAlign(updated[prevIdx].alignsValues);
-      setPressure(updated[prevIdx].externalPressure ? "Yes" : "No");
-      setAssumptions(updated[prevIdx].makingAssumptions ? "Yes" : "No");
+      setPressure(updated[prevIdx].externalPressure ? "YES" : "NO");
+      setAssumptions(updated[prevIdx].makingAssumptions ? "YES" : "NO");
     } else {
       setStep(1);
     }
@@ -379,109 +385,57 @@ export default function DecisionsPage() {
               Context Check: {options[currentOptionIndex].label.trim() || `Option ${String.fromCharCode(65 + currentOptionIndex)}`}
             </h3>
 
-            {/* 6 Months Feeling Prompt */}
+            {/* 6-Month Feeling Question */}
             <div className="space-y-3">
-              <label className="block text-lg font-bold text-slate-800">How will I likely feel about this choice in 6 months?</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(["Proud", "Indifferent", "Regretful", "Unknown"] as const).map((f) => {
-                  const isSelected = feeling === f;
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => setFeeling(f)}
-                      className={`p-4 rounded-2xl text-sm font-medium transition-all duration-250 ${
-                        isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  );
-                })}
+              <label className="block text-lg font-bold text-slate-900">How will I likely feel about this choice in 6 months?</label>
+              <div className="flex flex-wrap gap-3">
+                {['Proud', 'Indifferent', 'Regretful', 'Unknown'].map((opt) => (
+                  <button 
+                    key={opt}
+                    type="button"
+                    onClick={() => setFeeling(opt)}
+                    className={getButtonClass(feeling === opt)}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Values Alignment */}
+            {/* Core Values Question */}
             <div className="space-y-3">
-              <label className="block text-lg font-bold text-slate-800">Does this option align with my core values?</label>
-              <div className="grid grid-cols-3 gap-3">
-                {(["Yes", "No", "Unsure"] as const).map((v) => {
-                  const isSelected = valuesAlign === v;
-                  return (
-                    <button
-                      key={v}
-                      onClick={() => setValuesAlign(v)}
-                      className={`p-4 rounded-2xl text-sm font-medium transition-all duration-250 ${
-                        isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      {v}
-                    </button>
-                  );
-                })}
+              <label className="block text-lg font-bold text-slate-900">Does this option align with my core values?</label>
+              <div className="flex flex-wrap gap-3">
+                {['Yes', 'No', 'Unsure'].map((opt) => (
+                  <button 
+                    key={opt}
+                    type="button"
+                    onClick={() => setValuesAlign(opt)}
+                    className={getButtonClass(valuesAlign === opt)}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* External Pressure & Assumptions toggles */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-              <div className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
-                <div>
-                  <span className="font-semibold text-slate-800 block text-base">Is there external pressure?</span>
-                  <span className="text-sm text-slate-500">Feeling forced by others</span>
-                </div>
+            {/* External Pressure and Assumptions Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* External Pressure */}
+              <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
+                <p className="font-bold text-slate-900 text-base">Is there external pressure?</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setPressure("Yes")}
-                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                      pressure === "Yes"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    }`}
-                  >
-                    YES
-                  </button>
-                  <button
-                    onClick={() => setPressure("No")}
-                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                      pressure === "No"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    }`}
-                  >
-                    NO
-                  </button>
+                  <button type="button" onClick={() => setPressure('YES')} className={getButtonClass(pressure === 'YES')}>YES</button>
+                  <button type="button" onClick={() => setPressure('NO')} className={getButtonClass(pressure === 'NO')}>NO</button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
-                <div>
-                  <span className="font-semibold text-slate-800 block text-base">Am I making assumptions?</span>
-                  <span className="text-sm text-slate-500">Deciding without verified facts</span>
-                </div>
+              {/* Assumptions */}
+              <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
+                <p className="font-bold text-slate-900 text-base">Am I making assumptions?</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setAssumptions("Yes")}
-                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                      assumptions === "Yes"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    }`}
-                  >
-                    YES
-                  </button>
-                  <button
-                    onClick={() => setAssumptions("No")}
-                    className={`py-2.5 px-6 rounded-xl text-xs font-bold transition-all ${
-                      assumptions === "No"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02] font-semibold"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    }`}
-                  >
-                    NO
-                  </button>
+                  <button type="button" onClick={() => setAssumptions('YES')} className={getButtonClass(assumptions === 'YES')}>YES</button>
+                  <button type="button" onClick={() => setAssumptions('NO')} className={getButtonClass(assumptions === 'NO')}>NO</button>
                 </div>
               </div>
             </div>
@@ -609,8 +563,8 @@ export default function DecisionsPage() {
                 setCurrentOptionIndex(lastIdx);
                 setFeeling(options[lastIdx].predictedFeeling);
                 setValuesAlign(options[lastIdx].alignsValues);
-                setPressure(options[lastIdx].externalPressure ? "Yes" : "No");
-                setAssumptions(options[lastIdx].makingAssumptions ? "Yes" : "No");
+                setPressure(options[lastIdx].externalPressure ? "YES" : "NO");
+                setAssumptions(options[lastIdx].makingAssumptions ? "YES" : "NO");
                 setStep(2);
               }}
               className="bg-slate-100 text-slate-700 font-bold py-3.5 px-10 rounded-2xl hover:bg-slate-200 transition-colors"
