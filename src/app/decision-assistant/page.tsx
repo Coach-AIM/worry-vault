@@ -12,8 +12,8 @@ export default function DecisionContextCheck() {
   // Dynamic CSS injector to guarantee immediate color transformation on selection
   const checkStyle = (currentValue: string | null, targetValue: string) => {
     return currentValue === targetValue
-      ? "flex-1 min-w-[100px] px-5 py-4 text-base font-bold rounded-2xl border-2 transition-all duration-150 bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100 scale-[1.02]"
-      : "flex-1 min-w-[100px] px-5 py-4 text-base font-medium rounded-2xl border transition-all duration-150 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300";
+      ? "flex-1 min-w-[100px] px-5 py-4 text-base font-bold rounded-2xl border-2 transition-all duration-150 !bg-blue-600 !text-white !border-blue-600 shadow-lg shadow-blue-100 scale-[1.02]"
+      : "flex-1 min-w-[100px] px-5 py-4 text-base font-medium rounded-2xl border transition-all duration-150 !bg-white !text-slate-700 !border-slate-200 hover:!bg-slate-50 hover:!border-slate-300";
   };
 
   return (

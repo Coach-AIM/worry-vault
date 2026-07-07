@@ -30,28 +30,30 @@ a {
   box-sizing: border-box;
 }
 
-button {
-  background-color: var(--sage-green);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-}
+@layer base {
+  button {
+    background-color: var(--sage-green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+  }
 
-button:hover {
-  background-color: var(--sage-green-hover);
-}
+  button:hover {
+    background-color: var(--sage-green-hover);
+  }
 
-button.secondary {
-  background-color: var(--soft-blue);
-  color: var(--foreground);
-}
+  button.secondary {
+    background-color: var(--soft-blue);
+    color: var(--foreground);
+  }
 
-button.secondary:hover {
-  background-color: var(--soft-blue-hover);
+  button.secondary:hover {
+    background-color: var(--soft-blue-hover);
+  }
 }
 
 /* Base Layout Classes */
