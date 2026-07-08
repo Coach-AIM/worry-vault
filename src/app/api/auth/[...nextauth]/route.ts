@@ -10,15 +10,15 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Username", type: "text", placeholder: "coach" },
+        username: { label: "Username", type: "text", placeholder: "CanDo" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
         // Simple default fallback credentials
-        if (credentials.username === "coach" && credentials.password === "password123") {
-          return { id: "user_coach_1", name: "Coach", email: "coach@momentum.app" };
+        if (credentials.username.trim().toLowerCase() === "cando" && credentials.password === "password123") {
+          return { id: "user_cando_1", name: "CanDo", email: "cando@momentum.app" };
         }
 
         try {

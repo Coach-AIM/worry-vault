@@ -93,7 +93,11 @@ export default function Navigation() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              boxShadow: 'none',
+              transform: 'none',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              color: 'inherit'
             }}
           >
             <div className="nav-icon-wrapper">

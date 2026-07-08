@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('coach');
+  const [username, setUsername] = useState('CanDo');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid credentials. Hint: use coach / password123");
+        setError("Invalid credentials. Hint: use CanDo / password123");
       } else {
         router.push('/');
         router.refresh();
@@ -43,55 +43,51 @@ export default function LoginPage() {
       justifyContent: 'center', 
       alignItems: 'center', 
       minHeight: '100vh', 
-      backgroundColor: '#f4f6f4',
-      padding: '1rem' 
+      padding: '1.5rem' 
     }}>
-      <div style={{ 
+      <div className="card-premium animate-fade-in" style={{ 
         maxWidth: '400px', 
         width: '100%', 
-        backgroundColor: '#fff', 
-        padding: '2.5rem', 
-        borderRadius: 'var(--radius)', 
-        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-        border: '1px solid var(--border)'
+        padding: '2.5rem'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ 
             fontSize: '2.5rem', 
             color: 'var(--sage-green)', 
-            fontFamily: 'serif', 
             margin: '0 0 0.5rem 0',
-            fontWeight: 600
+            fontWeight: 700
           }}>Momentum</h1>
-          <p style={{ color: '#777', margin: 0, fontSize: '0.95rem' }}>Secure Private Locker</p>
+          <p style={{ color: 'hsl(200, 10%, 50%)', margin: 0, fontSize: '0.95rem', fontWeight: 500 }}>Secure Private Locker</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem', color: '#555' }}>Username</label>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--foreground)', opacity: 0.8 }}>Username</label>
             <input 
               type="text" 
               value={username} 
               onChange={e => setUsername(e.target.value)} 
               required
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.95rem' }}
+              className="form-input"
+              style={{ width: '100%' }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem', color: '#555' }}>Password</label>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--foreground)', opacity: 0.8 }}>Password</label>
             <input 
               type="password" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
               placeholder="••••••••"
               required
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.95rem' }}
+              className="form-input"
+              style={{ width: '100%' }}
             />
           </div>
 
           {error && (
-            <div style={{ color: '#b45309', backgroundColor: '#fffbeb', border: '1px solid #fde68a', padding: '0.75rem', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center' }}>
+            <div className="badge-danger" style={{ padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>
               ⚠️ {error}
             </div>
           )}
@@ -99,16 +95,11 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={loading}
+            className="btn-primary"
             style={{ 
               width: '100%', 
               padding: '0.85rem', 
               fontSize: '1rem', 
-              fontWeight: 600,
-              backgroundColor: 'var(--sage-green)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 'var(--radius)',
-              cursor: 'pointer',
               marginTop: '0.5rem'
             }}
           >
@@ -117,14 +108,14 @@ export default function LoginPage() {
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.88rem' }}>
-          <span style={{ color: '#777' }}>Don't have an account? </span>
+          <span style={{ color: 'hsl(200, 10%, 50%)' }}>Don't have an account? </span>
           <Link href="/register" style={{ color: 'var(--sage-green)', fontWeight: 600, textDecoration: 'none' }}>
             Sign Up
           </Link>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.8rem', color: '#999', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-          Default credentials: <strong>coach</strong> / <strong>password123</strong>
+          Default credentials: <strong>CanDo</strong> / <strong>password123</strong>
         </div>
       </div>
     </div>

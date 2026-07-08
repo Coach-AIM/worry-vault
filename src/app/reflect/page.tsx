@@ -150,28 +150,26 @@ export default function EndOfDayReflection() {
   const currentDecision = expiredDecisions[currentExpiredIndex];
 
   return (
-    <div style={{ 
+    <div className="card-premium animate-fade-in" style={{ 
       maxWidth: '600px', 
       margin: '2rem auto', 
       padding: '2.5rem', 
-      backgroundColor: '#fdfbf7', // Warm cream background for winding down
-      borderRadius: '16px', 
-      border: '1px solid #f1e9db',
-      boxShadow: '0 8px 30px rgba(143, 188, 143, 0.08)',
-      minHeight: '450px',
+      backgroundColor: '#fcfaf6', // Soothing warm sand tone
+      borderColor: 'hsl(38, 30%, 90%)',
+      boxShadow: 'var(--card-shadow)',
+      minHeight: '480px',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between',
-      animation: 'fadeIn 0.6s ease'
+      justifyContent: 'space-between'
     }}>
       {step === 'intro' && (
         <div style={{ textAlign: 'center', margin: 'auto 0', animation: 'fadeIn 0.4s ease' }}>
           <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>🌙</div>
-          <h1 style={{ color: '#4a5d4e', fontFamily: 'serif', fontSize: '2.2rem', marginBottom: '1rem', fontWeight: 600 }}>End of Day Reflection</h1>
-          <p style={{ color: '#6e7e73', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2.5rem', maxWidth: '440px', marginInline: 'auto' }}>
+          <h1 className="serif-heading" style={{ color: 'var(--sage-green)', fontSize: '2.2rem', marginBottom: '1rem', fontWeight: 700 }}>End of Day Reflection</h1>
+          <p style={{ color: 'hsl(200, 10%, 45%)', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2.5rem', maxWidth: '440px', marginInline: 'auto', fontWeight: 500 }}>
             Take a few moments to offload your thoughts, release today's worries, and set a gentle path for tomorrow so your mind can rest.
           </p>
-          <button type="button" onClick={handleBegin} style={{ backgroundColor: '#7da084', padding: '0.8rem 2.5rem', fontSize: '1.05rem' }}>
+          <button type="button" onClick={handleBegin} className="btn-primary" style={{ padding: '0.8rem 2.5rem', fontSize: '1.05rem' }}>
             Begin Reflection
           </button>
         </div>
@@ -181,22 +179,23 @@ export default function EndOfDayReflection() {
       {step === 'decision_follow_up' && currentDecision && (
         <div style={{ animation: 'fadeIn 0.4s ease', display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
           <div>
-            <span style={{ fontSize: '0.75rem', backgroundColor: '#e6f4ea', color: '#137333', padding: '0.2rem 0.6rem', borderRadius: '10px', fontWeight: 'bold' }}>
+            <span className="badge-custom badge-sage" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', fontWeight: 'bold' }}>
               Recap check-in {currentExpiredIndex + 1} of {expiredDecisions.length}
             </span>
-            <h2 style={{ color: '#4a5d4e', fontSize: '1.5rem', marginTop: '0.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>🎯 Decision Check-in</h2>
-            <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: 1.5 }}>
+            <h2 className="serif-heading" style={{ color: 'var(--sage-green)', fontSize: '1.6rem', marginTop: '0.75rem', marginBottom: '0.5rem', fontWeight: 700 }}>🎯 Decision Check-in</h2>
+            <p style={{ color: 'hsl(200, 10%, 45%)', fontSize: '0.98rem', lineHeight: 1.5, fontWeight: 500 }}>
               You recently made a decision about <strong>"{currentDecision.title}"</strong>. Which option did you choose, and how do you feel about it now?
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#5a6b5e', marginBottom: '0.4rem' }}>Which option did you choose?</label>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.4rem' }}>Which option did you choose?</label>
               <select
                 value={chosenOptionId}
                 onChange={e => setChosenOptionId(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dcd3c4', backgroundColor: '#fff', fontSize: '0.95rem' }}
+                className="form-input"
+                style={{ width: '100%', fontSize: '0.95rem', backgroundColor: '#fff' }}
               >
                 <option value="">-- Select Option --</option>
                 {currentDecision.options?.map((opt: any) => (
@@ -206,7 +205,7 @@ export default function EndOfDayReflection() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#5a6b5e', marginBottom: '0.4rem' }}>How do you feel about it now?</label>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.4rem' }}>How do you feel about it now?</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {['Proud', 'Indifferent', 'Regretful'].map(feeling => (
                   <button
@@ -215,14 +214,16 @@ export default function EndOfDayReflection() {
                     onClick={() => setActualFeeling(feeling)}
                     style={{
                       flex: 1,
-                      padding: '0.6rem',
-                      border: '1px solid #dcd3c4',
+                      padding: '0.65rem',
+                      border: actualFeeling === feeling ? 'none' : '1px solid var(--border)',
                       borderRadius: '8px',
-                      backgroundColor: actualFeeling === feeling ? '#7da084' : '#fff',
-                      color: actualFeeling === feeling ? '#fff' : '#555',
-                      fontWeight: 600,
+                      backgroundColor: actualFeeling === feeling ? 'var(--sage-green)' : '#fff',
+                      color: actualFeeling === feeling ? '#fff' : 'hsl(200, 10%, 45%)',
+                      fontWeight: 700,
                       fontSize: '0.9rem',
                       cursor: 'pointer',
+                      boxShadow: 'none',
+                      transform: 'none',
                       transition: 'all 0.2s'
                     }}
                   >
@@ -238,7 +239,8 @@ export default function EndOfDayReflection() {
               type="button" 
               onClick={handleSubmitFollowUp} 
               disabled={submittingFollowUp || !chosenOptionId}
-              style={{ flex: 1, backgroundColor: '#7da084', padding: '0.75rem' }}
+              className="btn-primary"
+              style={{ flex: 1, padding: '0.75rem' }}
             >
               {submittingFollowUp ? 'Submitting...' : 'Submit Check-in'}
             </button>
@@ -249,39 +251,35 @@ export default function EndOfDayReflection() {
       {step === 'release' && (
         <div style={{ animation: 'fadeIn 0.4s ease', display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
           <div>
-            <h2 style={{ color: '#4a5d4e', fontSize: '1.6rem', marginBottom: '0.5rem', fontWeight: 600 }}>Release the Day</h2>
-            <p style={{ color: '#778', fontSize: '0.95rem', margin: 0 }}>Gently acknowledge a positive moment and put today's worries to rest.</p>
+            <h2 className="serif-heading" style={{ color: 'var(--sage-green)', fontSize: '1.6rem', marginBottom: '0.5rem', fontWeight: 700 }}>Release the Day</h2>
+            <p style={{ color: 'hsl(200, 10%, 45%)', fontSize: '0.98rem', margin: 0, fontWeight: 500 }}>Gently acknowledge a positive moment and put today's worries to rest.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#5a6b5e', marginBottom: '0.4rem' }}>What is one thing that went well today?</label>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.4rem' }}>What is one thing that went well today?</label>
               <textarea 
                 value={positive}
                 onChange={e => setPositive(e.target.value)}
                 placeholder="E.g., I completed a task I was avoiding, or had a warm conversation."
                 rows={3}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #dcd3c4', fontFamily: 'inherit', resize: 'none', backgroundColor: '#fff', fontSize: '0.95rem' }}
+                className="form-input"
+                style={{ fontSize: '0.95rem', resize: 'none' }}
               />
             </div>
 
             <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#5a6b5e', marginBottom: '0.4rem' }}>Is there a worry you want to leave behind in the vault?</label>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.4rem' }}>Is there a worry you want to leave behind in the vault?</label>
               <textarea 
                 value={worry}
                 onChange={e => setWorry(e.target.value)}
                 placeholder="Write down any residual worries to leave them here."
                 rows={3}
                 disabled={releasingWorry}
+                className="form-input"
                 style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  borderRadius: '8px', 
-                  border: '1px solid #dcd3c4', 
-                  fontFamily: 'inherit', 
-                  resize: 'none', 
-                  backgroundColor: '#fff',
                   fontSize: '0.95rem',
+                  resize: 'none', 
                   opacity: releasingWorry ? 0 : 1,
                   transform: releasingWorry ? 'translateY(-30px) scale(0.9)' : 'none',
                   transition: 'opacity 2s ease, transform 2s ease'
@@ -290,12 +288,12 @@ export default function EndOfDayReflection() {
               {releasingWorry && (
                 <div style={{ 
                   position: 'absolute', 
-                  top: '40px', 
+                  top: '45px', 
                   left: 0, 
                   right: 0, 
                   textAlign: 'center', 
                   color: 'var(--sage-green)',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   fontSize: '1.1rem',
                   animation: 'floatUp 2s ease-out'
                 }}>
@@ -310,7 +308,8 @@ export default function EndOfDayReflection() {
               type="button" 
               onClick={handleReleaseWorry} 
               disabled={releasingWorry || (!positive.trim() && !worry.trim())}
-              style={{ flex: 1, backgroundColor: '#7da084', padding: '0.75rem' }}
+              className="btn-primary"
+              style={{ flex: 1, padding: '0.75rem' }}
             >
               {releasingWorry ? 'Releasing...' : 'Lock & Release Today'}
             </button>
@@ -321,45 +320,48 @@ export default function EndOfDayReflection() {
       {step === 'plan' && (
         <form onSubmit={handleSavePlan} style={{ animation: 'fadeIn 0.4s ease', display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
           <div>
-            <h2 style={{ color: '#4a5d4e', fontSize: '1.6rem', marginBottom: '0.5rem', fontWeight: 600 }}>Plan Tomorrow</h2>
-            <p style={{ color: '#778', fontSize: '0.95rem', margin: 0 }}>List up to 3 gentle steps for tomorrow, so you don't have to carry them in your thoughts overnight.</p>
+            <h2 className="serif-heading" style={{ color: 'var(--sage-green)', fontSize: '1.6rem', marginBottom: '0.5rem', fontWeight: 700 }}>Plan Tomorrow</h2>
+            <p style={{ color: 'hsl(200, 10%, 45%)', fontSize: '0.98rem', margin: 0, fontWeight: 500 }}>List up to 3 gentle steps for tomorrow, so you don't have to carry them in your thoughts overnight.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#555', marginBottom: '0.25rem' }}>Tomorrow's Step 1</label>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.25rem' }}>Tomorrow's Step 1</label>
               <input 
                 type="text" 
                 value={tomorrowTask1} 
                 onChange={e => setTomorrowTask1(e.target.value)} 
                 placeholder="E.g., Review the document first thing"
-                style={{ width: '100%', padding: '0.65rem', borderRadius: '6px', border: '1px solid #dcd3c4' }}
+                className="form-input"
+                style={{ padding: '0.65rem' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#555', marginBottom: '0.25rem' }}>Tomorrow's Step 2 (Optional)</label>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.25rem' }}>Tomorrow's Step 2 (Optional)</label>
               <input 
                 type="text" 
                 value={tomorrowTask2} 
                 onChange={e => setTomorrowTask2(e.target.value)} 
                 placeholder="E.g., Take a 15-minute stretch break"
-                style={{ width: '100%', padding: '0.65rem', borderRadius: '6px', border: '1px solid #dcd3c4' }}
+                className="form-input"
+                style={{ padding: '0.65rem' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#555', marginBottom: '0.25rem' }}>Tomorrow's Step 3 (Optional)</label>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.25rem' }}>Tomorrow's Step 3 (Optional)</label>
               <input 
                 type="text" 
                 value={tomorrowTask3} 
                 onChange={e => setTomorrowTask3(e.target.value)} 
                 placeholder="E.g., Call a friend at lunch"
-                style={{ width: '100%', padding: '0.65rem', borderRadius: '6px', border: '1px solid #dcd3c4' }}
+                className="form-input"
+                style={{ padding: '0.65rem' }}
               />
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
-            <button type="submit" disabled={savingPlan} style={{ flex: 1, backgroundColor: '#7da084', padding: '0.75rem' }}>
+            <button type="submit" disabled={savingPlan} className="btn-primary" style={{ flex: 1, padding: '0.75rem' }}>
               {savingPlan ? 'Saving Steps...' : 'Schedule for Tomorrow & Finish'}
             </button>
           </div>
@@ -369,20 +371,16 @@ export default function EndOfDayReflection() {
       {step === 'rest' && (
         <div style={{ textAlign: 'center', margin: 'auto 0', animation: 'fadeIn 0.4s ease' }}>
           <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>✨</div>
-          <h2 style={{ color: '#4a5d4e', fontSize: '1.8rem', marginBottom: '1rem', fontWeight: 600 }}>Your Day is Done</h2>
-          <p style={{ color: '#6e7e73', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '2.5rem', maxWidth: '440px', marginInline: 'auto' }}>
+          <h2 className="serif-heading" style={{ color: 'var(--sage-green)', fontSize: '1.8rem', marginBottom: '1rem', fontWeight: 700 }}>Your Day is Done</h2>
+          <p style={{ color: 'hsl(200, 10%, 45%)', fontSize: '1.05rem', lineHeight: '1.6', marginBottom: '2.5rem', maxWidth: '440px', marginInline: 'auto', fontWeight: 500 }}>
             Your worries are secured, your accomplishments are recognized, and tomorrow's steps are planned. You have cleared the path. 
             <br /><br />
             <strong>Rest well.</strong>
           </p>
-          <Link href="/" style={{
+          <Link href="/" className="btn-primary" style={{
             display: 'inline-block',
-            backgroundColor: '#7da084',
-            color: '#fff',
             padding: '0.75rem 2.5rem',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: 500
+            textDecoration: 'none'
           }}>
             Back to Dashboard
           </Link>
@@ -390,7 +388,6 @@ export default function EndOfDayReflection() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes floatUp {
           0% { opacity: 1; transform: translateY(0); }
           100% { opacity: 0; transform: translateY(-50px); }

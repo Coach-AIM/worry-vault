@@ -38,13 +38,13 @@ const DISTORTION_NAMES: Record<string, string> = {
 };
 
 const DONUT_COLORS = [
-  '#6366f1', // Indigo
-  '#8b5cf6', // Violet
-  '#a855f7', // Purple
-  '#d946ef', // Fuchsia
-  '#ec4899', // Pink
-  '#64748b', // Slate
-  '#475569', // Dark Slate
+  'var(--soft-blue)',
+  'var(--sage-green)',
+  'var(--accent-gold)',
+  'hsl(200, 40%, 65%)', // soft slate blue
+  'hsl(140, 20%, 65%)', // soft moss sage
+  'hsl(38, 45%, 65%)',  // soft ochre gold
+  'hsl(200, 10%, 55%)',  // calming grey
 ];
 
 const getEmotionColor = (name: string) => {
@@ -54,11 +54,11 @@ const getEmotionColor = (name: string) => {
   const stress = ['anxiety', 'overwhelm', 'frustrated', 'frustration', 'fear', 'nervous', 'stressed', 'panicked'];
   const reactive = ['anger', 'sadness', 'sad', 'angry', 'grief', 'hurt', 'guilt', 'shame', 'regretful'];
 
-  if (positive.some(e => n.includes(e))) return '#10b981'; // Emerald Green
-  if (stress.some(e => n.includes(e))) return '#f59e0b'; // Amber Orange
-  if (reactive.some(e => n.includes(e))) return '#f43f5e'; // Rose Red
+  if (positive.some(e => n.includes(e))) return 'var(--sage-green)'; 
+  if (stress.some(e => n.includes(e))) return 'var(--accent-gold)'; 
+  if (reactive.some(e => n.includes(e))) return 'var(--accent-danger)'; 
   
-  return '#64748b'; // Fallback Slate
+  return 'hsl(200, 10%, 50%)'; 
 };
 
 export default function InsightsPage() {
@@ -208,10 +208,10 @@ export default function InsightsPage() {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div style={{ backgroundColor: '#fff', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', fontSize: '0.85rem' }}>
-          <p style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>{data.name}</p>
-          <p style={{ margin: '0.25rem 0 0 0', color: '#3b82f6', fontWeight: 600 }}>Avg. Intensity: {data.averageIntensity}%</p>
-          <p style={{ margin: 0, color: '#64748b' }}>Logged: {data.frequency} times</p>
+        <div style={{ backgroundColor: '#fff', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)', fontSize: '0.88rem' }}>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--foreground)' }}>{data.name}</p>
+          <p style={{ margin: '0.35rem 0 0 0', color: 'var(--soft-blue-hover)', fontWeight: 700 }}>Avg. Intensity: {data.averageIntensity}%</p>
+          <p style={{ margin: 0, color: 'hsl(200, 10%, 45%)', fontWeight: 500 }}>Logged: {data.frequency} times</p>
         </div>
       );
     }
@@ -222,10 +222,10 @@ export default function InsightsPage() {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div style={{ backgroundColor: '#fff', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', fontSize: '0.85rem' }}>
-          <p style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>{data.name}</p>
-          <p style={{ margin: '0.25rem 0 0 0', color: '#6366f1', fontWeight: 600 }}>Count: {data.count} times</p>
-          <p style={{ margin: 0, color: '#64748b' }}>Share: {data.percentage}%</p>
+        <div style={{ backgroundColor: '#fff', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)', fontSize: '0.88rem' }}>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--foreground)' }}>{data.name}</p>
+          <p style={{ margin: '0.35rem 0 0 0', color: 'var(--soft-blue-hover)', fontWeight: 700 }}>Count: {data.count} times</p>
+          <p style={{ margin: 0, color: 'hsl(200, 10%, 45%)', fontWeight: 500 }}>Share: {data.percentage}%</p>
         </div>
       );
     }
@@ -235,10 +235,10 @@ export default function InsightsPage() {
   const CustomTimelineTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div style={{ backgroundColor: '#fff', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', fontSize: '0.85rem' }}>
-          <p style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>{label}</p>
+        <div style={{ backgroundColor: '#fff', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)', fontSize: '0.88rem' }}>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--foreground)', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', marginBottom: '0.35rem' }}>{label}</p>
           {payload.map((p: any) => (
-            <p key={p.name} style={{ margin: '0.25rem 0 0 0', color: p.stroke || p.color, fontWeight: 600 }}>
+            <p key={p.name} style={{ margin: '0.25rem 0 0 0', color: p.stroke || p.color, fontWeight: 700 }}>
               {p.name}: {p.value}%
             </p>
           ))}
@@ -249,30 +249,31 @@ export default function InsightsPage() {
   };
 
   return (
-    <div style={{ padding: '2rem 0', maxWidth: '800px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '2rem', textAlign: 'center' }}>
-        <h1 style={{ color: 'var(--sage-green)', marginBottom: '0.5rem', fontSize: '2.5rem', fontWeight: 600 }}>Wellness Trends</h1>
-        <p style={{ fontSize: '1.1rem', color: '#555' }}>Analyze emotional patterns and tracing distortion frequencies over time.</p>
-        <Link href="/" style={{ color: 'var(--soft-blue)', textDecoration: 'none', fontWeight: 600, display: 'inline-block', marginTop: '0.5rem' }}>&larr; Back to Dashboard</Link>
+    <div className="animate-fade-in" style={{ padding: '1.5rem 0', maxWidth: '800px', margin: '0 auto' }}>
+      <header style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
+        <h1 style={{ color: 'var(--sage-green)', marginBottom: '0.5rem', fontSize: '2.5rem', fontWeight: 700 }}>Wellness Trends</h1>
+        <p style={{ fontSize: '1.1rem', color: 'hsl(200, 10%, 45%)', fontWeight: 500 }}>Analyze emotional patterns and tracing distortion frequencies over time.</p>
+        <Link href="/" style={{ color: 'var(--soft-blue)', textDecoration: 'none', fontWeight: 700, display: 'inline-block', marginTop: '0.5rem' }}>&larr; Back to Dashboard</Link>
       </header>
 
       {/* Advanced Chart Toggle Controller */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2.5rem', backgroundColor: '#f1f5f9', padding: '0.35rem', borderRadius: '12px', maxWidth: '420px', marginInline: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2.5rem', backgroundColor: 'var(--border)', padding: '0.35rem', borderRadius: '12px', maxWidth: '420px', marginInline: 'auto' }}>
         <button 
           type="button" 
           onClick={() => setViewStyle('frequency')}
           style={{ 
             flex: 1, 
-            padding: '0.6rem 1.25rem', 
+            padding: '0.65rem 1.25rem', 
             borderRadius: '10px', 
             border: 'none', 
             backgroundColor: viewStyle === 'frequency' ? '#fff' : 'transparent',
-            color: viewStyle === 'frequency' ? 'var(--foreground)' : '#666',
-            fontWeight: 600,
+            color: viewStyle === 'frequency' ? 'var(--foreground)' : 'hsl(200, 10%, 50%)',
+            fontWeight: 700,
             fontSize: '0.9rem',
-            boxShadow: viewStyle === 'frequency' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+            boxShadow: viewStyle === 'frequency' ? 'var(--card-shadow)' : 'none',
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transform: 'none',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           📊 Frequency Metrics
@@ -282,16 +283,17 @@ export default function InsightsPage() {
           onClick={() => setViewStyle('timeline')}
           style={{ 
             flex: 1, 
-            padding: '0.6rem 1.25rem', 
+            padding: '0.65rem 1.25rem', 
             borderRadius: '10px', 
             border: 'none', 
             backgroundColor: viewStyle === 'timeline' ? '#fff' : 'transparent',
-            color: viewStyle === 'timeline' ? 'var(--foreground)' : '#666',
-            fontWeight: 600,
+            color: viewStyle === 'timeline' ? 'var(--foreground)' : 'hsl(200, 10%, 50%)',
+            fontWeight: 700,
             fontSize: '0.9rem',
-            boxShadow: viewStyle === 'timeline' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+            boxShadow: viewStyle === 'timeline' ? 'var(--card-shadow)' : 'none',
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transform: 'none',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           📈 Timeline Fluctuations
@@ -299,12 +301,12 @@ export default function InsightsPage() {
       </div>
 
       {fetchingStats ? (
-        <p style={{ textAlign: 'center', color: '#666' }}>Analyzing wellness trends...</p>
+        <p style={{ textAlign: 'center', color: 'hsl(200, 10%, 45%)' }}>Analyzing wellness trends...</p>
       ) : !mounted ? (
-        <p style={{ textAlign: 'center', color: '#666' }}>Loading interactive charts...</p>
+        <p style={{ textAlign: 'center', color: 'hsl(200, 10%, 45%)' }}>Loading interactive charts...</p>
       ) : journalEntries.length === 0 ? (
         <div style={{ padding: '4rem 2rem', textAlign: 'center', backgroundColor: '#fff', borderRadius: 'var(--radius)', border: '1px dashed var(--border)' }}>
-          <p style={{ color: '#888', fontSize: '1.15rem' }}>
+          <p style={{ color: 'hsl(200, 10%, 50%)', fontSize: '1.15rem' }}>
             Complete a guided CBT thought record in the **Journal** tab to begin generating wellness trends.
           </p>
         </div>
@@ -315,12 +317,12 @@ export default function InsightsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
               
               {/* Emotion Intensities Chart */}
-              <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--foreground)', marginBottom: '0.25rem' }}>Emotion Trends</h3>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '2rem' }}>Shows which emotions are logged most frequently, along with their average intensity.</p>
+              <div className="card-premium" style={{ padding: '2rem' }}>
+                <h3 style={{ fontSize: '1.35rem', color: 'var(--foreground)', marginBottom: '0.25rem', fontWeight: 700 }}>Emotion Trends</h3>
+                <p style={{ fontSize: '0.92rem', color: 'hsl(200, 10%, 45%)', marginBottom: '2rem', fontWeight: 500 }}>Shows which emotions are logged most frequently, along with their average intensity.</p>
                 
                 {emotionStats.length === 0 ? (
-                  <p style={{ color: '#999', fontSize: '0.95rem' }}>No structured emotion data recorded yet.</p>
+                  <p style={{ color: 'hsl(200, 10%, 50%)', fontSize: '0.95rem' }}>No structured emotion data recorded yet.</p>
                 ) : (
                   <div>
                     <div style={{ height: '320px', width: '100%' }}>
@@ -343,18 +345,18 @@ export default function InsightsPage() {
                     </div>
 
                     {/* Chart Legend */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', fontSize: '0.8rem', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)', fontSize: '0.85rem', fontWeight: 700 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '50%' }} />
-                        <span style={{ color: '#64748b' }}>Positive / Resourceful</span>
+                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: 'var(--sage-green)', borderRadius: '50%' }} />
+                        <span style={{ color: 'hsl(200, 10%, 45%)' }}>Positive / Resourceful</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: '#f59e0b', borderRadius: '50%' }} />
-                        <span style={{ color: '#64748b' }}>High-Stress / Threat</span>
+                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: 'var(--accent-gold)', borderRadius: '50%' }} />
+                        <span style={{ color: 'hsl(200, 10%, 45%)' }}>High-Stress / Threat</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: '#f43f5e', borderRadius: '50%' }} />
-                        <span style={{ color: '#64748b' }}>Heavy / Reactive</span>
+                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: 'var(--accent-danger)', borderRadius: '50%' }} />
+                        <span style={{ color: 'hsl(200, 10%, 45%)' }}>Heavy / Reactive</span>
                       </div>
                     </div>
                   </div>
@@ -362,12 +364,12 @@ export default function InsightsPage() {
               </div>
 
               {/* Distortion Frequencies Donut Chart */}
-              <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--foreground)', marginBottom: '0.25rem' }}>Thinking Trap Frequency</h3>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '2rem' }}>Frequency distribution of cognitive distortions flagged in your thought records.</p>
+              <div className="card-premium" style={{ padding: '2rem' }}>
+                <h3 style={{ fontSize: '1.35rem', color: 'var(--foreground)', marginBottom: '0.25rem', fontWeight: 700 }}>Thinking Trap Frequency</h3>
+                <p style={{ fontSize: '0.92rem', color: 'hsl(200, 10%, 45%)', marginBottom: '2rem', fontWeight: 500 }}>Frequency distribution of cognitive distortions flagged in your thought records.</p>
                 
                 {distortionStats.length === 0 ? (
-                  <p style={{ color: '#999', fontSize: '0.95rem' }}>No structured distortion data recorded yet.</p>
+                  <p style={{ color: 'hsl(200, 10%, 50%)', fontSize: '0.95rem' }}>No structured distortion data recorded yet.</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
                     {/* Responsive Flex layout for chart + legend */}
@@ -406,20 +408,20 @@ export default function InsightsPage() {
                           alignItems: 'center', 
                           pointerEvents: 'none' 
                         }}>
-                          <span style={{ fontSize: '2rem', fontWeight: 900, color: '#1e293b', lineHeight: 1 }}>{totalDistortionsCount}</span>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>Total Traps</span>
+                          <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--foreground)', lineHeight: 1 }}>{totalDistortionsCount}</span>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'hsl(200, 10%, 50%)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '6px' }}>Total Traps</span>
                         </div>
                       </div>
 
                       {/* Custom styled list legend */}
                       <div style={{ flex: 1, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                         {distortionStats.map((stat, index) => (
-                          <div key={stat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                          <div key={stat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.88rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                               <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length], borderRadius: '50%', flexShrink: 0 }} />
-                              <span style={{ fontWeight: 600, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stat.name}</span>
+                              <span style={{ fontWeight: 600, color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stat.name}</span>
                             </div>
-                            <span style={{ color: '#64748b', fontWeight: 700, paddingLeft: '0.5rem' }}>{stat.count}x ({stat.percentage}%)</span>
+                            <span style={{ color: 'hsl(200, 10%, 45%)', fontWeight: 700, paddingLeft: '0.5rem' }}>{stat.count}x ({stat.percentage}%)</span>
                           </div>
                         ))}
                       </div>
@@ -430,14 +432,14 @@ export default function InsightsPage() {
             </div>
           ) : (
             /* Timeline View with Interactive AreaChart */
-            <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--foreground)', marginBottom: '0.25rem' }}>Timeline Trajectory</h3>
-              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '2.5rem' }}>
+            <div className="card-premium" style={{ padding: '2rem' }}>
+              <h3 style={{ fontSize: '1.35rem', color: 'var(--foreground)', marginBottom: '0.25rem', fontWeight: 700 }}>Timeline Trajectory</h3>
+              <p style={{ fontSize: '0.92rem', color: 'hsl(200, 10%, 45%)', marginBottom: '2.5rem', fontWeight: 500 }}>
                 Monitors fluctuations of positive vs. negative feelings. (Reflects averages per distinct logged day).
               </p>
 
               {timelinePoints.length === 0 ? (
-                <p style={{ color: '#999', fontSize: '0.95rem', textAlign: 'center', padding: '2rem' }}>Not enough emotional data logged yet. Add journal logs to plot your timeline!</p>
+                <p style={{ color: 'hsl(200, 10%, 50%)', fontSize: '0.95rem', textAlign: 'center', padding: '2rem' }}>Not enough emotional data logged yet. Add journal logs to plot your timeline!</p>
               ) : (
                 <div>
                   <div style={{ height: '320px', width: '100%' }}>
@@ -448,12 +450,12 @@ export default function InsightsPage() {
                       >
                         <defs>
                           <linearGradient id="posGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="var(--sage-green)" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="var(--sage-green)" stopOpacity={0}/>
                           </linearGradient>
                           <linearGradient id="negGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2b4c5e" stopOpacity={0.25}/>
-                            <stop offset="95%" stopColor="#2b4c5e" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="var(--soft-blue)" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="var(--soft-blue)" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -464,7 +466,7 @@ export default function InsightsPage() {
                           type="monotone" 
                           dataKey="positive" 
                           name="Positive Trajectory" 
-                          stroke="#10b981" 
+                          stroke="var(--sage-green)" 
                           fillOpacity={1} 
                           fill="url(#posGrad)" 
                           strokeWidth={3} 
@@ -473,7 +475,7 @@ export default function InsightsPage() {
                           type="monotone" 
                           dataKey="negative" 
                           name="Negative Trajectory" 
-                          stroke="#2b4c5e" 
+                          stroke="var(--soft-blue)" 
                           fillOpacity={1} 
                           fill="url(#negGrad)" 
                           strokeWidth={3} 
@@ -483,14 +485,14 @@ export default function InsightsPage() {
                   </div>
 
                   {/* Chart Legend */}
-                  <div style={{ display: 'flex', gap: '2rem', marginTop: '1.5rem', justifyContent: 'center', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#444' }}>
-                      <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '50%' }} />
-                      <strong style={{ fontWeight: 600 }}>Positive Trajectory (Joy/Relief)</strong>
+                  <div style={{ display: 'flex', gap: '2rem', marginTop: '1.5rem', justifyContent: 'center', fontSize: '0.88rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--foreground)' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: 'var(--sage-green)', borderRadius: '50%' }} />
+                      <strong style={{ fontWeight: 700 }}>Positive Trajectory (Joy/Relief)</strong>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#444' }}>
-                      <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: '#2b4c5e', borderRadius: '50%' }} />
-                      <strong style={{ fontWeight: 600 }}>Negative Trajectory (Stress/Anxiety)</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--foreground)' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: 'var(--soft-blue)', borderRadius: '50%' }} />
+                      <strong style={{ fontWeight: 700 }}>Negative Trajectory (Stress/Anxiety)</strong>
                     </div>
                   </div>
                 </div>
@@ -500,10 +502,6 @@ export default function InsightsPage() {
 
         </div>
       )}
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-      `}} />
     </div>
   );
 }
