@@ -39,6 +39,7 @@ export default function CBTJournal() {
   const [selectedDistortions, setSelectedDistortions] = useState<string[]>([]);
   
   const [reframe, setReframe] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState<'friend' | 'fact' | 'reset' | null>(null);
   
   // Heuristic Highlights
   const [localDistortions, setLocalDistortions] = useState<DistortionType[]>([]);
@@ -331,6 +332,7 @@ export default function CBTJournal() {
     setReframe('');
     setInsightsData(null);
     setApiSuggestedEmotions([]);
+    setSelectedExercise(null);
     fetchHistory();
     setLoading(false);
   }
@@ -794,30 +796,68 @@ export default function CBTJournal() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <button 
                       type="button"
-                      onClick={() => setReframe(`If a close friend were in this situation, I would tell them: "This is a single event, not a reflection of your worth. You are doing the best you can and have handled hard things before."`)}
-                      style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
+                      onClick={() => setSelectedExercise('friend')}
+                      style={{ 
+                        textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
+                        backgroundColor: selectedExercise === 'friend' ? '#f0fdf4' : '#fff', 
+                        border: selectedExercise === 'friend' ? '2px solid var(--sage-green)' : '1px solid #e2e8f0', 
+                        cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' 
+                      }}
                       className="prompt-card"
                     >
                       <strong>👥 The Friend Test:</strong> What would you tell a friend who had this exact thought?
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setReframe(`Looking at the objective evidence: The fact is I made a mistake, but the evidence against it being a disaster is that I can fix it tomorrow and my overall track record is very solid.`)}
-                      style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
+                      onClick={() => setSelectedExercise('fact')}
+                      style={{ 
+                        textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
+                        backgroundColor: selectedExercise === 'fact' ? '#f0fdf4' : '#fff', 
+                        border: selectedExercise === 'fact' ? '2px solid var(--sage-green)' : '1px solid #e2e8f0', 
+                        cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' 
+                      }}
                       className="prompt-card"
                     >
                       <strong>⚖️ Fact Checking:</strong> What is the objective evidence for and against this automatic thought?
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setReframe(`Even if the worst-case scenario happened (such as the meeting going poorly), the reality is I would feel embarrassed for a day but I would recover, learn, and move on.`)}
-                      style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' }}
+                      onClick={() => setSelectedExercise('reset')}
+                      style={{ 
+                        textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
+                        backgroundColor: selectedExercise === 'reset' ? '#f0fdf4' : '#fff', 
+                        border: selectedExercise === 'reset' ? '2px solid var(--sage-green)' : '1px solid #e2e8f0', 
+                        cursor: 'pointer', fontSize: '0.88rem', color: '#555', transition: 'all 0.2s' 
+                      }}
                       className="prompt-card"
                     >
-                      <strong>💭 Decatastrophizing (So What?):</strong> If the worst-case scenario happened, how would you cope?
+                      <strong>💭 Perspective Reset:</strong> If the worst-case scenario happened, how would you cope?
                     </button>
                   </div>
                 </div>
+
+                {selectedExercise && (
+                  <div style={{ 
+                    marginBottom: '1.5rem', 
+                    padding: '1.25rem', 
+                    backgroundColor: '#f0fdf4', 
+                    border: '1px solid #bcf0da', 
+                    borderRadius: 'var(--radius)', 
+                    borderLeft: '5px solid var(--sage-green)',
+                    animation: 'fadeIn 0.3s ease'
+                  }}>
+                    <strong style={{ display: 'block', fontSize: '0.9rem', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem' }}>
+                      {selectedExercise === 'friend' && "👥 Active Exercise: The Friend Test"}
+                      {selectedExercise === 'fact' && "⚖️ Active Exercise: Fact Checking"}
+                      {selectedExercise === 'reset' && "💭 Active Exercise: Perspective Reset"}
+                    </strong>
+                    <p style={{ margin: 0, fontSize: '1rem', color: '#14532d', lineHeight: '1.5', fontWeight: 500 }}>
+                      {selectedExercise === 'friend' && `If a close friend came to you and said: '${thought}', what realistic advice would you give them?`}
+                      {selectedExercise === 'fact' && `What are the concrete facts that support '${thought}'? What concrete facts contradict it?`}
+                      {selectedExercise === 'reset' && `Regarding the situation: '${situation}'—if the absolute worst-case scenario happens, what is your plan to handle it?`}
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
@@ -881,6 +921,12 @@ export default function CBTJournal() {
               onChange={(e) => setReframe(e.target.value)}
               placeholder={entryType === 'positive'
                 ? "Describe your strengths, who you are grateful for, or how you want to remember this win."
+                : selectedExercise === 'friend'
+                ? "Based on the Friend Test, my alternative thought is..."
+                : selectedExercise === 'fact'
+                ? "Based on Fact Checking, my alternative thought is..."
+                : selectedExercise === 'reset'
+                ? "Based on Perspective Reset, my alternative thought is..."
                 : "Type your reframed, realistic thought here..."}
               rows={4}
               required
@@ -888,7 +934,7 @@ export default function CBTJournal() {
             />
 
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <button type="button" onClick={() => setStep(entryType === 'positive' ? 2 : 4)} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
+              <button type="button" onClick={() => { setStep(entryType === 'positive' ? 2 : 4); setSelectedExercise(null); }} style={{ background: 'transparent', color: '#666', border: '1px solid #ccc', flex: 1 }}>Back</button>
               <button type="submit" disabled={loading} style={{ flex: 2 }}>
                 {loading ? 'Saving...' : 'Save Entry & Finish'}
               </button>
