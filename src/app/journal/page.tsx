@@ -15,6 +15,9 @@ type Entry = {
   automaticThought: string | null;
   distortionsJson: string | null;
   reframedThought: string;
+  outcomeText?: string | null;
+  lessonsLearned?: string | null;
+  predictionEvaluation?: string | null;
 };
 
 type SelectedEmotion = {
@@ -51,6 +54,13 @@ export default function CBTJournal() {
   const [history, setHistory] = useState<Entry[]>([]);
   const [positives, setPositives] = useState<any[]>([]);
   const [counterEvidence, setCounterEvidence] = useState<string | null>(null);
+
+  // Evidence Loop (Follow-up) State
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [tempOutcomeText, setTempOutcomeText] = useState('');
+  const [tempLessonsLearned, setTempLessonsLearned] = useState('');
+  const [tempEvaluation, setTempEvaluation] = useState('Much better than expected');
+  const [savingOutcomeId, setSavingOutcomeId] = useState<number | null>(null);
 
   // Default suggested emotions helper
   const getSuggestedEmotions = (situationText: string) => {
@@ -352,6 +362,50 @@ export default function CBTJournal() {
     setSelectedExercise(null);
     fetchHistory();
     setLoading(false);
+  }
+
+  async function handleSaveOutcome(entryId: number) {
+    if (!tempOutcomeText.trim()) {
+      alert("Please enter what actually happened.");
+      return;
+    }
+    setSavingOutcomeId(entryId);
+    try {
+      const res = await fetch(`/api/journal/${entryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          outcomeText: tempOutcomeText,
+          lessonsLearned: tempLessonsLearned,
+          predictionEvaluation: tempEvaluation
+        })
+      });
+      if (res.ok) {
+        setHistory(history.map(item => {
+          if (item.id === entryId) {
+            return {
+              ...item,
+              outcomeText: tempOutcomeText,
+              lessonsLearned: tempLessonsLearned,
+              predictionEvaluation: tempEvaluation
+            };
+          }
+          return item;
+        }));
+        setEditingId(null);
+        setTempOutcomeText('');
+        setTempLessonsLearned('');
+        setTempEvaluation('Much better than expected');
+      } else {
+        const data = await res.json();
+        alert(`Failed to save outcome: ${data.error || 'Server error'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving outcome");
+    } finally {
+      setSavingOutcomeId(null);
+    }
   }
 
   const selectedDistortionNames = selectedDistortions
@@ -1140,6 +1194,132 @@ export default function CBTJournal() {
                         </div>
                       );
                     })()}
+
+                    {/* Close the Loop / The Evidence Check section */}
+                    {!isPositive && (
+                      <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed #e2e8f0' }}>
+                        {item.outcomeText ? (
+                          // If outcome is logged, show it in a beautiful frame
+                          <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', borderLeft: '4px solid var(--soft-blue)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--soft-blue-hover)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                ⚖️ The Evidence Loop (Outcome Logged)
+                              </span>
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                fontWeight: 700, 
+                                backgroundColor: item.predictionEvaluation === 'Much better than expected' ? '#dcfce7' : item.predictionEvaluation === 'As expected' ? '#fef9c3' : '#fee2e2', 
+                                color: item.predictionEvaluation === 'Much better than expected' ? '#15803d' : item.predictionEvaluation === 'As expected' ? '#a16207' : '#b91c1c', 
+                                padding: '0.15rem 0.5rem', 
+                                borderRadius: '12px' 
+                              }}>
+                                {item.predictionEvaluation}
+                              </span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--foreground)', lineHeight: 1.4, fontWeight: 500 }}>
+                              <strong>What happened:</strong> {item.outcomeText}
+                            </p>
+                            {item.lessonsLearned && (
+                              <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.88rem', color: '#475569', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                <strong>Takeaway:</strong> {item.lessonsLearned}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          // If outcome not logged
+                          <div>
+                            {editingId === item.id ? (
+                              <div style={{ backgroundColor: '#fcfaf6', padding: '1.25rem', borderRadius: '8px', border: '1px solid #f5efe6', display: 'flex', flexDirection: 'column', gap: '0.75rem', animation: 'fadeIn 0.3s ease' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-gold-text)' }}>
+                                  📝 Log Real-World Outcome
+                                </span>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#666', marginBottom: '0.2rem' }}>
+                                    How did this situation actually turn out? (Outcome)
+                                  </label>
+                                  <textarea
+                                    value={tempOutcomeText}
+                                    onChange={e => setTempOutcomeText(e.target.value)}
+                                    placeholder="Write down the concrete, objective details of what occurred..."
+                                    rows={2}
+                                    style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.9rem', fontFamily: 'inherit', resize: 'vertical' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#666', marginBottom: '0.2rem' }}>
+                                    Prediction Evaluation
+                                  </label>
+                                  <select
+                                    value={tempEvaluation}
+                                    onChange={e => setTempEvaluation(e.target.value)}
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.9rem', backgroundColor: '#fff', cursor: 'pointer' }}
+                                  >
+                                    <option value="Much better than expected">Much better than expected</option>
+                                    <option value="As expected">As expected</option>
+                                    <option value="Worse than expected">Worse than expected</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#666', marginBottom: '0.2rem' }}>
+                                    Lessons / Key Takeaways (Optional)
+                                  </label>
+                                  <textarea
+                                    value={tempLessonsLearned}
+                                    onChange={e => setTempLessonsLearned(e.target.value)}
+                                    placeholder="Any patterns noticed, should statements debunked, etc."
+                                    rows={2}
+                                    style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.9rem', fontFamily: 'inherit', resize: 'vertical' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingId(null);
+                                      setTempOutcomeText('');
+                                      setTempLessonsLearned('');
+                                      setTempEvaluation('Much better than expected');
+                                    }}
+                                    style={{ flex: 1, padding: '0.4rem 0.8rem', fontSize: '0.85rem', backgroundColor: 'transparent', color: '#666', border: '1px solid #ccc', borderRadius: '6px' }}
+                                    className="btn-secondary"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveOutcome(item.id)}
+                                    disabled={savingOutcomeId === item.id || !tempOutcomeText.trim()}
+                                    style={{ flex: 2, padding: '0.4rem 0.8rem', fontSize: '0.85rem', borderRadius: '6px' }}
+                                    className="btn-primary"
+                                  >
+                                    {savingOutcomeId === item.id ? 'Saving...' : 'Save Outcome'}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
+                                  How did this situation actually turn out? Add an outcome to update your evidence engine.
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingId(item.id);
+                                    setTempOutcomeText('');
+                                    setTempLessonsLearned('');
+                                    setTempEvaluation('Much better than expected');
+                                  }}
+                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '6px', cursor: 'pointer' }}
+                                  className="btn-secondary"
+                                >
+                                  Close the Loop
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

@@ -27,6 +27,11 @@ export const journalEntries = sqliteTable("journal_entries", {
   // Multi-purpose field: Acts as 'Reframed Thought' or 'Core Strength / Savoring Anchor'
   reframedThought: text("reframed_thought").notNull(),
   
+  // Follow-up / Evidence Loop fields
+  outcomeText: text("outcome_text"),
+  lessonsLearned: text("lessons_learned"),
+  predictionEvaluation: text("prediction_evaluation"),
+  
   // Ownership Filtering
   userId: text("user_id").default("user_coach_1").notNull(),
 });
