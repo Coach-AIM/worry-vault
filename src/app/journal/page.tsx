@@ -116,6 +116,19 @@ export default function CBTJournal() {
     return "I can take a deep breath and look at the facts of this situation objectively, rather than letting my automatic thoughts dictate my reality.";
   };
 
+  const getExerciseSample = (exerciseType = selectedExercise) => {
+    if (exerciseType === 'friend') {
+      return "If a friend were facing this, I'd remind them that a single stressful event doesn't define their capability. This is just a temporary challenge, and they are doing the best they can.";
+    }
+    if (exerciseType === 'fact') {
+      return "Looking at the actual evidence, the situation is frustrating, but it does not guarantee a total disaster. I have navigated unexpected hurdles successfully in the past.";
+    }
+    if (exerciseType === 'reset') {
+      return "Even if the worst-case scenario happens, it is an annoying inconvenience, not an insurmountable catastrophe. I am fully capable of handling the fallout step-by-step.";
+    }
+    return getHeuristicReframe();
+  };
+
   const [loading, setLoading] = useState(false);
   const [loadingEmotions, setLoadingEmotions] = useState(false);
   const [apiSuggestedEmotions, setApiSuggestedEmotions] = useState<string[]>([]);
@@ -883,14 +896,25 @@ export default function CBTJournal() {
                     {/* Heuristic Reframe */}
                     <button 
                       type="button"
-                      onClick={() => setAlternativeThought(getHeuristicReframe())}
+                      onClick={() => {
+                        const sample = getExerciseSample(selectedExercise);
+                        if (selectedExercise === 'friend') {
+                          setAlternativeThought(`If a close friend came to me and said: "${thought}", I would tell them: "${sample}"`);
+                        } else if (selectedExercise === 'fact') {
+                          setAlternativeThought(`Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- "${sample}"`);
+                        } else if (selectedExercise === 'reset') {
+                          setAlternativeThought(`Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: "${sample}"`);
+                        } else {
+                          setAlternativeThought(sample);
+                        }
+                      }}
                       style={{
                         textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
                         backgroundColor: '#f0f4f8', border: '1px solid #bcd0f7', color: '#1e40af',
                         cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.95rem', lineHeight: '1.4'
                       }}
                     >
-                      "{getHeuristicReframe()}" <span style={{ float: 'right', fontSize: '0.75rem', opacity: 0.6 }}>Coping Option</span>
+                      "{getExerciseSample()}" <span style={{ float: 'right', fontSize: '0.75rem', opacity: 0.6 }}>Coping Option</span>
                     </button>
                   </div>
                 </div>
@@ -905,7 +929,7 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise('friend');
-                        const currentSampleThought = (insightsData?.reframeSuggestions && insightsData.reframeSuggestions[0]) || getHeuristicReframe();
+                        const currentSampleThought = getExerciseSample('friend');
                         const fullText = `If a close friend came to me and said: "${thought}", I would tell them: "${currentSampleThought}"`;
                         setAlternativeThought(fullText);
                       }}
@@ -923,7 +947,7 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise('fact');
-                        const currentSampleThought = (insightsData?.reframeSuggestions && insightsData.reframeSuggestions[0]) || getHeuristicReframe();
+                        const currentSampleThought = getExerciseSample('fact');
                         const fullText = `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- "${currentSampleThought}"`;
                         setAlternativeThought(fullText);
                       }}
@@ -941,7 +965,7 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise('reset');
-                        const currentSampleThought = (insightsData?.reframeSuggestions && insightsData.reframeSuggestions[0]) || getHeuristicReframe();
+                        const currentSampleThought = getExerciseSample('reset');
                         const fullText = `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: "${currentSampleThought}"`;
                         setAlternativeThought(fullText);
                       }}
