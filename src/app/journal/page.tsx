@@ -37,6 +37,7 @@ export default function CBTJournal() {
   
   // Distortions State (Step 4)
   const [selectedDistortions, setSelectedDistortions] = useState<string[]>([]);
+  const [suggestedTraps, setSuggestedTraps] = useState<string[]>([]);
   
   const [alternativeThought, setAlternativeThought] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<'friend' | 'fact' | 'reset' | null>(null);
@@ -211,8 +212,10 @@ export default function CBTJournal() {
       if (thought.trim()) {
         const found = findDistortions(thought);
         setLocalDistortions(found);
+        setSuggestedTraps(found.map(d => d.id));
       } else {
         setLocalDistortions([]);
+        setSuggestedTraps([]);
       }
     }, 500);
 
@@ -293,7 +296,9 @@ export default function CBTJournal() {
         }
 
         const heuristicDistortions = localDistortions.map(ld => ld.id);
-        setSelectedDistortions(Array.from(new Set([...heuristicDistortions, ...aiDistortions])));
+        const combinedDistortions = Array.from(new Set([...heuristicDistortions, ...aiDistortions]));
+        setSuggestedTraps(combinedDistortions);
+        setSelectedDistortions(combinedDistortions);
       }
     } catch (err: any) {
       console.error("Insight Error", err);
@@ -303,8 +308,9 @@ export default function CBTJournal() {
         reframeSuggestions: ["Focus on what you can control in this situation.", "Look at this situation with more self-compassion."],
         suggestedDistortions: []
       });
-      // Fallback: populate selectedDistortions with heuristic distortions if API is offline
+      // Fallback: populate selectedDistortions and suggestedTraps with heuristic distortions if API is offline
       const heuristicDistortions = localDistortions.map(ld => ld.id);
+      setSuggestedTraps(heuristicDistortions);
       setSelectedDistortions(heuristicDistortions);
       setStep(4);
     } finally {
@@ -339,6 +345,7 @@ export default function CBTJournal() {
     setSelectedEmotions([]);
     setThought('');
     setSelectedDistortions([]);
+    setSuggestedTraps([]);
     setAlternativeThought('');
     setInsightsData(null);
     setApiSuggestedEmotions([]);
@@ -669,6 +676,42 @@ export default function CBTJournal() {
                          The system heuristically flagged: <strong>{localDistortions.map(d => d.name).join(", ")}</strong> based on keywords in your thought.
                        </p>
                     )}
+                  </div>
+                )}
+                
+                {/* Clickable suggested traps badges */}
+                {suggestedTraps.length > 0 && (
+                  <div style={{ backgroundColor: '#f0f4f8', padding: '1.25rem', borderRadius: 'var(--radius)', borderLeft: '4px solid var(--soft-blue)', marginBottom: '1.5rem', textAlign: 'left' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e40af', display: 'block', marginBottom: '0.5rem' }}>
+                      Suggested based on your thoughts:
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {suggestedTraps.map(id => {
+                        const dist = DISTORTIONS.find(d => d.id === id);
+                        if (!dist) return null;
+                        const isSelected = selectedDistortions.includes(id);
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => toggleDistortion(id)}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              borderRadius: '20px',
+                              border: isSelected ? '2px solid var(--soft-blue)' : '1px solid #cce0ff',
+                              backgroundColor: isSelected ? 'var(--soft-blue)' : '#fff',
+                              color: isSelected ? '#fff' : '#004fe6',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {dist.name} {isSelected ? "✓" : "＋"}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
                 
