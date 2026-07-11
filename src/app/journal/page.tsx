@@ -38,7 +38,7 @@ export default function CBTJournal() {
   // Distortions State (Step 4)
   const [selectedDistortions, setSelectedDistortions] = useState<string[]>([]);
   
-  const [reframe, setReframe] = useState('');
+  const [alternativeThought, setAlternativeThought] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<'friend' | 'fact' | 'reset' | null>(null);
   
   // Heuristic Highlights
@@ -269,16 +269,18 @@ export default function CBTJournal() {
         throw new Error(data.error || 'Gemini API Error');
       }
       if (data.result) {
-        const aiDistortions = (data.result.distortions || []).map((name: string) => {
-          const lower = name.toLowerCase();
-          if (lower.includes("all-or-nothing") || lower.includes("all or nothing")) return "all-or-nothing";
-          if (lower.includes("catastrophiz")) return "catastrophizing";
-          if (lower.includes("should")) return "should-statements";
-          if (lower.includes("mind")) return "mind-reading";
-          if (lower.includes("emotional")) return "emotional-reasoning";
-          if (lower.includes("overgeneral")) return "overgeneralization";
-          return name;
-        });
+        const aiDistortions = (data.result.distortions || [])
+          .map((name: string) => {
+            const lower = name.toLowerCase();
+            if (lower.includes("all-or-nothing") || lower.includes("all or nothing") || lower.includes("black-and-white") || lower.includes("black and white") || lower.includes("allornothing")) return "all-or-nothing";
+            if (lower.includes("catastrophiz") || lower.includes("worst-case") || lower.includes("worst case")) return "catastrophizing";
+            if (lower.includes("should") || lower.includes("must") || lower.includes("ought") || lower.includes("have to")) return "should-statements";
+            if (lower.includes("mind") || lower.includes("reading") || lower.includes("read mind")) return "mind-reading";
+            if (lower.includes("emotional") || lower.includes("reasoning") || lower.includes("feel like")) return "emotional-reasoning";
+            if (lower.includes("overgeneral") || lower.includes("always") || lower.includes("never") || lower.includes("generaliz")) return "overgeneralization";
+            return null;
+          })
+          .filter(Boolean) as string[];
 
         setInsightsData({
           insights: "Analysis complete. Review the suggested cognitive distortions and compassionate reframes.",
@@ -287,7 +289,7 @@ export default function CBTJournal() {
         });
 
         if (data.result.reframed_thought) {
-          setReframe(data.result.reframed_thought);
+          setAlternativeThought(data.result.reframed_thought);
         }
 
         const heuristicDistortions = localDistortions.map(ld => ld.id);
@@ -295,8 +297,16 @@ export default function CBTJournal() {
       }
     } catch (err: any) {
       console.error("Insight Error", err);
-      alert(`AI CBT Analysis Failed: ${err.message || 'Gemini API Error. Verify configuration.'}`);
-      setStep(3); // Direct user back to retry
+      alert("AI CBT Analysis is currently offline. You can manually identify your thinking traps in the next steps.");
+      setInsightsData({
+        insights: "AI analysis is offline. Please manually identify your thinking traps.",
+        reframeSuggestions: ["Focus on what you can control in this situation.", "Look at this situation with more self-compassion."],
+        suggestedDistortions: []
+      });
+      // Fallback: populate selectedDistortions with heuristic distortions if API is offline
+      const heuristicDistortions = localDistortions.map(ld => ld.id);
+      setSelectedDistortions(heuristicDistortions);
+      setStep(4);
     } finally {
       setLoading(false);
     }
@@ -316,7 +326,7 @@ export default function CBTJournal() {
           emotionsJson: JSON.stringify(selectedEmotions),
           automaticThought: entryType === 'negative' ? thought : null,
           distortionsJson: entryType === 'negative' ? JSON.stringify(selectedDistortions) : null,
-          reframedThought: reframe
+          reframedThought: alternativeThought
         })
       });
     } catch (err) {
@@ -329,7 +339,7 @@ export default function CBTJournal() {
     setSelectedEmotions([]);
     setThought('');
     setSelectedDistortions([]);
-    setReframe('');
+    setAlternativeThought('');
     setInsightsData(null);
     setApiSuggestedEmotions([]);
     setSelectedExercise(null);
@@ -763,7 +773,7 @@ export default function CBTJournal() {
                       <button 
                         key={`ai-${idx}`}
                         type="button"
-                        onClick={() => setReframe(suggestion)}
+                        onClick={() => setAlternativeThought(suggestion)}
                         style={{
                           textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
                           backgroundColor: '#f0f7f4', border: '1px solid #c2e0c6', color: '#2b5a2b',
@@ -776,7 +786,7 @@ export default function CBTJournal() {
                     {/* Heuristic Reframe */}
                     <button 
                       type="button"
-                      onClick={() => setReframe(getHeuristicReframe())}
+                      onClick={() => setAlternativeThought(getHeuristicReframe())}
                       style={{
                         textAlign: 'left', padding: '0.8rem 1rem', borderRadius: 'var(--radius)',
                         backgroundColor: '#f0f4f8', border: '1px solid #bcd0f7', color: '#1e40af',
@@ -796,7 +806,10 @@ export default function CBTJournal() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <button 
                       type="button"
-                      onClick={() => setSelectedExercise('friend')}
+                      onClick={() => {
+                        setSelectedExercise('friend');
+                        setAlternativeThought(`If a close friend came to me and said: "${thought}", I would tell them: `);
+                      }}
                       style={{ 
                         textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
                         backgroundColor: selectedExercise === 'friend' ? '#f0fdf4' : '#fff', 
@@ -809,7 +822,10 @@ export default function CBTJournal() {
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setSelectedExercise('fact')}
+                      onClick={() => {
+                        setSelectedExercise('fact');
+                        setAlternativeThought(`Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- `);
+                      }}
                       style={{ 
                         textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
                         backgroundColor: selectedExercise === 'fact' ? '#f0fdf4' : '#fff', 
@@ -822,7 +838,10 @@ export default function CBTJournal() {
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setSelectedExercise('reset')}
+                      onClick={() => {
+                        setSelectedExercise('reset');
+                        setAlternativeThought(`Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: `);
+                      }}
                       style={{ 
                         textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
                         backgroundColor: selectedExercise === 'reset' ? '#f0fdf4' : '#fff', 
@@ -870,7 +889,7 @@ export default function CBTJournal() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button 
                     type="button"
-                    onClick={() => setReframe(`This positive event happened because I used my personal strengths of communication and preparation. I am capable of achieving good results when I put in focus.`)}
+                    onClick={() => setAlternativeThought(`This positive event happened because I used my personal strengths of communication and preparation. I am capable of achieving good results when I put in focus.`)}
                     style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fde68a', cursor: 'pointer', fontSize: '0.88rem', color: '#78350f', transition: 'all 0.2s' }}
                     className="prompt-card"
                   >
@@ -878,7 +897,7 @@ export default function CBTJournal() {
                   </button>
                   <button 
                     type="button"
-                    onClick={() => setReframe(`I feel incredibly grateful for this coworker's kind feedback. It reminds me that I have supportive people around me who value my effort.`)}
+                    onClick={() => setAlternativeThought(`I feel incredibly grateful for this coworker's kind feedback. It reminds me that I have supportive people around me who value my effort.`)}
                     style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fde68a', cursor: 'pointer', fontSize: '0.88rem', color: '#78350f', transition: 'all 0.2s' }}
                     className="prompt-card"
                   >
@@ -886,7 +905,7 @@ export default function CBTJournal() {
                   </button>
                   <button 
                     type="button"
-                    onClick={() => setReframe(`Even when work feels highly stressful, this event shows that good moments can still occur. It is an exception to my negative thoughts.`)}
+                    onClick={() => setAlternativeThought(`Even when work feels highly stressful, this event shows that good moments can still occur. It is an exception to my negative thoughts.`)}
                     style={{ textAlign: 'left', padding: '0.75rem', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fde68a', cursor: 'pointer', fontSize: '0.88rem', color: '#78350f', transition: 'all 0.2s' }}
                     className="prompt-card"
                   >
@@ -917,8 +936,8 @@ export default function CBTJournal() {
             )}
 
             <textarea 
-              value={reframe}
-              onChange={(e) => setReframe(e.target.value)}
+              value={alternativeThought}
+              onChange={(e) => setAlternativeThought(e.target.value)}
               placeholder={entryType === 'positive'
                 ? "Describe your strengths, who you are grateful for, or how you want to remember this win."
                 : selectedExercise === 'friend'
