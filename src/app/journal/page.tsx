@@ -905,7 +905,9 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise('friend');
-                        setAlternativeThought(`If a close friend came to me and said: "${thought}", I would tell them: `);
+                        const currentSampleThought = (insightsData?.reframeSuggestions && insightsData.reframeSuggestions[0]) || getHeuristicReframe();
+                        const fullText = `If a close friend came to me and said: "${thought}", I would tell them: "${currentSampleThought}"`;
+                        setAlternativeThought(fullText);
                       }}
                       style={{ 
                         textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
@@ -921,7 +923,9 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise('fact');
-                        setAlternativeThought(`Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- `);
+                        const currentSampleThought = (insightsData?.reframeSuggestions && insightsData.reframeSuggestions[0]) || getHeuristicReframe();
+                        const fullText = `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- "${currentSampleThought}"`;
+                        setAlternativeThought(fullText);
                       }}
                       style={{ 
                         textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
@@ -937,7 +941,9 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise('reset');
-                        setAlternativeThought(`Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: `);
+                        const currentSampleThought = (insightsData?.reframeSuggestions && insightsData.reframeSuggestions[0]) || getHeuristicReframe();
+                        const fullText = `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: "${currentSampleThought}"`;
+                        setAlternativeThought(fullText);
                       }}
                       style={{ 
                         textAlign: 'left', padding: '0.75rem', borderRadius: '6px', 
