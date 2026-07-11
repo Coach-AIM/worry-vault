@@ -47,18 +47,25 @@ const DONUT_COLORS = [
   'hsl(200, 10%, 55%)',  // calming grey
 ];
 
-const getEmotionColor = (name: string) => {
+const getEmotionCategory = (name: string): 'positive' | 'threat' | 'reactive' | 'unknown' => {
   const n = name.toLowerCase();
   
   const positive = ['grateful', 'proud', 'relieved', 'energized', 'happy', 'calm', 'content', 'hopeful', 'excited', 'peaceful', 'inspired', 'elated', 'serene'];
-  const stress = ['anxiety', 'overwhelm', 'frustrated', 'frustration', 'fear', 'nervous', 'stressed', 'panicked'];
-  const reactive = ['anger', 'sadness', 'sad', 'angry', 'grief', 'hurt', 'guilt', 'shame', 'regretful'];
+  const threat = ['anxiety', 'overwhelm', 'frustrated', 'frustration', 'fear', 'nervous', 'stressed', 'panicked', 'irritated', 'anxious', 'overwhelmed'];
+  const reactive = ['anger', 'sadness', 'sad', 'angry', 'grief', 'hurt', 'guilt', 'shame', 'regretful', 'lonely', 'embarrassment'];
 
-  if (positive.some(e => n.includes(e))) return 'var(--sage-green)'; 
-  if (stress.some(e => n.includes(e))) return 'var(--accent-gold)'; 
-  if (reactive.some(e => n.includes(e))) return 'var(--accent-danger)'; 
-  
-  return 'hsl(200, 10%, 50%)'; 
+  if (positive.some(e => n.includes(e))) return 'positive';
+  if (threat.some(e => n.includes(e))) return 'threat';
+  if (reactive.some(e => n.includes(e))) return 'reactive';
+  return 'unknown';
+};
+
+const getEmotionColor = (name: string) => {
+  const cat = getEmotionCategory(name);
+  if (cat === 'positive') return 'var(--sage-green)';
+  if (cat === 'threat') return 'var(--accent-gold)';
+  if (cat === 'reactive') return 'var(--accent-danger)';
+  return 'hsl(200, 10%, 50%)';
 };
 
 export default function InsightsPage() {
@@ -66,6 +73,8 @@ export default function InsightsPage() {
   const [fetchingStats, setFetchingStats] = useState(true);
   const [viewStyle, setViewStyle] = useState<'frequency' | 'timeline'>('frequency');
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'resourceful' | 'distressing'>('all');
+  const [sortBy, setSortBy] = useState<'intensity' | 'frequency'>('frequency');
 
   async function fetchStats() {
     setFetchingStats(true);
@@ -89,17 +98,26 @@ export default function InsightsPage() {
   const getEmotionStats = () => {
     const emotionTotals: Record<string, { totalWeight: number, count: number }> = {};
     
+    const normalizeName = (rawName: string): string => {
+      const trimmed = rawName.trim();
+      const lower = trimmed.toLowerCase();
+      if (lower === 'overwhelm' || lower === 'overwhelmed') return 'Overwhelmed';
+      if (lower === 'frustrated' || lower === 'frustration') return 'Frustrated';
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    };
+
     journalEntries.forEach(entry => {
       if (!entry.emotionsJson) return;
       try {
         const emotions = JSON.parse(entry.emotionsJson);
         if (Array.isArray(emotions)) {
           emotions.forEach((e: any) => {
-            if (!emotionTotals[e.name]) {
-              emotionTotals[e.name] = { totalWeight: 0, count: 0 };
+            const name = normalizeName(e.name);
+            if (!emotionTotals[name]) {
+              emotionTotals[name] = { totalWeight: 0, count: 0 };
             }
-            emotionTotals[e.name].totalWeight += (e.weight || 50);
-            emotionTotals[e.name].count += 1;
+            emotionTotals[name].totalWeight += (e.weight || 50);
+            emotionTotals[name].count += 1;
           });
         }
       } catch (err) {}
@@ -110,11 +128,28 @@ export default function InsightsPage() {
       return {
         name,
         averageIntensity: Math.round(totalWeight / count),
-        frequency: count
+        frequency: count,
+        category: getEmotionCategory(name)
       };
     });
 
-    return stats.sort((a, b) => b.frequency - a.frequency);
+    let processedData = [...stats];
+
+    // 1. Apply Filter
+    if (activeTab === 'resourceful') {
+      processedData = processedData.filter(d => d.category === 'positive');
+    } else if (activeTab === 'distressing') {
+      processedData = processedData.filter(d => d.category === 'threat' || d.category === 'reactive');
+    }
+
+    // 2. Apply Sort
+    if (sortBy === 'intensity') {
+      processedData.sort((a, b) => b.averageIntensity - a.averageIntensity);
+    } else if (sortBy === 'frequency') {
+      processedData.sort((a, b) => b.frequency - a.frequency);
+    }
+
+    return processedData;
   };
 
   // Process Distortion Stats
@@ -321,16 +356,97 @@ export default function InsightsPage() {
                 <h3 style={{ fontSize: '1.35rem', color: 'var(--foreground)', marginBottom: '0.25rem', fontWeight: 700 }}>Emotion Trends</h3>
                 <p style={{ fontSize: '0.92rem', color: 'hsl(200, 10%, 45%)', marginBottom: '2rem', fontWeight: 500 }}>Shows which emotions are logged most frequently, along with their average intensity.</p>
                 
+                {/* Controls Bar: Category Tabs & Sorting Dropdown */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', backgroundColor: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                  {/* Category Tabs */}
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('all')}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        borderRadius: '20px',
+                        border: 'none',
+                        backgroundColor: activeTab === 'all' ? 'var(--foreground)' : 'transparent',
+                        color: activeTab === 'all' ? '#fff' : 'hsl(200, 10%, 45%)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('resourceful')}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        borderRadius: '20px',
+                        border: 'none',
+                        backgroundColor: activeTab === 'resourceful' ? 'var(--sage-green)' : 'transparent',
+                        color: activeTab === 'resourceful' ? '#fff' : 'hsl(200, 10%, 45%)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Resourceful Only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('distressing')}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        borderRadius: '20px',
+                        border: 'none',
+                        backgroundColor: activeTab === 'distressing' ? 'var(--accent-gold)' : 'transparent',
+                        color: activeTab === 'distressing' ? '#fff' : 'hsl(200, 10%, 45%)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Distressing Only
+                    </button>
+                  </div>
+
+                  {/* Sorting Selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'hsl(200, 10%, 45%)' }}>Sort by:</span>
+                    <select
+                      value={sortBy}
+                      onChange={e => setSortBy(e.target.value as any)}
+                      style={{
+                        padding: '0.4rem 0.6rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        borderRadius: '6px',
+                        border: '1px solid #ccc',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="frequency">Frequency (Most frequent first)</option>
+                      <option value="intensity">Intensity (Highest first)</option>
+                    </select>
+                  </div>
+                </div>
+
                 {emotionStats.length === 0 ? (
-                  <p style={{ color: 'hsl(200, 10%, 50%)', fontSize: '0.95rem' }}>No structured emotion data recorded yet.</p>
+                  <p style={{ color: 'hsl(200, 10%, 50%)', fontSize: '0.95rem', padding: '1rem 0' }}>
+                    {journalEntries.length > 0 ? "No emotions match the selected filter category." : "No structured emotion data recorded yet."}
+                  </p>
                 ) : (
                   <div>
-                    <div style={{ height: '320px', width: '100%' }}>
+                    <div style={{ height: `${Math.max(320, emotionStats.length * 35)}px`, minHeight: '320px', width: '100%' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
-                          data={emotionStats}
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                           data={emotionStats}
+                           layout="vertical"
+                           margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
                         >
                           <XAxis type="number" domain={[0, 100]} stroke="#94a3b8" />
                           <YAxis dataKey="name" type="category" stroke="#94a3b8" width={110} tick={{ fontSize: '12px', fontWeight: 600 }} />
