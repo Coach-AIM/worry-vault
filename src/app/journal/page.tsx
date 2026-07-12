@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { checkSafety } from '@/lib/safetyIntercept';
 import { findDistortions, DistortionType, DISTORTIONS } from '@/lib/cbtDistortions';
 import { EMOTION_WHEEL, PRIMARY_EMOTIONS } from '@/lib/emotionWheel';
@@ -26,6 +27,7 @@ type SelectedEmotion = {
 };
 
 export default function CBTJournal() {
+  const router = useRouter();
   const [entryType, setEntryType] = useState<'negative' | 'positive'>('negative');
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   
@@ -346,7 +348,7 @@ export default function CBTJournal() {
     setLoading(true);
     
     try {
-      await fetch('/api/journal', {
+      const response = await fetch('/api/journal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -358,23 +360,36 @@ export default function CBTJournal() {
           reframedThought: alternativeThought
         })
       });
-    } catch (err) {
-      console.error("Failed to save entry:", err);
-    }
 
-    // Reset wizard
-    setStep(1);
-    setSituation('');
-    setSelectedEmotions([]);
-    setThought('');
-    setSelectedDistortions([]);
-    setSuggestedTraps([]);
-    setAlternativeThought('');
-    setInsightsData(null);
-    setApiSuggestedEmotions([]);
-    setSelectedExercise(null);
-    fetchHistory();
-    setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("SERVER SIDE REJECTION ERROR DETECTED:", errorData);
+        alert(`Submission Failed: ${errorData.message || errorData.error || 'Unknown Server Error'}`);
+        return;
+      }
+
+      console.log("Database entry saved successfully! Redirecting...");
+
+      // Reset wizard
+      setStep(1);
+      setSituation('');
+      setSelectedEmotions([]);
+      setThought('');
+      setSelectedDistortions([]);
+      setSuggestedTraps([]);
+      setAlternativeThought('');
+      setInsightsData(null);
+      setApiSuggestedEmotions([]);
+      setSelectedExercise(null);
+      
+      router.push('/');
+      router.refresh();
+    } catch (clientError: any) {
+      console.error("CLIENT SIDE RUNTIME CRASH DETECTED:", clientError);
+      alert(`Client Error: ${clientError.message}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSaveOutcome(entryId: number) {
