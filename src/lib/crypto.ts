@@ -1,15 +1,19 @@
-import crypto from 'crypto';
+import crypto from "crypto";
 
 export function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+    .toString("hex");
   return `${salt}:${hash}`;
 }
 
 export function verifyPassword(password: string, storedHash: string): boolean {
-  if (!storedHash || typeof storedHash !== 'string') return false;
-  const [salt, hash] = storedHash.split(':');
+  if (!storedHash || typeof storedHash !== "string") return false;
+  const [salt, hash] = storedHash.split(":");
   if (!salt || !hash) return false;
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  const verifyHash = crypto
+    .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+    .toString("hex");
   return hash === verifyHash;
 }

@@ -11,23 +11,42 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text", placeholder: "CanDo" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
         // Simple default fallback credentials
-        if (credentials.username.trim().toLowerCase() === "cando" && credentials.password === "password123") {
-          return { id: "user_cando_1", name: "CanDo", email: "cando@momentum.app" };
+        if (
+          credentials.username.trim().toLowerCase() === "cando" &&
+          credentials.password === "password123"
+        ) {
+          return {
+            id: "user_cando_1",
+            name: "CanDo",
+            email: "cando@momentum.app",
+          };
         }
 
         try {
-          const userRows = await db.select().from(users).where(eq(users.username, credentials.username.trim().toLowerCase()));
+          const userRows = await db
+            .select()
+            .from(users)
+            .where(
+              eq(users.username, credentials.username.trim().toLowerCase()),
+            );
           if (userRows.length > 0) {
             const user = userRows[0];
-            const isValid = verifyPassword(credentials.password, user.passwordHash);
+            const isValid = verifyPassword(
+              credentials.password,
+              user.passwordHash,
+            );
             if (isValid) {
-              return { id: user.id, name: user.username, email: `${user.username}@momentum.app` };
+              return {
+                id: user.id,
+                name: user.username,
+                email: `${user.username}@momentum.app`,
+              };
             }
           }
         } catch (err) {
@@ -35,8 +54,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         return null;
-      }
-    })
+      },
+    }),
   ],
   session: {
     strategy: "jwt",
@@ -56,8 +75,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
       }
       return session;
-    }
-  }
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

@@ -11,27 +11,27 @@ export const journalEntries = sqliteTable("journal_entries", {
   entryType: text("entry_type", { enum: ["negative", "positive"] })
     .notNull()
     .default("negative"),
-  
+
   // Core Context Data
   situation: text("situation").notNull(),
-  
+
   // Stores strong key-value pairs: e.g., '{"Stressed": 88, "Proud": 40}'
   emotionsJson: text("emotions_json").notNull(),
-  
+
   // Nullable fields: Empty when entryType === 'positive'
   automaticThought: text("automatic_thought"),
-  
+
   // Stores a stringified JSON array: e.g., '["Mind Reading", "Should Statements"]'
   distortionsJson: text("distortions_json"),
-  
+
   // Multi-purpose field: Acts as 'Reframed Thought' or 'Core Strength / Savoring Anchor'
   reframedThought: text("reframed_thought").notNull(),
-  
+
   // Follow-up / Evidence Loop fields
   outcomeText: text("outcome_text"),
   lessonsLearned: text("lessons_learned"),
   predictionEvaluation: text("prediction_evaluation"),
-  
+
   // Ownership Filtering
   userId: text("user_id").default("user_coach_1").notNull(),
 });
@@ -44,15 +44,24 @@ export const positiveThoughts = sqliteTable("positive_thoughts", {
     .notNull(),
   thoughtText: text("thought_text").notNull(),
   // Enhances categorization rules for frontend card-rendering / carousels
-  category: text("category", { 
-    enum: ["Gratitude", "Strength Validation", "Exception to Problem", "General"] 
-  }).default("General").notNull(),
+  category: text("category", {
+    enum: [
+      "Gratitude",
+      "Strength Validation",
+      "Exception to Problem",
+      "General",
+    ],
+  })
+    .default("General")
+    .notNull(),
 });
 
 // 3. Keep existing Tasks and Therapist layouts intact
 export const tasks = sqliteTable("tasks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
   title: text("title").notNull(),
   description: text("description"),
   estimatedTime: text("estimated_time"),
@@ -85,7 +94,9 @@ export const decisions = sqliteTable("decisions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
   timeframeDays: integer("timeframe_days").notNull(),
   completed: integer("completed").default(0).notNull(),
 });
@@ -106,5 +117,7 @@ export const decisionFollowUps = sqliteTable("decision_follow_ups", {
   decisionId: integer("decision_id").notNull(),
   chosenOptionId: integer("chosen_option_id").notNull(),
   actualFeeling: text("actual_feeling").notNull(),
-  followedUpAt: text("followed_up_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  followedUpAt: text("followed_up_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });

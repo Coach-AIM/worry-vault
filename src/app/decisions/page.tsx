@@ -31,7 +31,7 @@ export default function DecisionsPage() {
       alignsValues: "Unsure",
       externalPressure: false,
       makingAssumptions: false,
-      prosCons: []
+      prosCons: [],
     },
     {
       label: "", // Starts empty to show placeholder
@@ -39,12 +39,16 @@ export default function DecisionsPage() {
       alignsValues: "Unsure",
       externalPressure: false,
       makingAssumptions: false,
-      prosCons: []
-    }
+      prosCons: [],
+    },
   ]);
   const [saving, setSaving] = useState(false);
-  const [newProConText, setNewProConText] = useState<Record<number, string>>({});
-  const [newProConType, setNewProConType] = useState<Record<number, "pro" | "con">>({});
+  const [newProConText, setNewProConText] = useState<Record<number, string>>(
+    {},
+  );
+  const [newProConType, setNewProConType] = useState<
+    Record<number, "pro" | "con">
+  >({});
 
   // 1. Explicitly track separate state strings for each question group
   const [currentOptionIndex, setCurrentOptionIndex] = useState(0);
@@ -100,8 +104,8 @@ export default function DecisionsPage() {
         alignsValues: "Unsure",
         externalPressure: false,
         makingAssumptions: false,
-        prosCons: []
-      }
+        prosCons: [],
+      },
     ]);
   };
 
@@ -142,7 +146,7 @@ export default function DecisionsPage() {
           predictedFeeling: (feeling as any) || "Unknown",
           alignsValues: (valuesAlign as any) || "Unsure",
           externalPressure: pressure === "YES",
-          makingAssumptions: assumptions === "YES"
+          makingAssumptions: assumptions === "YES",
         };
       }
       return opt;
@@ -171,7 +175,7 @@ export default function DecisionsPage() {
           predictedFeeling: (feeling as any) || "Unknown",
           alignsValues: (valuesAlign as any) || "Unsure",
           externalPressure: pressure === "YES",
-          makingAssumptions: assumptions === "YES"
+          makingAssumptions: assumptions === "YES",
         };
       }
       return opt;
@@ -200,7 +204,7 @@ export default function DecisionsPage() {
       if (i === index) {
         return {
           ...opt,
-          prosCons: [...opt.prosCons, { text, weight: 3, type }]
+          prosCons: [...opt.prosCons, { text, weight: 3, type }],
         };
       }
       return opt;
@@ -216,7 +220,7 @@ export default function DecisionsPage() {
       if (i === optIndex) {
         return {
           ...opt,
-          prosCons: opt.prosCons.filter((_, idx) => idx !== pcIndex)
+          prosCons: opt.prosCons.filter((_, idx) => idx !== pcIndex),
         };
       }
       return opt;
@@ -224,7 +228,11 @@ export default function DecisionsPage() {
     setOptions(updated);
   };
 
-  const handleWeightChange = (optIndex: number, pcIndex: number, val: number) => {
+  const handleWeightChange = (
+    optIndex: number,
+    pcIndex: number,
+    val: number,
+  ) => {
     const updated = options.map((opt, i) => {
       if (i === optIndex) {
         const newProsCons = opt.prosCons.map((pc, idx) => {
@@ -252,14 +260,14 @@ export default function DecisionsPage() {
           alignsValues: opt.alignsValues,
           externalPressure: opt.externalPressure,
           makingAssumptions: opt.makingAssumptions,
-          netScore: calculateOptionScore(opt)
-        }))
+          netScore: calculateOptionScore(opt),
+        })),
       };
 
       const res = await fetch("/api/decisions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -281,7 +289,7 @@ export default function DecisionsPage() {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 pb-28">
       {/* Back Button and Header */}
       <div className="max-w-3xl mx-auto mb-8 animate-fade-in">
-        <button 
+        <button
           onClick={() => router.push("/")}
           className="text-sm font-medium text-slate-500 hover:text-slate-700 transition mb-6 flex items-center gap-2"
         >
@@ -289,10 +297,16 @@ export default function DecisionsPage() {
         </button>
         <div className="flex items-center gap-3 mb-2">
           <span className="text-4xl">🤔</span>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Decision Assistant</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            Decision Assistant
+          </h1>
         </div>
-        <p className="text-slate-600 text-lg">Challenge biases and make structured, balanced choices.</p>
-        <p className="text-blue-600 font-semibold text-sm mt-4 uppercase tracking-wider">Step {step} of 4</p>
+        <p className="text-slate-600 text-lg">
+          Challenge biases and make structured, balanced choices.
+        </p>
+        <p className="text-blue-600 font-semibold text-sm mt-4 uppercase tracking-wider">
+          Step {step} of 4
+        </p>
       </div>
 
       {/* STEP 1: SETUP */}
@@ -300,8 +314,10 @@ export default function DecisionsPage() {
         <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-10 animate-fade-in">
           {/* Question 1 */}
           <div className="space-y-3">
-            <label className="block text-2xl font-bold text-slate-900">1. What decision are you facing?</label>
-            <input 
+            <label className="block text-2xl font-bold text-slate-900">
+              1. What decision are you facing?
+            </label>
+            <input
               type="text"
               placeholder="e.g., Should I purchase an E-bike?"
               value={title}
@@ -312,15 +328,23 @@ export default function DecisionsPage() {
 
           {/* Question 2 */}
           <div className="space-y-4">
-            <label className="block text-2xl font-bold text-slate-900">2. Define your options</label>
+            <label className="block text-2xl font-bold text-slate-900">
+              2. Define your options
+            </label>
             <div className="space-y-3">
               {options.map((opt, i) => (
                 <div key={i} className="flex gap-2 items-center">
-                  <input 
+                  <input
                     type="text"
                     value={opt.label}
                     onChange={(e) => handleOptionLabelChange(i, e.target.value)}
-                    placeholder={i === 0 ? "e.g., Add cliffside hike to the Italy itinerary" : i === 1 ? "e.g., Stick to the valley wine tour" : `Option ${String.fromCharCode(65 + i)}`}
+                    placeholder={
+                      i === 0
+                        ? "e.g., Add cliffside hike to the Italy itinerary"
+                        : i === 1
+                          ? "e.g., Stick to the valley wine tour"
+                          : `Option ${String.fromCharCode(65 + i)}`
+                    }
                     className="w-full px-5 py-4 text-lg border border-slate-200 rounded-2xl bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none placeholder:text-slate-400"
                   />
                   {options.length > 2 && (
@@ -334,7 +358,7 @@ export default function DecisionsPage() {
                 </div>
               ))}
             </div>
-            <button 
+            <button
               onClick={handleAddOption}
               className="inline-flex items-center justify-center px-5 py-3 font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 mt-2"
             >
@@ -344,10 +368,14 @@ export default function DecisionsPage() {
 
           {/* Question 3 */}
           <div className="space-y-3 pt-4 border-t border-slate-100">
-            <label className="block text-2xl font-bold text-slate-900">3. Timeframe for Follow-up</label>
-            <p className="text-slate-500 text-base">When should Momentum check back on the outcome of this decision?</p>
+            <label className="block text-2xl font-bold text-slate-900">
+              3. Timeframe for Follow-up
+            </label>
+            <p className="text-slate-500 text-base">
+              When should Momentum check back on the outcome of this decision?
+            </p>
             <div className="relative max-w-xs">
-              <select 
+              <select
                 value={timeframeDays}
                 onChange={(e) => setTimeframeDays(parseInt(e.target.value))}
                 className="w-full px-5 py-4 text-lg border border-slate-200 rounded-2xl bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none appearance-none cursor-pointer text-slate-800 font-medium pr-10"
@@ -359,8 +387,12 @@ export default function DecisionsPage() {
                 <option value={180}>6 Months (180 Days)</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                <svg className="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                <svg
+                  className="fill-current h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                 </svg>
               </div>
             </div>
@@ -383,15 +415,19 @@ export default function DecisionsPage() {
         <div className="space-y-8 animate-fade-in">
           <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8">
             <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
-              Context Check: {options[currentOptionIndex].label.trim() || `Option ${String.fromCharCode(65 + currentOptionIndex)}`}
+              Context Check:{" "}
+              {options[currentOptionIndex].label.trim() ||
+                `Option ${String.fromCharCode(65 + currentOptionIndex)}`}
             </h3>
 
             {/* 6-Month Feeling Question */}
             <div className="space-y-3">
-              <label className="block text-lg font-bold text-slate-900">How will I likely feel about this choice in 6 months?</label>
+              <label className="block text-lg font-bold text-slate-900">
+                How will I likely feel about this choice in 6 months?
+              </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {['Proud', 'Indifferent', 'Regretful', 'Unknown'].map((opt) => (
-                  <button 
+                {["Proud", "Indifferent", "Regretful", "Unknown"].map((opt) => (
+                  <button
                     key={opt}
                     type="button"
                     onClick={() => setFeeling(opt)}
@@ -405,10 +441,12 @@ export default function DecisionsPage() {
 
             {/* Core Values Question */}
             <div className="space-y-3">
-              <label className="block text-lg font-bold text-slate-900">Does this option align with my core values?</label>
+              <label className="block text-lg font-bold text-slate-900">
+                Does this option align with my core values?
+              </label>
               <div className="grid grid-cols-3 gap-3">
-                {['Yes', 'No', 'Unsure'].map((opt) => (
-                  <button 
+                {["Yes", "No", "Unsure"].map((opt) => (
+                  <button
                     key={opt}
                     type="button"
                     onClick={() => setValuesAlign(opt)}
@@ -424,19 +462,47 @@ export default function DecisionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* External Pressure */}
               <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
-                <p className="font-bold text-slate-900 text-base">Is there external pressure?</p>
+                <p className="font-bold text-slate-900 text-base">
+                  Is there external pressure?
+                </p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setPressure('YES')} className={checkStyle(pressure, 'YES')}>YES</button>
-                  <button type="button" onClick={() => setPressure('NO')} className={checkStyle(pressure, 'NO')}>NO</button>
+                  <button
+                    type="button"
+                    onClick={() => setPressure("YES")}
+                    className={checkStyle(pressure, "YES")}
+                  >
+                    YES
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPressure("NO")}
+                    className={checkStyle(pressure, "NO")}
+                  >
+                    NO
+                  </button>
                 </div>
               </div>
 
               {/* Assumptions */}
               <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
-                <p className="font-bold text-slate-900 text-base">Am I making assumptions?</p>
+                <p className="font-bold text-slate-900 text-base">
+                  Am I making assumptions?
+                </p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setAssumptions('YES')} className={checkStyle(assumptions, 'YES')}>YES</button>
-                  <button type="button" onClick={() => setAssumptions('NO')} className={checkStyle(assumptions, 'NO')}>NO</button>
+                  <button
+                    type="button"
+                    onClick={() => setAssumptions("YES")}
+                    className={checkStyle(assumptions, "YES")}
+                  >
+                    YES
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssumptions("NO")}
+                    className={checkStyle(assumptions, "NO")}
+                  >
+                    NO
+                  </button>
                 </div>
               </div>
             </div>
@@ -454,7 +520,9 @@ export default function DecisionsPage() {
               onClick={handleNextOption}
               className="bg-blue-600 text-white font-bold py-3.5 px-10 rounded-2xl hover:bg-blue-700 hover:scale-[1.01] transition-all shadow-md"
             >
-              {currentOptionIndex < options.length - 1 ? "Next Option →" : "Continue →"}
+              {currentOptionIndex < options.length - 1
+                ? "Next Option →"
+                : "Continue →"}
             </button>
           </div>
         </div>
@@ -464,9 +532,13 @@ export default function DecisionsPage() {
       {step === 3 && (
         <div className="space-y-8 animate-fade-in">
           {options.map((opt, i) => (
-            <div key={i} className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-6">
+            <div
+              key={i}
+              className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-6"
+            >
               <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
-                Pros & Cons: {opt.label || `Option ${String.fromCharCode(65 + i)}`}
+                Pros & Cons:{" "}
+                {opt.label || `Option ${String.fromCharCode(65 + i)}`}
               </h3>
 
               {/* Added Items List */}
@@ -491,21 +563,33 @@ export default function DecisionsPage() {
                         >
                           {pc.type}
                         </span>
-                        <span className="font-semibold text-slate-800 text-base">{pc.text}</span>
+                        <span className="font-semibold text-slate-800 text-base">
+                          {pc.text}
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-4 justify-between md:justify-end">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500">Weight:</span>
+                          <span className="text-xs text-slate-500">
+                            Weight:
+                          </span>
                           <input
                             type="range"
                             min="1"
                             max="5"
                             value={pc.weight}
-                            onChange={(e) => handleWeightChange(i, pcIdx, parseInt(e.target.value))}
+                            onChange={(e) =>
+                              handleWeightChange(
+                                i,
+                                pcIdx,
+                                parseInt(e.target.value),
+                              )
+                            }
                             className="w-28 accent-blue-600 cursor-pointer"
                           />
-                          <span className="font-bold text-slate-700 w-4 text-center">{pc.weight}</span>
+                          <span className="font-bold text-slate-700 w-4 text-center">
+                            {pc.weight}
+                          </span>
                         </div>
                         <button
                           onClick={() => handleRemoveProCon(i, pcIdx)}
@@ -518,7 +602,9 @@ export default function DecisionsPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm italic py-4 text-center">No Pros or Cons added yet. Add one below.</p>
+                <p className="text-slate-400 text-sm italic py-4 text-center">
+                  No Pros or Cons added yet. Add one below.
+                </p>
               )}
 
               {/* Add Pro/Con Row */}
@@ -528,20 +614,31 @@ export default function DecisionsPage() {
                   className="flex-1 border border-slate-200 rounded-2xl px-5 py-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
                   placeholder="e.g. Save money on fuel/parking"
                   value={newProConText[i] || ""}
-                  onChange={(e) => setNewProConText({ ...newProConText, [i]: e.target.value })}
+                  onChange={(e) =>
+                    setNewProConText({ ...newProConText, [i]: e.target.value })
+                  }
                 />
                 <div className="relative">
                   <select
                     className="w-full px-5 py-4 text-lg border border-slate-200 rounded-2xl bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none appearance-none cursor-pointer text-slate-800 font-medium pr-10"
                     value={newProConType[i] || "pro"}
-                    onChange={(e) => setNewProConType({ ...newProConType, [i]: e.target.value as "pro" | "con" })}
+                    onChange={(e) =>
+                      setNewProConType({
+                        ...newProConType,
+                        [i]: e.target.value as "pro" | "con",
+                      })
+                    }
                   >
                     <option value="pro">Pro (Positive)</option>
                     <option value="con">Con (Negative)</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                    <svg className="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                    <svg
+                      className="fill-current h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                     </svg>
                   </div>
                 </div>
@@ -565,7 +662,9 @@ export default function DecisionsPage() {
                 setFeeling(options[lastIdx].predictedFeeling);
                 setValuesAlign(options[lastIdx].alignsValues);
                 setPressure(options[lastIdx].externalPressure ? "YES" : "NO");
-                setAssumptions(options[lastIdx].makingAssumptions ? "YES" : "NO");
+                setAssumptions(
+                  options[lastIdx].makingAssumptions ? "YES" : "NO",
+                );
                 setStep(2);
               }}
               className="bg-slate-100 text-slate-700 font-bold py-3.5 px-10 rounded-2xl hover:bg-slate-200 transition-colors"
@@ -594,22 +693,30 @@ export default function DecisionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {options.slice(0, 2).map((opt, i) => {
                 const finalScore = calculateOptionScore(opt);
-                const resolvedLabel = opt.label.trim() || (i === 0 ? "Option A" : "Option B");
+                const resolvedLabel =
+                  opt.label.trim() || (i === 0 ? "Option A" : "Option B");
                 return (
-                  <div key={i} className="border border-slate-200 rounded-2xl p-6 bg-slate-50/50 space-y-4 shadow-sm flex flex-col justify-between">
+                  <div
+                    key={i}
+                    className="border border-slate-200 rounded-2xl p-6 bg-slate-50/50 space-y-4 shadow-sm flex flex-col justify-between"
+                  >
                     <div>
                       {/* Score Readout (Bold & Prominent) */}
                       <div className="border-b border-slate-200 pb-3 mb-4">
-                        <h3 className="text-xl font-bold text-slate-800 mb-1">{resolvedLabel}</h3>
+                        <h3 className="text-xl font-bold text-slate-800 mb-1">
+                          {resolvedLabel}
+                        </h3>
                         <p className="text-xl font-extrabold text-blue-900 mt-2">
                           {i === 0 ? "Option A" : "Option B"} Net Score:{" "}
-                          <span className={`px-3 py-1 rounded-lg text-2xl font-black ${
-                            finalScore > 0
-                              ? "bg-emerald-100 text-emerald-800"
-                              : finalScore < 0
-                              ? "bg-red-100 text-red-800"
-                              : "bg-slate-200 text-slate-800"
-                          }`}>
+                          <span
+                            className={`px-3 py-1 rounded-lg text-2xl font-black ${
+                              finalScore > 0
+                                ? "bg-emerald-100 text-emerald-800"
+                                : finalScore < 0
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-slate-200 text-slate-800"
+                            }`}
+                          >
                             {finalScore > 0 ? `+${finalScore}` : finalScore}
                           </span>
                         </p>
@@ -618,11 +725,15 @@ export default function DecisionsPage() {
                       {/* Values & Feeling Readouts */}
                       <div className="space-y-2 text-sm text-slate-700 font-medium">
                         <div>
-                          <strong className="text-slate-400 block text-xs uppercase tracking-wide">Values Alignment</strong>
+                          <strong className="text-slate-400 block text-xs uppercase tracking-wide">
+                            Values Alignment
+                          </strong>
                           <span>{`Aligns with values: ${opt.alignsValues}`}</span>
                         </div>
                         <div>
-                          <strong className="text-slate-400 block text-xs uppercase tracking-wide">Predicted Feeling</strong>
+                          <strong className="text-slate-400 block text-xs uppercase tracking-wide">
+                            Predicted Feeling
+                          </strong>
                           <span>{`Feeling in 6 months: ${opt.predictedFeeling}`}</span>
                         </div>
                       </div>
@@ -631,15 +742,25 @@ export default function DecisionsPage() {
                     {/* Simple Pros & Cons Weight Metrics */}
                     <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-150 text-xs mt-4">
                       <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3">
-                        <span className="font-bold text-emerald-800 text-xxs block uppercase tracking-wider mb-1">PROS WEIGHT</span>
+                        <span className="font-bold text-emerald-800 text-xxs block uppercase tracking-wider mb-1">
+                          PROS WEIGHT
+                        </span>
                         <span className="text-lg font-black text-emerald-700">
-                          +{opt.prosCons.filter(pc => pc.type === "pro").reduce((sum, item) => sum + item.weight, 0)}
+                          +
+                          {opt.prosCons
+                            .filter((pc) => pc.type === "pro")
+                            .reduce((sum, item) => sum + item.weight, 0)}
                         </span>
                       </div>
                       <div className="bg-red-50/50 border border-red-100 rounded-xl p-3">
-                        <span className="font-bold text-red-800 text-xxs block uppercase tracking-wider mb-1">CONS WEIGHT</span>
+                        <span className="font-bold text-red-800 text-xxs block uppercase tracking-wider mb-1">
+                          CONS WEIGHT
+                        </span>
                         <span className="text-lg font-black text-red-700">
-                          -{opt.prosCons.filter(pc => pc.type === "con").reduce((sum, item) => sum + item.weight, 0)}
+                          -
+                          {opt.prosCons
+                            .filter((pc) => pc.type === "con")
+                            .reduce((sum, item) => sum + item.weight, 0)}
                         </span>
                       </div>
                     </div>
@@ -651,20 +772,38 @@ export default function DecisionsPage() {
             {/* Handle remaining options if > 2 */}
             {options.length > 2 && (
               <div className="space-y-4 pt-4 border-t border-slate-100">
-                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide">Additional Options</h4>
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                  Additional Options
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {options.slice(2).map((opt, i) => {
                     const finalScore = calculateOptionScore(opt);
-                    const resolvedLabel = opt.label.trim() || `Option ${String.fromCharCode(67 + i)}`;
+                    const resolvedLabel =
+                      opt.label.trim() ||
+                      `Option ${String.fromCharCode(67 + i)}`;
                     return (
-                      <div key={i} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex justify-between items-center">
+                      <div
+                        key={i}
+                        className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex justify-between items-center"
+                      >
                         <div>
-                          <strong className="block text-slate-800">{resolvedLabel}</strong>
-                          <span className="text-xs text-slate-500">Values: {opt.alignsValues} | 6mo: {opt.predictedFeeling}</span>
+                          <strong className="block text-slate-800">
+                            {resolvedLabel}
+                          </strong>
+                          <span className="text-xs text-slate-500">
+                            Values: {opt.alignsValues} | 6mo:{" "}
+                            {opt.predictedFeeling}
+                          </span>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded text-sm font-extrabold ${
-                          finalScore > 0 ? "bg-emerald-100 text-emerald-800" : finalScore < 0 ? "bg-red-100 text-red-800" : "bg-slate-200 text-slate-800"
-                        }`}>
+                        <span
+                          className={`px-2.5 py-0.5 rounded text-sm font-extrabold ${
+                            finalScore > 0
+                              ? "bg-emerald-100 text-emerald-800"
+                              : finalScore < 0
+                                ? "bg-red-100 text-red-800"
+                                : "bg-slate-200 text-slate-800"
+                          }`}
+                        >
                           {finalScore > 0 ? `+${finalScore}` : finalScore}
                         </span>
                       </div>
@@ -676,9 +815,17 @@ export default function DecisionsPage() {
 
             {/* Baseline Informational Notice Box */}
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3.5 mt-8 shadow-sm">
-              <span className="text-2xl mt-0.5 select-none" role="img" aria-label="info">ℹ️</span>
+              <span
+                className="text-2xl mt-0.5 select-none"
+                role="img"
+                aria-label="info"
+              >
+                ℹ️
+              </span>
               <p className="text-sm text-amber-900 leading-relaxed font-medium">
-                Note: This tool calculates the mathematical weight of your inputs. It does not constitute advice. The final decision is entirely your responsibility.
+                Note: This tool calculates the mathematical weight of your
+                inputs. It does not constitute advice. The final decision is
+                entirely your responsibility.
               </p>
             </div>
           </div>

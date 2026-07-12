@@ -15,17 +15,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, timeframeDays, options } = body;
 
-    if (!title || !timeframeDays || !options || !Array.isArray(options) || options.length === 0) {
-      return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+    if (
+      !title ||
+      !timeframeDays ||
+      !options ||
+      !Array.isArray(options) ||
+      options.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields." },
+        { status: 400 },
+      );
     }
 
     // Insert Decision
-    const [insertedDecision] = await db.insert(decisions).values({
-      userId,
-      title: title.trim(),
-      timeframeDays: parseInt(timeframeDays) || 7,
-      completed: 0
-    }).returning();
+    const [insertedDecision] = await db
+      .insert(decisions)
+      .values({
+        userId,
+        title: title.trim(),
+        timeframeDays: parseInt(timeframeDays) || 7,
+        completed: 0,
+      })
+      .returning();
 
     // Insert Options
     for (const opt of options) {
@@ -36,13 +48,19 @@ export async function POST(req: Request) {
         alignsValues: opt.alignsValues || "Unsure",
         externalPressure: opt.externalPressure ? 1 : 0,
         makingAssumptions: opt.makingAssumptions ? 1 : 0,
-        netScore: parseInt(opt.netScore) || 0
+        netScore: parseInt(opt.netScore) || 0,
       });
     }
 
-    return NextResponse.json({ success: true, decisionId: insertedDecision.id });
+    return NextResponse.json({
+      success: true,
+      decisionId: insertedDecision.id,
+    });
   } catch (err: any) {
     console.error("Decision API Error:", err);
-    return NextResponse.json({ error: err.message || "Failed to create decision" }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to create decision" },
+      { status: 500 },
+    );
   }
 }

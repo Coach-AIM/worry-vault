@@ -1,6 +1,11 @@
 // Clinical safety intercept system
 export const CRISIS_KEYWORDS = [
-  "suicide", "kill myself", "die", "hurt myself", "end it all", "hopeless"
+  "suicide",
+  "kill myself",
+  "die",
+  "hurt myself",
+  "end it all",
+  "hopeless",
 ];
 
 /**
@@ -10,5 +15,5 @@ export const CRISIS_KEYWORDS = [
 export function checkSafety(input: string): boolean {
   if (!input) return false;
   const lowerInput = input.toLowerCase();
-  return CRISIS_KEYWORDS.some(keyword => lowerInput.includes(keyword));
+  return CRISIS_KEYWORDS.some((keyword) => lowerInput.includes(keyword));
 }
