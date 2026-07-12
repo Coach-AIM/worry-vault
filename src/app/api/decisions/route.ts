@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     const userId = (session.user as any).id || "user_coach_1";
 
     const body = await req.json();
+    delete body.id;
     const { title, timeframeDays, options } = body;
 
     if (

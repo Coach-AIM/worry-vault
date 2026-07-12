@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     const currentUserId = (session.user as any).id || "user_coach_1";
 
     const body = await request.json();
+    delete body.id;
 
     // Enforce that complex structures are properly stringified for SQLite
     const insertedRow = await db
