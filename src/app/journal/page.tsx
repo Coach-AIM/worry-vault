@@ -391,7 +391,6 @@ export default function CBTJournal() {
       return;
     }
 
-    setStep(4);
     setLoading(true);
 
     try {
@@ -480,6 +479,7 @@ export default function CBTJournal() {
         );
         setSuggestedTraps(combinedDistortions);
         setSelectedDistortions(combinedDistortions);
+        setStep(4);
       }
     } catch (err: any) {
       console.error("Insight Error", err);
@@ -1217,10 +1217,38 @@ export default function CBTJournal() {
               <button
                 type="button"
                 onClick={handleAnalyzeThoughts}
-                disabled={!thought.trim()}
-                style={{ flex: 2 }}
+                disabled={!thought.trim() || loading}
+                style={{
+                  flex: 2,
+                  opacity: !thought.trim() || loading ? 0.7 : 1,
+                  cursor: !thought.trim() || loading ? "not-allowed" : "pointer",
+                }}
               >
-                Identify Thinking Traps
+                {loading ? (
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <span
+                      className="animate-spin"
+                      style={{
+                        display: "inline-block",
+                        width: "1rem",
+                        height: "1rem",
+                        border: "2px solid currentColor",
+                        borderTopColor: "transparent",
+                        borderRadius: "50%",
+                      }}
+                    ></span>
+                    Analyzing Thought...
+                  </span>
+                ) : (
+                  "Identify Thinking Traps"
+                )}
               </button>
             </div>
           </div>
