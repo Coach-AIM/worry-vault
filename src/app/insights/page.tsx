@@ -418,6 +418,32 @@ export default function InsightsPage() {
     0,
   );
 
+  const getLabelStyle = (text: string): React.CSSProperties => {
+    if (text.length > 15) {
+      return {
+        fontSize: "0.72rem",
+        fontWeight: 700,
+        letterSpacing: "-0.01em",
+        color: "hsl(200, 10%, 40%)",
+        lineHeight: 1.25,
+        maxWidth: "150px",
+        textAlign: "center",
+        textTransform: "uppercase",
+        marginTop: "4px",
+      };
+    }
+    return {
+      fontSize: "0.85rem",
+      fontWeight: 700,
+      color: "hsl(200, 10%, 40%)",
+      lineHeight: 1.4,
+      letterSpacing: "0.03em",
+      textAlign: "center",
+      textTransform: "uppercase",
+      marginTop: "4px",
+    };
+  };
+
   // Custom Tooltip Components
   const CustomEmotionTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -1156,8 +1182,9 @@ export default function InsightsPage() {
                         flexDirection: "row",
                         flexWrap: "wrap",
                         alignItems: "center",
-                        justifyContent: "space-around",
-                        gap: "2rem",
+                        justifyContent: "space-between",
+                        gap: "1.5rem",
+                        width: "100%",
                       }}
                     >
                       {/* Donut block wrapper */}
@@ -1166,14 +1193,17 @@ export default function InsightsPage() {
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
+                          flex: "0 0 55%",
+                          maxWidth: "55%",
+                          justifyContent: "center",
                         }}
                       >
                         {/* Donut container */}
                         <div
                           style={{
                             position: "relative",
-                            width: "220px",
-                            height: "220px",
+                            width: "280px",
+                            height: "280px",
                             flexShrink: 0,
                           }}
                         >
@@ -1185,8 +1215,8 @@ export default function InsightsPage() {
                                 nameKey="name"
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={65}
-                                outerRadius={90}
+                                innerRadius={95}
+                                outerRadius={120}
                                 paddingAngle={3}
                                 // @ts-ignore
                                 activeIndex={activeIndex}
@@ -1219,11 +1249,6 @@ export default function InsightsPage() {
                                   />
                                 ))}
                               </Pie>
-                              <Tooltip
-                                content={<CustomDistortionTooltip />}
-                                isAnimationActive={false}
-                                offset={20}
-                              />
                             </PieChart>
                           </ResponsiveContainer>
                           {/* Central Dynamic Text/Icon Layer with Inner Hue background */}
@@ -1233,8 +1258,8 @@ export default function InsightsPage() {
                               top: "50%",
                               left: "50%",
                               transform: "translate(-50%, -50%)",
-                              width: "126px",
-                              height: "126px",
+                              width: "180px",
+                              height: "180px",
                               borderRadius: "50%",
                               backgroundColor: hoveredSlice
                                 ? `${hoveredSlice.color}15`
@@ -1268,19 +1293,7 @@ export default function InsightsPage() {
                                   {hoveredSlice.percentage}%
                                 </span>
                                 <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    fontWeight: 700,
-                                    color: "hsl(200, 10%, 40%)",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.05em",
-                                    marginTop: "4px",
-                                    maxWidth: "105px",
-                                    textAlign: "center",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
+                                  style={getLabelStyle(hoveredSlice.name)}
                                   title={hoveredSlice.name}
                                 >
                                   {hoveredSlice.name}
@@ -1331,12 +1344,12 @@ export default function InsightsPage() {
                       {/* Custom styled list legend */}
                       <div
                         style={{
-                          flex: 1,
-                          minWidth: "240px",
+                          flex: "0 0 45%",
+                          maxWidth: "45%",
                           display: "flex",
                           flexDirection: "column",
                           gap: "0.6rem",
-                          maxHeight: "200px",
+                          maxHeight: "260px",
                           overflowY: "auto",
                           paddingRight: "0.5rem",
                         }}
