@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import ExportPdfButton from "@/components/ExportPdfButton";
+import { getRandomQuote, QuoteItem } from "@/utils/perspectiveQuotes";
+import { signOut } from "next-auth/react";
 
 type TherapistContact = {
   name: string;
@@ -35,6 +37,7 @@ export default function Home() {
   // Dynamic Dashboard Stats
   const [entriesCount, setEntriesCount] = useState<number>(0);
   const [recentTraps, setRecentTraps] = useState<string[]>([]);
+  const [quote, setQuote] = useState<QuoteItem | null>(null);
 
   async function handleDownloadBackup() {
     const password = prompt(
@@ -166,9 +169,9 @@ export default function Home() {
     fetchContact();
     fetchJournalStats();
     const hour = new Date().getHours();
-    if (hour >= 18 || hour < 6) {
-      setIsNight(true);
-    }
+    const evening = hour >= 18 || hour < 6;
+    setIsNight(evening);
+    setQuote(getRandomQuote(evening));
   }, []);
 
   async function handleSave(e: React.FormEvent) {
@@ -198,6 +201,9 @@ export default function Home() {
         margin: "0 auto",
         paddingTop: "1.5rem",
         paddingBottom: "3.5rem",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
       }}
     >
       <header style={{ marginBottom: "3rem", textAlign: "center" }}>
@@ -223,63 +229,72 @@ export default function Home() {
         </p>
       </header>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-        {/* Evening Check-in Banner */}
-        {isNight && (
-          <div
-            className="card-glass"
-            style={{
-              borderLeft: "4px solid var(--accent-gold)",
-              borderRadius: "var(--radius)",
-              padding: "1.25rem 1.5rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "1rem",
-              boxShadow: "0 4px 15px rgba(92, 127, 102, 0.04)",
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: "1.2rem", marginRight: "0.5rem" }}>
-                🌙
-              </span>
-              <strong style={{ color: "var(--accent-gold-text)" }}>
-                Evening Check-in:
-              </strong>{" "}
-              <span
-                style={{
-                  color: "var(--foreground)",
-                  fontSize: "0.95rem",
-                  opacity: 0.9,
-                }}
-              >
-                Ready to release today's worries and plan a restful tomorrow?
-              </span>
-            </div>
-            <Link
-              href="/reflect"
-              className="btn-primary"
+      <div style={{ display: "flex", flexDirection: "column", gap: "2rem", width: "100%" }}>
+        {/* Dynamic Time-Gated Check-in Banner */}
+        <div
+          className="card-glass"
+          style={{
+            borderLeft: isNight ? "4px solid var(--accent-gold)" : "4px solid var(--sage-green)",
+            borderRadius: "var(--radius)",
+            padding: "1.5rem",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "1.25rem",
+            textAlign: "center",
+            boxShadow: "0 4px 15px rgba(92, 127, 102, 0.04)",
+          }}
+        >
+          <div>
+            <span style={{ fontSize: "2rem", display: "block", marginBottom: "0.5rem" }}>
+              {isNight ? "🌙" : "☀️"}
+            </span>
+            <strong style={{ color: isNight ? "var(--accent-gold-text)" : "var(--sage-green)", fontSize: "1.1rem" }}>
+              {isNight ? "Evening Reflection" : "Day Check-In"}
+            </strong>{" "}
+            <p
               style={{
-                backgroundColor: "var(--accent-gold)",
-                color: "#fff",
-                padding: "0.5rem 1.25rem",
-                borderRadius: "var(--radius)",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                boxShadow: "none",
+                color: "var(--foreground)",
+                fontSize: "0.95rem",
+                opacity: 0.9,
+                margin: "0.5rem 0 0 0",
+                lineHeight: 1.5,
               }}
             >
-              Start Reflection
-            </Link>
+              {isNight
+                ? "Ready to release today's worries and plan a restful tomorrow?"
+                : "Ready to log your focus, check in on your goals, or practice CBT thought reframing?"}
+            </p>
           </div>
-        )}
+          <Link
+            href={isNight ? "/reflect" : "/journal"}
+            className="btn-primary"
+            style={{
+              backgroundColor: isNight ? "var(--accent-gold)" : "var(--sage-green)",
+              color: "#fff",
+              padding: "0.65rem 1.5rem",
+              borderRadius: "var(--radius)",
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              boxShadow: "none",
+              width: "100%",
+              maxWidth: "240px",
+              textAlign: "center",
+            }}
+          >
+            {isNight ? "Start Reflection" : "Start Guided Journal"}
+          </Link>
+        </div>
 
         {/* PRIMARY FUNCTION: CBT Journal Card (Top of the Welcome Page) */}
         <section
           className="card-premium"
           style={{
             borderTop: "4px solid var(--sage-green)",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
           <h2
@@ -288,6 +303,7 @@ export default function Home() {
               marginBottom: "0.75rem",
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "0.5rem",
             }}
           >
@@ -300,6 +316,7 @@ export default function Home() {
               lineHeight: 1.6,
               marginBottom: "1.75rem",
               fontSize: "1rem",
+              textAlign: "center",
             }}
           >
             Process distressing moments with our guided 5-step CBT Thought
@@ -307,7 +324,7 @@ export default function Home() {
             to anchor and savor your strengths.
           </p>
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center" }}
           >
             <Link
               href="/journal"
@@ -317,6 +334,8 @@ export default function Home() {
                 textAlign: "center",
                 fontSize: "1.05rem",
                 padding: "0.85rem 1.5rem",
+                width: "100%",
+                maxWidth: "320px",
               }}
             >
               ✍️ Open Guided Journal
@@ -340,92 +359,50 @@ export default function Home() {
           </div>
         </section>
 
-        {/* INSIGHTS PREVIEW CARD (Below Journal) */}
-        <section className="card-premium">
-          <div
+        {/* Context-Aware Quote Deck */}
+        {quote && (
+          <section
+            className="card-premium"
             style={{
+              textAlign: "center",
+              padding: "2.5rem 2rem",
               display: "flex",
-              justifyContent: "space-between",
+              flexDirection: "column",
               alignItems: "center",
-              marginBottom: "0.75rem",
-              flexWrap: "wrap",
-              gap: "0.5rem",
+              justifyContent: "center",
             }}
           >
-            <h2 style={{ fontSize: "1.4rem", margin: 0 }}>
-              📈 Wellness Trends & Analytics
-            </h2>
-            <span className="badge-custom badge-blue">Live Data</span>
-          </div>
-          <p
-            style={{
-              color: "var(--foreground)",
-              opacity: 0.8,
-              lineHeight: 1.5,
-              marginBottom: "1.5rem",
-              fontSize: "0.95rem",
-            }}
-          >
-            Track your emotional trajectory fluctuations, review distortion
-            frequencies over 30 days, and identify cognitive trends.
-          </p>
-
-          {/* Dynamic Statistics Panel */}
-          {entriesCount > 0 && (
-            <div
-              className="badge-sage"
+            <span style={{ fontSize: "3rem", color: "var(--sage-green)", opacity: 0.3, display: "block", height: "1.5rem", lineHeight: 0.5 }}>“</span>
+            <p
               style={{
-                padding: "1rem 1.25rem",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
+                fontSize: "1.15rem",
+                fontStyle: "italic",
+                color: "var(--foreground)",
+                opacity: 0.9,
+                lineHeight: 1.6,
+                margin: "0.5rem 0 1.25rem 0",
+                textAlign: "center",
+                maxWidth: "500px",
               }}
             >
-              <span
-                style={{
-                  fontSize: "0.95rem",
-                  color: "var(--sage-green)",
-                  fontWeight: 600,
-                }}
-              >
-                🌱 Total journal reflections logged:{" "}
-                <strong>{entriesCount}</strong>
-              </span>
-              {recentTraps.length > 0 && (
-                <span
-                  style={{
-                    fontSize: "0.88rem",
-                    color: "var(--accent-gold-text)",
-                    fontWeight: 500,
-                  }}
-                >
-                  Traps identified:{" "}
-                  <strong style={{ color: "var(--accent-gold)" }}>
-                    {recentTraps.join(", ")}
-                  </strong>
-                </span>
-              )}
-            </div>
-          )}
+              {quote.text}
+            </p>
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "hsl(200, 10%, 45%)" }}>
+              — {quote.author}
+            </span>
+          </section>
+        )}
 
-          <Link
-            href="/insights"
-            className="btn-secondary"
-            style={{
-              display: "block",
-              textAlign: "center",
-              fontSize: "0.95rem",
-              padding: "0.75rem 1.5rem",
-            }}
-          >
-            📊 View Wellness Insights
-          </Link>
-        </section>
-
-        {/* ACTION PLANNER CARD (Below Insights) */}
-        <section className="card-premium">
+        {/* ACTION PLANNER CARD (Below Quote Deck) */}
+        <section
+          className="card-premium"
+          style={{
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
           <h2 style={{ fontSize: "1.4rem", marginBottom: "0.5rem" }}>
             📅 Action Planner
           </h2>
@@ -436,6 +413,7 @@ export default function Home() {
               lineHeight: 1.5,
               marginBottom: "1.5rem",
               fontSize: "0.95rem",
+              textAlign: "center",
             }}
           >
             Break down worries and tasks into small, manageable daily
@@ -452,6 +430,8 @@ export default function Home() {
               backgroundColor: "var(--sage-green-light)",
               color: "var(--sage-green)",
               borderColor: "rgba(92,127,102,0.1)",
+              width: "100%",
+              maxWidth: "320px",
             }}
           >
             📋 Open Action Planner
@@ -459,7 +439,15 @@ export default function Home() {
         </section>
 
         {/* DECISION ASSISTANT CARD (Below Action Planner) */}
-        <section className="card-premium">
+        <section
+          className="card-premium"
+          style={{
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
           <h2 style={{ fontSize: "1.4rem", marginBottom: "0.5rem" }}>
             🤔 Decision Assistant
           </h2>
@@ -470,6 +458,7 @@ export default function Home() {
               lineHeight: 1.5,
               marginBottom: "1.5rem",
               fontSize: "0.95rem",
+              textAlign: "center",
             }}
           >
             Facing a tough choice? Use our multi-step wizard to align options
@@ -487,6 +476,8 @@ export default function Home() {
               backgroundColor: "var(--accent-gold-light)",
               color: "var(--accent-gold-text)",
               borderColor: "rgba(217,145,38,0.1)",
+              width: "100%",
+              maxWidth: "320px",
             }}
           >
             🎯 Open Decision Assistant
@@ -494,7 +485,15 @@ export default function Home() {
         </section>
 
         {/* Therapist / Support Network Card */}
-        <section className="card-premium">
+        <section
+          className="card-premium"
+          style={{
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
           <h2 style={{ fontSize: "1.4rem", marginBottom: "1rem" }}>
             📞 My Support Contact
           </h2>
@@ -511,9 +510,11 @@ export default function Home() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "1.25rem",
+                width: "100%",
+                alignItems: "center",
               }}
             >
-              <div>
+              <div style={{ width: "100%", textAlign: "left" }}>
                 <label
                   style={{
                     display: "block",
@@ -535,8 +536,8 @@ export default function Home() {
                   className="form-input"
                 />
               </div>
-              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: "140px" }}>
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", width: "100%" }}>
+                <div style={{ flex: 1, minWidth: "140px", textAlign: "left" }}>
                   <label
                     style={{
                       display: "block",
@@ -557,7 +558,7 @@ export default function Home() {
                     className="form-input"
                   />
                 </div>
-                <div style={{ flex: 1, minWidth: "140px" }}>
+                <div style={{ flex: 1, minWidth: "140px", textAlign: "left" }}>
                   <label
                     style={{
                       display: "block",
@@ -579,7 +580,7 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <div>
+              <div style={{ width: "100%", textAlign: "left" }}>
                 <label
                   style={{
                     display: "block",
@@ -602,7 +603,7 @@ export default function Home() {
                 />
               </div>
               <div
-                style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}
+                style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem", justifyContent: "center" }}
               >
                 <button
                   type="submit"
@@ -623,12 +624,13 @@ export default function Home() {
             </form>
           ) : contact ? (
             /* Displaying Details */
-            <div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
               <p
                 style={{
                   fontSize: "1.25rem",
                   fontWeight: 700,
                   margin: "0 0 0.5rem 0",
+                  textAlign: "center",
                 }}
               >
                 {contact.name}
@@ -637,8 +639,10 @@ export default function Home() {
                 style={{
                   display: "flex",
                   flexDirection: "column",
+                  alignItems: "center",
                   gap: "0.5rem",
                   marginBottom: "1.25rem",
+                  width: "100%",
                 }}
               >
                 {contact.phone && (
@@ -647,6 +651,7 @@ export default function Home() {
                       fontSize: "0.95rem",
                       color: "var(--foreground)",
                       opacity: 0.9,
+                      textAlign: "center",
                     }}
                   >
                     📞 Phone:{" "}
@@ -664,6 +669,7 @@ export default function Home() {
                       fontSize: "0.95rem",
                       color: "var(--foreground)",
                       opacity: 0.9,
+                      textAlign: "center",
                     }}
                   >
                     ✉️ Email:{" "}
@@ -685,6 +691,8 @@ export default function Home() {
                       padding: "0.75rem 1rem",
                       borderRadius: "var(--radius-sm)",
                       borderLeft: "4px solid var(--sage-green)",
+                      textAlign: "center",
+                      maxWidth: "400px",
                     }}
                   >
                     {contact.notes}
@@ -695,14 +703,14 @@ export default function Home() {
                 type="button"
                 onClick={() => setIsEditing(true)}
                 className="btn-secondary"
-                style={{ padding: "0.5rem 1.25rem", fontSize: "0.85rem" }}
+                style={{ padding: "0.5rem 1.25rem", fontSize: "0.85rem", width: "100%", maxWidth: "200px" }}
               >
                 ✏️ Edit Contact Info
               </button>
             </div>
           ) : (
             /* Placeholder / No details added */
-            <div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <p
                 style={{
                   color: "var(--foreground)",
@@ -710,6 +718,7 @@ export default function Home() {
                   fontSize: "0.95rem",
                   lineHeight: 1.5,
                   marginBottom: "1.25rem",
+                  textAlign: "center",
                 }}
               >
                 Having quick access to your therapist or a trusted support
@@ -720,7 +729,7 @@ export default function Home() {
                 type="button"
                 onClick={() => setIsEditing(true)}
                 className="btn-primary"
-                style={{ padding: "0.65rem 1.5rem", fontSize: "0.9rem" }}
+                style={{ padding: "0.65rem 1.5rem", fontSize: "0.9rem", width: "100%", maxWidth: "220px" }}
               >
                 + Add Support Contact
               </button>
@@ -735,6 +744,9 @@ export default function Home() {
             padding: "2rem",
             borderRadius: "var(--radius)",
             textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
           <h3
@@ -755,6 +767,7 @@ export default function Home() {
               marginBottom: "1.5rem",
               marginInline: "auto",
               maxWidth: "400px",
+              textAlign: "center",
             }}
           >
             Export your completed grounding steps and CBT insights to review in
@@ -769,6 +782,10 @@ export default function Home() {
           style={{
             border: "1px solid var(--accent-gold)",
             backgroundColor: "var(--accent-gold-light)",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
           <h3
@@ -789,6 +806,7 @@ export default function Home() {
               marginBottom: "1.5rem",
               marginInline: "auto",
               maxWidth: "400px",
+              textAlign: "center",
             }}
           >
             Download an encrypted local backup file of your entire wellness data
@@ -801,6 +819,7 @@ export default function Home() {
             className="btn-primary"
             style={{
               width: "100%",
+              maxWidth: "320px",
               fontSize: "1.05rem",
               padding: "0.85rem",
               backgroundColor: "var(--accent-gold)",
@@ -813,6 +832,26 @@ export default function Home() {
               : "🔐 Create Encrypted Backup"}
           </button>
         </section>
+
+        {/* Sign Out Button (Clean, centered mobile fallback) */}
+        <div style={{ textAlign: "center", marginTop: "1rem" }}>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="btn-secondary"
+            style={{
+              padding: "0.6rem 1.5rem",
+              fontSize: "0.9rem",
+              color: "var(--accent-danger-text)",
+              backgroundColor: "var(--accent-danger-bg)",
+              borderColor: "rgba(220, 53, 69, 0.1)",
+              width: "100%",
+              maxWidth: "200px",
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     </div>
   );

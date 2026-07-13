@@ -115,7 +115,9 @@ export default function Navigation() {
     <nav className="bottom-nav">
       <ul className="nav-list">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.href;
+          const isActive = tab.href === "/"
+            ? pathname === "/"
+            : pathname ? pathname.startsWith(tab.href) : false;
           return (
             <li key={tab.href} className="nav-item">
               <Link
@@ -128,7 +130,7 @@ export default function Navigation() {
             </li>
           );
         })}
-        <li className="nav-item">
+        <li className="nav-item hidden md:flex">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="nav-link"
