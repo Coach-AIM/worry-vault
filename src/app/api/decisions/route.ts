@@ -3,6 +3,7 @@ import { db } from "@/db/index";
 import { decisions, decisionOptions } from "@/db/schema";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -30,27 +31,46 @@ export async function POST(req: Request) {
     }
 
     // Insert Decision
+    const result = await db.run(sql`
+      insert into "decisions" (
+        "user_id",
+        "title",
+        "timeframe_days",
+        "completed"
+      ) values (
+        ${userId},
+        ${title.trim()},
+        ${parseInt(timeframeDays) || 7},
+        0
+      )
+    `);
+    const lastId = Number(result.lastInsertRowid);
     const [insertedDecision] = await db
-      .insert(decisions)
-      .values({
-        userId,
-        title: title.trim(),
-        timeframeDays: parseInt(timeframeDays) || 7,
-        completed: 0,
-      })
-      .returning();
+      .select()
+      .from(decisions)
+      .where(eq(decisions.id, lastId));
 
     // Insert Options
     for (const opt of options) {
-      await db.insert(decisionOptions).values({
-        decisionId: insertedDecision.id,
-        label: opt.label.trim(),
-        predictedFeeling: opt.predictedFeeling || "Unknown",
-        alignsValues: opt.alignsValues || "Unsure",
-        externalPressure: opt.externalPressure ? 1 : 0,
-        makingAssumptions: opt.makingAssumptions ? 1 : 0,
-        netScore: parseInt(opt.netScore) || 0,
-      });
+      await db.run(sql`
+        insert into "decision_options" (
+          "decision_id",
+          "label",
+          "predicted_feeling",
+          "aligns_values",
+          "external_pressure",
+          "making_assumptions",
+          "net_score"
+        ) values (
+          ${insertedDecision.id},
+          ${opt.label.trim()},
+          ${opt.predictedFeeling || "Unknown"},
+          ${opt.alignsValues || "Unsure"},
+          ${opt.externalPressure ? 1 : 0},
+          ${opt.makingAssumptions ? 1 : 0},
+          ${parseInt(opt.netScore) || 0}
+        )
+      `);
     }
 
     return NextResponse.json({

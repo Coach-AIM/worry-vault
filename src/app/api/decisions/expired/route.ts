@@ -60,11 +60,17 @@ export async function POST(req: Request) {
     }
 
     // Insert follow up record
-    await db.insert(decisionFollowUps).values({
-      decisionId: parseInt(decisionId),
-      chosenOptionId: parseInt(chosenOptionId),
-      actualFeeling: actualFeeling.trim(),
-    });
+    await db.run(sql`
+      insert into "decision_follow_ups" (
+        "decision_id",
+        "chosen_option_id",
+        "actual_feeling"
+      ) values (
+        ${parseInt(decisionId)},
+        ${parseInt(chosenOptionId)},
+        ${actualFeeling.trim()}
+      )
+    `);
 
     // Mark parent decision as completed
     await db

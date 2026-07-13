@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/index";
 import { positiveThoughts } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -26,10 +26,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
     }
 
-    await db.insert(positiveThoughts).values({
-      thoughtText: thoughtText.trim(),
-      category: category || "General",
-    });
+    await db.run(sql`
+      insert into "positive_thoughts" (
+        "thought_text",
+        "category"
+      ) values (
+        ${thoughtText.trim()},
+        ${category || "General"}
+      )
+    `);
 
     return NextResponse.json({ success: true });
   } catch (error) {

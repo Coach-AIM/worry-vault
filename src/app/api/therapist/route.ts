@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/index";
 import { therapistContact } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -32,7 +32,19 @@ export async function POST(req: Request) {
         .set({ name, phone, email, notes })
         .where(eq(therapistContact.id, records[0].id));
     } else {
-      await db.insert(therapistContact).values({ name, phone, email, notes });
+      await db.run(sql`
+        insert into "therapist_contact" (
+          "name",
+          "phone",
+          "email",
+          "notes"
+        ) values (
+          ${name},
+          ${phone || null},
+          ${email || null},
+          ${notes || null}
+        )
+      `);
     }
 
     return NextResponse.json({ success: true });

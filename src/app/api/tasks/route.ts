@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/index";
 import { tasks } from "@/db/schema";
+import { sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -25,7 +26,27 @@ export async function POST(req: Request) {
       recurrence: t.recurrence || "none",
     }));
 
-    await db.insert(tasks).values(insertData);
+    for (const t of insertData) {
+      await db.run(sql`
+        insert into "tasks" (
+          "title",
+          "description",
+          "estimated_time",
+          "emotional_intensity",
+          "due_date",
+          "parent_id",
+          "recurrence"
+        ) values (
+          ${t.title},
+          ${t.description},
+          ${t.estimatedTime},
+          ${t.emotionalIntensity},
+          ${t.dueDate},
+          ${t.parentId},
+          ${t.recurrence}
+        )
+      `);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
