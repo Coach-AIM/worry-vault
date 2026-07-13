@@ -120,6 +120,14 @@ export default function InsightsPage() {
   >("all");
   const [sortBy, setSortBy] = useState<"intensity" | "frequency">("frequency");
 
+  const [activeRange, setActiveRange] = useState<"week" | "month" | "year">(
+    "month",
+  );
+  const [timelinePoints, setTimelinePoints] = useState<
+    { date: string; positive: number; negative: number }[]
+  >([]);
+  const [fetchingTrends, setFetchingTrends] = useState(true);
+
   async function fetchStats() {
     setFetchingStats(true);
     try {
@@ -133,10 +141,47 @@ export default function InsightsPage() {
     }
   }
 
+  async function fetchTrends(range: string) {
+    setFetchingTrends(true);
+    try {
+      const res = await fetch(`/api/journal/trends?range=${range}`);
+      const data = await res.json();
+      if (data.success && data.timelineData) {
+        setTimelinePoints(data.timelineData);
+      }
+    } catch (err) {
+      console.error("Failed to fetch trends data:", err);
+    } finally {
+      setFetchingTrends(false);
+    }
+  }
+
   useEffect(() => {
     fetchStats();
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    fetchTrends(activeRange);
+  }, [activeRange]);
+
+  const getFilteredEntriesForStats = () => {
+    const now = new Date();
+    let lookbackMs = 30 * 24 * 60 * 60 * 1000;
+    if (activeRange === "week") {
+      lookbackMs = 7 * 24 * 60 * 60 * 1000;
+    } else if (activeRange === "year") {
+      lookbackMs = 365 * 24 * 60 * 60 * 1000;
+    }
+
+    const threshold = now.getTime() - lookbackMs;
+    return journalEntries.filter((entry) => {
+      const dateStr = entry.createdAt.includes("T")
+        ? entry.createdAt
+        : entry.createdAt.replace(" ", "T") + "Z";
+      return new Date(dateStr).getTime() >= threshold;
+    });
+  };
 
   // Process Emotion Stats
   const getEmotionStats = () => {
@@ -148,14 +193,16 @@ export default function InsightsPage() {
     const normalizeName = (rawName: string): string => {
       const trimmed = rawName.trim();
       const lower = trimmed.toLowerCase();
-      if (lower === "overwhelm" || lower === "overwhelmed")
+      if (lower === "overwhelm" || lower === "overwhelmed") {
         return "Overwhelmed";
-      if (lower === "frustrated" || lower === "frustration")
+      }
+      if (lower === "frustrated" || lower === "frustration") {
         return "Frustrated";
+      }
       return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
     };
 
-    journalEntries.forEach((entry) => {
+    getFilteredEntriesForStats().forEach((entry) => {
       if (!entry.emotionsJson) return;
       try {
         const emotions = JSON.parse(entry.emotionsJson);
@@ -208,7 +255,7 @@ export default function InsightsPage() {
     const distortionCounts: Record<string, number> = {};
     let totalCount = 0;
 
-    journalEntries.forEach((entry) => {
+    getFilteredEntriesForStats().forEach((entry) => {
       if (!entry.distortionsJson) return;
       try {
         const distortions = JSON.parse(entry.distortionsJson);
@@ -314,7 +361,6 @@ export default function InsightsPage() {
 
   const emotionStats = getEmotionStats();
   const distortionStats = getDistortionStats();
-  const timelinePoints = getTimelineData();
   const totalDistortionsCount = distortionStats.reduce(
     (sum, item) => sum + item.count,
     0,
@@ -539,6 +585,53 @@ export default function InsightsPage() {
         >
           📈 Timeline Fluctuations
         </button>
+      </div>
+
+      {/* Date Range Selector */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "0.5rem",
+          marginBottom: "2rem",
+          backgroundColor: "var(--border)",
+          padding: "0.35rem",
+          borderRadius: "12px",
+          maxWidth: "360px",
+          marginInline: "auto",
+        }}
+      >
+        {(["week", "month", "year"] as const).map((r) => {
+          const label =
+            r === "week"
+              ? "Past Week"
+              : r === "month"
+                ? "Past Month"
+                : "Past Year";
+          const active = activeRange === r;
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setActiveRange(r)}
+              style={{
+                flex: 1,
+                padding: "0.5rem 1rem",
+                borderRadius: "10px",
+                border: "none",
+                backgroundColor: active ? "#fff" : "transparent",
+                color: active ? "var(--foreground)" : "hsl(200, 10%, 50%)",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                boxShadow: active ? "var(--card-shadow)" : "none",
+                cursor: "pointer",
+                transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {fetchingStats ? (
@@ -1077,7 +1170,18 @@ export default function InsightsPage() {
                 (Reflects averages per distinct logged day).
               </p>
 
-              {timelinePoints.length === 0 ? (
+              {fetchingTrends ? (
+                <p
+                  style={{
+                    color: "hsl(200, 10%, 50%)",
+                    fontSize: "0.95rem",
+                    textAlign: "center",
+                    padding: "4rem 2rem",
+                  }}
+                >
+                  Updating trends timeline...
+                </p>
+              ) : timelinePoints.length === 0 ? (
                 <p
                   style={{
                     color: "hsl(200, 10%, 50%)",
