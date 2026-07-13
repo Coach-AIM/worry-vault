@@ -1177,33 +1177,18 @@ export default function InsightsPage() {
                   >
                     {/* Responsive Flex layout for chart + legend */}
                     <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "1.5rem",
-                        width: "100%",
-                      }}
+                      className="flex flex-col lg:flex-row items-center justify-between w-full gap-8"
                     >
                       {/* Donut block wrapper */}
                       <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          flex: "0 0 55%",
-                          maxWidth: "55%",
-                          justifyContent: "center",
-                        }}
+                        className="w-full lg:w-[55%] flex flex-col items-start justify-center"
                       >
                         {/* Donut container */}
                         <div
                           style={{
                             position: "relative",
-                            width: "280px",
-                            height: "280px",
+                            width: "260px",
+                            height: "260px",
                             flexShrink: 0,
                           }}
                         >
@@ -1215,8 +1200,8 @@ export default function InsightsPage() {
                                 nameKey="name"
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={95}
-                                outerRadius={120}
+                                innerRadius={85}
+                                outerRadius={110}
                                 paddingAngle={3}
                                 // @ts-ignore
                                 activeIndex={activeIndex}
@@ -1258,8 +1243,8 @@ export default function InsightsPage() {
                               top: "50%",
                               left: "50%",
                               transform: "translate(-50%, -50%)",
-                              width: "180px",
-                              height: "180px",
+                              width: "160px",
+                              height: "160px",
                               borderRadius: "50%",
                               backgroundColor: hoveredSlice
                                 ? `${hoveredSlice.color}15`
@@ -1335,6 +1320,7 @@ export default function InsightsPage() {
                             marginTop: "1.25rem",
                             color: "var(--foreground)",
                             fontSize: "0.95rem",
+                            width: "260px",
                           }}
                         >
                           {totalDistortionsCount} Total Traps
@@ -1343,12 +1329,8 @@ export default function InsightsPage() {
 
                       {/* Custom styled list legend */}
                       <div
+                        className="w-full lg:w-[45%] flex flex-col gap-2"
                         style={{
-                          flex: "0 0 45%",
-                          maxWidth: "45%",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.6rem",
                           maxHeight: "260px",
                           overflowY: "auto",
                           paddingRight: "0.5rem",
