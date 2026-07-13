@@ -82,6 +82,18 @@ export default function CBTJournal() {
   );
   const [savingOutcomeId, setSavingOutcomeId] = useState<number | null>(null);
 
+  const isSuggested = (trapName: string) => {
+    if (!suggestedTraps || !Array.isArray(suggestedTraps)) return false;
+
+    // Normalize both strings to lowercase and strip spaces/underscores for a foolproof match
+    const normalize = (str: string) =>
+      str.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    return suggestedTraps.some(
+      (suggested) => normalize(suggested) === normalize(trapName),
+    );
+  };
+
   // Default suggested emotions helper
   const getSuggestedEmotions = (situationText: string) => {
     const text = situationText.toLowerCase();
@@ -1324,14 +1336,20 @@ export default function CBTJournal() {
                       }}
                     >
                       {suggestedTraps.map((id) => {
-                        const dist = DISTORTIONS.find((d) => d.id === id);
+                        const dist = DISTORTIONS.find(
+                          (d) =>
+                            d.id === id ||
+                            d.name.toLowerCase() === id.toLowerCase(),
+                        );
                         if (!dist) return null;
-                        const isSelected = selectedDistortions.includes(id);
+                        const isSelected = selectedDistortions.includes(
+                          dist.id,
+                        );
                         return (
                           <button
-                            key={id}
+                            key={dist.id}
                             type="button"
-                            onClick={() => toggleDistortion(id)}
+                            onClick={() => toggleDistortion(dist.id)}
                             style={{
                               padding: "0.4rem 0.8rem",
                               borderRadius: "20px",
@@ -1370,12 +1388,9 @@ export default function CBTJournal() {
                     const isSelected = selectedDistortions.includes(
                       distortion.id,
                     );
-                    const isSuggested =
-                      localDistortions.some((ld) => ld.id === distortion.id) ||
-                      (insightsData?.suggestedDistortions &&
-                        insightsData.suggestedDistortions.includes(
-                          distortion.id,
-                        ));
+                    const isThisSuggested =
+                      isSuggested(distortion.id) ||
+                      isSuggested(distortion.name);
 
                     return (
                       <div
@@ -1384,8 +1399,14 @@ export default function CBTJournal() {
                         style={{
                           border: isSelected
                             ? "2px solid var(--soft-blue)"
-                            : "1px solid #e0e0e0",
-                          backgroundColor: isSelected ? "#f5f9ff" : "#fff",
+                            : isThisSuggested
+                              ? "2px dashed #f59e0b"
+                              : "1px solid #e0e0e0",
+                          backgroundColor: isSelected
+                            ? "#f5f9ff"
+                            : isThisSuggested
+                              ? "#fffbeb"
+                              : "#fff",
                           borderRadius: "var(--radius)",
                           padding: "1.25rem",
                           cursor: "pointer",
@@ -1393,7 +1414,9 @@ export default function CBTJournal() {
                           transition: "all 0.2s ease",
                           boxShadow: isSelected
                             ? "0 2px 8px rgba(0, 79, 230, 0.1)"
-                            : "0 1px 3px rgba(0,0,0,0.02)",
+                            : isThisSuggested
+                              ? "0 2px 8px rgba(245, 158, 11, 0.05)"
+                              : "0 1px 3px rgba(0,0,0,0.02)",
                         }}
                       >
                         <div
@@ -1446,7 +1469,7 @@ export default function CBTJournal() {
                               {distortion.name}
                             </h4>
                           </div>
-                          {isSuggested && (
+                          {isThisSuggested && (
                             <span
                               style={{
                                 backgroundColor: "#ffc107",
