@@ -107,33 +107,50 @@ export function detectThinkingTraps(text: string): string[] {
   const identifiedTraps: string[] = [];
   const cleanText = text.toLowerCase();
 
-  // 1. All-or-Nothing / Overgeneralization
+  // 1. All-or-Nothing / Overgeneralization Checks
   if (
     cleanText.includes("always") ||
     cleanText.includes("never") ||
-    cleanText.includes("ruined")
+    cleanText.includes("ruined") ||
+    cleanText.includes("completely")
   ) {
-    identifiedTraps.push("All-or-Nothing Thinking");
-    identifiedTraps.push("Overgeneralization");
+    if (!identifiedTraps.includes("All-or-Nothing Thinking")) {
+      identifiedTraps.push("All-or-Nothing Thinking");
+    }
   }
 
-  // 2. Mind Reading
+  // 2. Mind Reading Checks
   if (
     cleanText.includes("they think") ||
     cleanText.includes("annoyed") ||
     cleanText.includes("probably don't") ||
     cleanText.includes("want to")
   ) {
-    identifiedTraps.push("Mind Reading");
+    if (!identifiedTraps.includes("Mind Reading")) {
+      identifiedTraps.push("Mind Reading");
+    }
   }
 
-  // 3. Catastrophizing
+  // 3. Catastrophizing Checks
   if (
     cleanText.includes("disaster") ||
     cleanText.includes("catastrophe") ||
     cleanText.includes("worst")
   ) {
-    identifiedTraps.push("Catastrophizing");
+    if (!identifiedTraps.includes("Catastrophizing")) {
+      identifiedTraps.push("Catastrophizing");
+    }
+  }
+
+  // 4. Should Statements Checks
+  if (
+    cleanText.includes("should") ||
+    cleanText.includes("must") ||
+    cleanText.includes("ought to")
+  ) {
+    if (!identifiedTraps.includes("Should Statements")) {
+      identifiedTraps.push("Should Statements");
+    }
   }
 
   return identifiedTraps;

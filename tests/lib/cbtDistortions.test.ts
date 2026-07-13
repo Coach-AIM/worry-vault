@@ -61,12 +61,14 @@ describe("findDistortions", () => {
 
 describe("detectThinkingTraps", () => {
   it("should find multiple cognitive distortions in a single text string", () => {
-    const text = "They think I am a failure always, this is a disaster and the worst thing ever!";
+    const text =
+      "They think I am a failure always, this is a disaster and the worst thing ever! I should do better.";
     const result = detectThinkingTraps(text);
     expect(result).toContain("All-or-Nothing Thinking");
-    expect(result).toContain("Overgeneralization");
     expect(result).toContain("Mind Reading");
     expect(result).toContain("Catastrophizing");
+    expect(result).toContain("Should Statements");
+    expect(result).not.toContain("Overgeneralization");
   });
 
   it("should return empty list for neutral text", () => {
