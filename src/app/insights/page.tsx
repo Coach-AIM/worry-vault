@@ -1138,28 +1138,17 @@ export default function InsightsPage() {
               </div>
 
               {/* Distortion Frequencies Donut Chart */}
-              <div className="card-premium" style={{ padding: "2rem" }}>
-                <h3
-                  style={{
-                    fontSize: "1.35rem",
-                    color: "var(--foreground)",
-                    marginBottom: "0.25rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  Thinking Trap Frequency
-                </h3>
-                <p
-                  style={{
-                    fontSize: "0.92rem",
-                    color: "hsl(200, 10%, 45%)",
-                    marginBottom: "2rem",
-                    fontWeight: 500,
-                  }}
-                >
-                  Frequency distribution of cognitive distortions flagged in
-                  your thought records.
-                </p>
+              <div className="w-full max-w-4xl bg-white p-6 rounded-2xl shadow-sm flex flex-col mx-auto mb-8">
+                {/* BLOCK 1: THE HEADER (Spans full width at the top) */}
+                <div className="w-full mb-8 text-left">
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    Thinking Trap Frequency
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Frequency distribution of cognitive distortions flagged in
+                    your thought records.
+                  </p>
+                </div>
 
                 {distortionStats.length === 0 ? (
                   <p
@@ -1168,168 +1157,141 @@ export default function InsightsPage() {
                     No structured distortion data recorded yet.
                   </p>
                 ) : (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr",
-                      gap: "2rem",
-                    }}
-                  >
-                    {/* Responsive Flex layout for chart + legend */}
-                    <div
-                      className="flex flex-col lg:flex-row items-center justify-between w-full gap-8"
-                    >
-                      {/* Donut block wrapper */}
-                      <div
-                        className="w-full lg:w-[55%] flex flex-col items-start justify-center"
-                      >
-                        {/* Donut container */}
-                        <div
-                          style={{
-                            position: "relative",
-                            width: "260px",
-                            height: "260px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={distortionStats}
-                                dataKey="count"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={85}
-                                outerRadius={110}
-                                paddingAngle={3}
-                                // @ts-ignore
-                                activeIndex={activeIndex}
-                                // @ts-ignore
-                                activeShape={(props: any) => (
-                                  <Sector
-                                    {...props}
-                                    outerRadius={props.outerRadius + 5}
-                                  />
-                                )}
-                                onMouseEnter={(data: any, index: number) => {
-                                  setActiveIndex(index);
-                                  setHoveredSlice({
-                                    name: data.name,
-                                    percentage: data.percentage,
-                                    color: DONUT_COLORS[index % DONUT_COLORS.length],
-                                  });
-                                }}
-                                onMouseLeave={() => {
-                                  setActiveIndex(-1);
-                                  setHoveredSlice(null);
-                                }}
-                              >
-                                {distortionStats.map((entry, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={
-                                      DONUT_COLORS[index % DONUT_COLORS.length]
-                                    }
-                                  />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                          {/* Central Dynamic Text/Icon Layer with Inner Hue background */}
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: "50%",
-                              left: "50%",
-                              transform: "translate(-50%, -50%)",
-                              width: "160px",
-                              height: "160px",
-                              borderRadius: "50%",
-                              backgroundColor: hoveredSlice
-                                ? `${hoveredSlice.color}15`
-                                : "transparent",
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              pointerEvents: "none",
-                              transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                            }}
-                          >
-                            {hoveredSlice ? (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  animation: "fadeIn 0.2s ease",
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontSize: "2.1rem",
-                                    fontWeight: 800,
-                                    color: "var(--foreground)",
-                                    lineHeight: 1,
-                                  }}
-                                >
-                                  {hoveredSlice.percentage}%
-                                </span>
-                                <span
-                                  style={getLabelStyle(hoveredSlice.name)}
-                                  title={hoveredSlice.name}
-                                >
-                                  {hoveredSlice.name}
-                                </span>
-                              </div>
-                            ) : (
-                              /* Stylized minimal vault lock SVG icon */
-                              <svg
-                                width="38"
-                                height="38"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="var(--soft-blue)"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                style={{ opacity: 0.8 }}
-                              >
-                                <rect
-                                  x="3"
-                                  y="11"
-                                  width="18"
-                                  height="11"
-                                  rx="2"
-                                  ry="2"
+                  /* BLOCK 2: THE SIDE-BY-SIDE SPLIT WRAPPER */
+                  <div className="w-full flex flex-col lg:flex-row items-center justify-between gap-8">
+                    {/* LEFT COLUMN: CHART AREA (Takes 55% width) */}
+                    <div className="w-full lg:w-[55%] flex flex-col items-center justify-center">
+                      <div className="relative w-full aspect-square max-w-[320px] flex items-center justify-center">
+                        {/* RECHARTS / SVG DONUT CHART ENGINE GOES HERE */}
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={distortionStats}
+                              dataKey="count"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={85}
+                              outerRadius={110}
+                              paddingAngle={3}
+                              // @ts-ignore
+                              activeIndex={activeIndex}
+                              // @ts-ignore
+                              activeShape={(props: any) => (
+                                <Sector
+                                  {...props}
+                                  outerRadius={props.outerRadius + 5}
                                 />
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                <circle cx="12" cy="16" r="1.5" />
-                              </svg>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Center bottom caption for total traps count */}
+                              )}
+                              onMouseEnter={(data: any, index: number) => {
+                                setActiveIndex(index);
+                                setHoveredSlice({
+                                  name: data.name,
+                                  percentage: data.percentage,
+                                  color: DONUT_COLORS[index % DONUT_COLORS.length],
+                                });
+                              }}
+                              onMouseLeave={() => {
+                                setActiveIndex(-1);
+                                setHoveredSlice(null);
+                              }}
+                            >
+                              {distortionStats.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={
+                                    DONUT_COLORS[index % DONUT_COLORS.length]
+                                  }
+                                />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        {/* Central Dynamic Text/Icon Layer with Inner Hue background */}
                         <div
                           style={{
-                            textAlign: "center",
-                            fontWeight: 600,
-                            marginTop: "1.25rem",
-                            color: "var(--foreground)",
-                            fontSize: "0.95rem",
-                            width: "260px",
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            width: "160px",
+                            height: "160px",
+                            borderRadius: "50%",
+                            backgroundColor: hoveredSlice
+                              ? `${hoveredSlice.color}15`
+                              : "transparent",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            pointerEvents: "none",
+                            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                           }}
                         >
-                          {totalDistortionsCount} Total Traps
+                          {hoveredSlice ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                animation: "fadeIn 0.2s ease",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "2.1rem",
+                                  fontWeight: 800,
+                                  color: "var(--foreground)",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                {hoveredSlice.percentage}%
+                              </span>
+                              <span
+                                style={getLabelStyle(hoveredSlice.name)}
+                                title={hoveredSlice.name}
+                              >
+                                {hoveredSlice.name}
+                              </span>
+                            </div>
+                          ) : (
+                            /* Stylized minimal vault lock SVG icon */
+                            <svg
+                              width="38"
+                              height="38"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="var(--soft-blue)"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ opacity: 0.8 }}
+                            >
+                              <rect
+                                x="3"
+                                y="11"
+                                width="18"
+                                height="11"
+                                rx="2"
+                                ry="2"
+                              />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              <circle cx="12" cy="16" r="1.5" />
+                            </svg>
+                          )}
                         </div>
                       </div>
+                      {/* CAPTION STAYS LINKED DIRECTLY UNDER THE CIRCLE */}
+                      <div className="text-base font-semibold text-slate-800 mt-4 text-center">
+                        {totalDistortionsCount} Total Traps
+                      </div>
+                    </div>
 
-                      {/* Custom styled list legend */}
+                    {/* RIGHT COLUMN: LEGEND AREA (Takes 45% width) */}
+                    <div className="w-full lg:w-[45%] flex flex-col gap-3">
+                      {/* THE COMPACT VERTICAL ROW ITEMS LIST GOES HERE */}
                       <div
-                        className="w-full lg:w-[45%] flex flex-col gap-2"
                         style={{
                           maxHeight: "260px",
                           overflowY: "auto",
@@ -1344,6 +1306,7 @@ export default function InsightsPage() {
                               alignItems: "center",
                               justifyContent: "space-between",
                               fontSize: "0.88rem",
+                              marginBottom: "0.65rem",
                             }}
                           >
                             <div
