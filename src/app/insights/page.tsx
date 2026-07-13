@@ -130,9 +130,10 @@ export default function InsightsPage() {
   const [fetchingTrends, setFetchingTrends] = useState(true);
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
-  const [hoveredData, setHoveredData] = useState<{
+  const [hoveredSlice, setHoveredSlice] = useState<{
     name: string;
     percentage: number;
+    color: string;
   } | null>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
@@ -1198,14 +1199,15 @@ export default function InsightsPage() {
                                 )}
                                 onMouseEnter={(data: any, index: number) => {
                                   setActiveIndex(index);
-                                  setHoveredData({
+                                  setHoveredSlice({
                                     name: data.name,
                                     percentage: data.percentage,
+                                    color: DONUT_COLORS[index % DONUT_COLORS.length],
                                   });
                                 }}
                                 onMouseLeave={() => {
                                   setActiveIndex(-1);
-                                  setHoveredData(null);
+                                  setHoveredSlice(null);
                                 }}
                               >
                                 {distortionStats.map((entry, index) => (
@@ -1224,32 +1226,66 @@ export default function InsightsPage() {
                               />
                             </PieChart>
                           </ResponsiveContainer>
-                          {/* Central Dynamic Text/Icon Layer */}
+                          {/* Central Dynamic Text/Icon Layer with Inner Hue background */}
                           <div
                             style={{
                               position: "absolute",
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              width: "126px",
+                              height: "126px",
+                              borderRadius: "50%",
+                              backgroundColor: hoveredSlice
+                                ? `${hoveredSlice.color}15`
+                                : "transparent",
                               display: "flex",
                               flexDirection: "column",
                               justifyContent: "center",
                               alignItems: "center",
                               pointerEvents: "none",
+                              transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                             }}
                           >
-                            {hoveredData ? (
-                              <span
+                            {hoveredSlice ? (
+                              <div
                                 style={{
-                                  fontSize: "2.2rem",
-                                  fontWeight: 800,
-                                  color: "var(--foreground)",
-                                  lineHeight: 1,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  animation: "fadeIn 0.2s ease",
                                 }}
                               >
-                                {hoveredData.percentage}%
-                              </span>
+                                <span
+                                  style={{
+                                    fontSize: "2.1rem",
+                                    fontWeight: 800,
+                                    color: "var(--foreground)",
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  {hoveredSlice.percentage}%
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.62rem",
+                                    fontWeight: 700,
+                                    color: "hsl(200, 10%, 40%)",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.05em",
+                                    marginTop: "4px",
+                                    maxWidth: "105px",
+                                    textAlign: "center",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={hoveredSlice.name}
+                                >
+                                  {hoveredSlice.name}
+                                </span>
+                              </div>
                             ) : (
                               /* Stylized minimal vault lock SVG icon */
                               <svg
