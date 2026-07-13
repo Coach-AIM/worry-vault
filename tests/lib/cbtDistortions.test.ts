@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findDistortions } from "@/lib/cbtDistortions";
+import { findDistortions, detectThinkingTraps } from "@/lib/cbtDistortions";
 
 describe("findDistortions", () => {
   it("should return empty list for neutral text", () => {
@@ -56,5 +56,22 @@ describe("findDistortions", () => {
     const result = findDistortions(text);
     const names = result.map((r) => r.id);
     expect(names).toContain("overgeneralization");
+  });
+});
+
+describe("detectThinkingTraps", () => {
+  it("should find multiple cognitive distortions in a single text string", () => {
+    const text = "They think I am a failure always, this is a disaster and the worst thing ever!";
+    const result = detectThinkingTraps(text);
+    expect(result).toContain("All-or-Nothing Thinking");
+    expect(result).toContain("Overgeneralization");
+    expect(result).toContain("Mind Reading");
+    expect(result).toContain("Catastrophizing");
+  });
+
+  it("should return empty list for neutral text", () => {
+    const text = "Today was a nice sunny day.";
+    const result = detectThinkingTraps(text);
+    expect(result).toEqual([]);
   });
 });

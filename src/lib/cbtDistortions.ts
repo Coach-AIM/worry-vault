@@ -102,3 +102,39 @@ export function findDistortions(text: string): DistortionType[] {
 
   return found;
 }
+
+export function detectThinkingTraps(text: string): string[] {
+  const identifiedTraps: string[] = [];
+  const cleanText = text.toLowerCase();
+
+  // 1. All-or-Nothing / Overgeneralization
+  if (
+    cleanText.includes("always") ||
+    cleanText.includes("never") ||
+    cleanText.includes("ruined")
+  ) {
+    identifiedTraps.push("All-or-Nothing Thinking");
+    identifiedTraps.push("Overgeneralization");
+  }
+
+  // 2. Mind Reading
+  if (
+    cleanText.includes("they think") ||
+    cleanText.includes("annoyed") ||
+    cleanText.includes("probably don't") ||
+    cleanText.includes("want to")
+  ) {
+    identifiedTraps.push("Mind Reading");
+  }
+
+  // 3. Catastrophizing
+  if (
+    cleanText.includes("disaster") ||
+    cleanText.includes("catastrophe") ||
+    cleanText.includes("worst")
+  ) {
+    identifiedTraps.push("Catastrophizing");
+  }
+
+  return identifiedTraps;
+}
