@@ -67,6 +67,9 @@ export default function CBTJournal() {
     insights: string;
     reframeSuggestions?: string[];
     suggestedDistortions?: string[];
+    friend_test_reframe?: string;
+    fact_checking_reframe?: string;
+    perspective_reset_reframe?: string;
   } | null>(null);
 
   const [history, setHistory] = useState<Entry[]>([]);
@@ -200,14 +203,24 @@ export default function CBTJournal() {
   };
 
   const getExerciseSample = (exerciseType = selectedExercise) => {
+    if (!insightsData) return "Analyzing your thought context...";
     if (exerciseType === "friend") {
-      return "If a friend were facing this, I'd remind them that a single stressful event doesn't define their capability. This is just a temporary challenge, and they are doing the best they can.";
+      return (
+        insightsData.friend_test_reframe ||
+        "Think about what you'd say to a friend in this exact situation..."
+      );
     }
     if (exerciseType === "fact") {
-      return "Looking at the actual evidence, the situation is frustrating, but it does not guarantee a total disaster. I have navigated unexpected hurdles successfully in the past.";
+      return (
+        insightsData.fact_checking_reframe ||
+        "Look at the concrete evidence for and against this specific thought..."
+      );
     }
     if (exerciseType === "reset") {
-      return "Even if the worst-case scenario happens, it is an annoying inconvenience, not an insurmountable catastrophe. I am fully capable of handling the fallout step-by-step.";
+      return (
+        insightsData.perspective_reset_reframe ||
+        "What is your concrete plan to handle the absolute worst-case scenario?"
+      );
     }
     return getHeuristicReframe();
   };
@@ -452,6 +465,9 @@ export default function CBTJournal() {
             ? [data.result.reframed_thought]
             : [],
           suggestedDistortions: aiDistortions,
+          friend_test_reframe: data.result.friend_test_reframe || "",
+          fact_checking_reframe: data.result.fact_checking_reframe || "",
+          perspective_reset_reframe: data.result.perspective_reset_reframe || "",
         });
 
         if (data.result.reframed_thought) {

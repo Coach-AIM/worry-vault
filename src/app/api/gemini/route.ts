@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         },
       };
     } else if (type === "journal") {
-      systemInstruction = `Analyze the following user situation and thoughts for Cognitive Behavioral Therapy (CBT). You must respond with a raw JSON object containing these exact keys: "emotions", "distortions", and "reframed_thought".`;
+      systemInstruction = `Analyze the following user situation and thoughts for Cognitive Behavioral Therapy (CBT). You must respond with a raw JSON object containing these exact keys: "emotions", "distortions", "reframed_thought", "friend_test_reframe", "fact_checking_reframe", and "perspective_reset_reframe". The exercises "friend_test_reframe", "fact_checking_reframe", and "perspective_reset_reframe" must be uniquely tailored to the user's specific inputs, explicitly incorporating specific nouns and details from the user's entry while avoiding generic boilerplate phrases.`;
       responseSchema = {
         type: Type.OBJECT,
         properties: {
@@ -86,8 +86,30 @@ export async function POST(req: Request) {
             type: Type.STRING,
             description: "Objective, compassionate reframed thought",
           },
+          friend_test_reframe: {
+            type: Type.STRING,
+            description:
+              "Compassionate advice you would give to a friend in this exact situation, referencing specific nouns/details from the user's entry.",
+          },
+          fact_checking_reframe: {
+            type: Type.STRING,
+            description:
+              "An evidence-based reframing that balances facts for and against the user's automatic thought, using specific details from the entry.",
+          },
+          perspective_reset_reframe: {
+            type: Type.STRING,
+            description:
+              "A concrete, realistic plan to handle the worst-case scenario, referencing specific details from the user's situation.",
+          },
         },
-        required: ["emotions", "distortions", "reframed_thought"],
+        required: [
+          "emotions",
+          "distortions",
+          "reframed_thought",
+          "friend_test_reframe",
+          "fact_checking_reframe",
+          "perspective_reset_reframe",
+        ],
       };
 
       prompt = `Analyze the following user situation and thoughts for Cognitive Behavioral Therapy (CBT).
@@ -95,7 +117,10 @@ You must respond with a raw JSON object containing these exact keys:
 {
   "emotions": { [key: string]: number }, // e.g., {"Anxious": 90, "Frustrated": 75}
   "distortions": string[], // e.g., ["Catastrophizing", "Mind Reading"]
-  "reframed_thought": string
+  "reframed_thought": string,
+  "friend_test_reframe": string,
+  "fact_checking_reframe": string,
+  "perspective_reset_reframe": string
 }
 User Input: ${prompt}`;
     } else if (type === "emotions") {
