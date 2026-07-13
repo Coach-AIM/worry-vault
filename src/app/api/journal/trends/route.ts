@@ -18,20 +18,34 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const range = searchParams.get("range") || "month";
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
-    let lookbackDays = "-30 days";
+    let lookbackSql = sql`datetime(created_at) >= datetime('now', 'start of month')`;
     if (range === "week") {
-      lookbackDays = "-7 days";
+      lookbackSql = sql`datetime(created_at) >= datetime('now', '-6 days', 'weekday 1', 'start of day')`;
     } else if (range === "year") {
-      lookbackDays = "-365 days";
+      lookbackSql = sql`datetime(created_at) >= datetime('now', 'start of year')`;
+    } else if (range === "custom" && startDate && endDate) {
+      lookbackSql = sql`date(created_at) >= date(${startDate}) AND date(created_at) <= date(${endDate})`;
     }
 
-    const lookbackSql = sql`datetime(created_at) >= datetime('now', ${lookbackDays})`;
     const entries = await db
       .select()
       .from(journalEntries)
       .where(and(eq(journalEntries.userId, currentUserId), lookbackSql))
       .orderBy(journalEntries.createdAt);
+
+    let aggregateByMonth = range === "year";
+    if (range === "custom" && startDate && endDate) {
+      const diffDays = Math.ceil(
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
+      if (diffDays > 90) {
+        aggregateByMonth = true;
+      }
+    }
 
     const pointsMap: Record<
       string,
@@ -102,7 +116,7 @@ export async function GET(request: Request) {
         "Dec",
       ];
       let key = "";
-      if (range === "year") {
+      if (aggregateByMonth) {
         key = monthNames[dateObj.getMonth()];
       } else {
         key = `${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}`;

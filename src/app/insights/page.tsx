@@ -15,6 +15,7 @@ import {
   AreaChart,
   Area,
   CartesianGrid,
+  Sector,
 } from "recharts";
 
 type JournalEntry = {
@@ -120,13 +121,23 @@ export default function InsightsPage() {
   >("all");
   const [sortBy, setSortBy] = useState<"intensity" | "frequency">("frequency");
 
-  const [activeRange, setActiveRange] = useState<"week" | "month" | "year">(
-    "month",
-  );
+  const [activeRange, setActiveRange] = useState<
+    "week" | "month" | "year" | "custom"
+  >("month");
   const [timelinePoints, setTimelinePoints] = useState<
     { date: string; positive: number; negative: number }[]
   >([]);
   const [fetchingTrends, setFetchingTrends] = useState(true);
+
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [hoveredData, setHoveredData] = useState<{
+    name: string;
+    percentage: number;
+  } | null>(null);
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [validationError, setValidationError] = useState("");
 
   async function fetchStats() {
     setFetchingStats(true);
@@ -141,10 +152,14 @@ export default function InsightsPage() {
     }
   }
 
-  async function fetchTrends(range: string) {
+  async function fetchTrends(range: string, start?: string, end?: string) {
     setFetchingTrends(true);
     try {
-      const res = await fetch(`/api/journal/trends?range=${range}`);
+      let url = `/api/journal/trends?range=${range}`;
+      if (range === "custom" && start && end) {
+        url += `&startDate=${start}&endDate=${end}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success && data.timelineData) {
         setTimelinePoints(data.timelineData);
@@ -162,24 +177,60 @@ export default function InsightsPage() {
   }, []);
 
   useEffect(() => {
-    fetchTrends(activeRange);
+    if (activeRange !== "custom") {
+      setShowCustomPicker(false);
+      fetchTrends(activeRange);
+    } else {
+      setShowCustomPicker(true);
+    }
   }, [activeRange]);
+
+  useEffect(() => {
+    if (customStartDate && customEndDate) {
+      if (new Date(customStartDate) > new Date(customEndDate)) {
+        setValidationError("Start date cannot occur after end date.");
+      } else {
+        setValidationError("");
+      }
+    } else {
+      setValidationError("");
+    }
+  }, [customStartDate, customEndDate]);
 
   const getFilteredEntriesForStats = () => {
     const now = new Date();
-    let lookbackMs = 30 * 24 * 60 * 60 * 1000;
+    let thresholdStart = 0;
+    let thresholdEnd = now.getTime();
+
     if (activeRange === "week") {
-      lookbackMs = 7 * 24 * 60 * 60 * 1000;
+      const date = new Date();
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(date.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+      thresholdStart = monday.getTime();
+    } else if (activeRange === "month") {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      thresholdStart = startOfMonth.getTime();
     } else if (activeRange === "year") {
-      lookbackMs = 365 * 24 * 60 * 60 * 1000;
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      thresholdStart = startOfYear.getTime();
+    } else if (activeRange === "custom" && customStartDate && customEndDate) {
+      thresholdStart = new Date(customStartDate).getTime();
+      const endOfEndDay = new Date(customEndDate);
+      endOfEndDay.setHours(23, 59, 59, 999);
+      thresholdEnd = endOfEndDay.getTime();
+    } else {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      thresholdStart = startOfMonth.getTime();
     }
 
-    const threshold = now.getTime() - lookbackMs;
     return journalEntries.filter((entry) => {
       const dateStr = entry.createdAt.includes("T")
         ? entry.createdAt
         : entry.createdAt.replace(" ", "T") + "Z";
-      return new Date(dateStr).getTime() >= threshold;
+      const entryTime = new Date(dateStr).getTime();
+      return entryTime >= thresholdStart && entryTime <= thresholdEnd;
     });
   };
 
@@ -410,31 +461,17 @@ export default function InsightsPage() {
       return (
         <div
           style={{
-            backgroundColor: "#fff",
-            padding: "0.85rem 1rem",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border)",
+            backgroundColor: "var(--foreground)",
+            color: "#fff",
+            padding: "0.4rem 0.8rem",
+            borderRadius: "20px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
             boxShadow: "var(--card-shadow)",
-            fontSize: "0.88rem",
+            border: "none",
           }}
         >
-          <p style={{ margin: 0, fontWeight: 700, color: "var(--foreground)" }}>
-            {data.name}
-          </p>
-          <p
-            style={{
-              margin: "0.35rem 0 0 0",
-              color: "var(--soft-blue-hover)",
-              fontWeight: 700,
-            }}
-          >
-            Count: {data.count} times
-          </p>
-          <p
-            style={{ margin: 0, color: "hsl(200, 10%, 45%)", fontWeight: 500 }}
-          >
-            Share: {data.percentage}%
-          </p>
+          {data.name}
         </div>
       );
     }
@@ -593,21 +630,23 @@ export default function InsightsPage() {
           display: "flex",
           justifyContent: "center",
           gap: "0.5rem",
-          marginBottom: "2rem",
+          marginBottom: "1.5rem",
           backgroundColor: "var(--border)",
           padding: "0.35rem",
           borderRadius: "12px",
-          maxWidth: "360px",
+          maxWidth: "520px",
           marginInline: "auto",
         }}
       >
-        {(["week", "month", "year"] as const).map((r) => {
+        {(["week", "month", "year", "custom"] as const).map((r) => {
           const label =
             r === "week"
-              ? "Past Week"
+              ? "Current Week"
               : r === "month"
-                ? "Past Month"
-                : "Past Year";
+                ? "Current Month"
+                : r === "year"
+                  ? "Current Year"
+                  : "🗓️ Custom Range";
           const active = activeRange === r;
           return (
             <button
@@ -616,13 +655,13 @@ export default function InsightsPage() {
               onClick={() => setActiveRange(r)}
               style={{
                 flex: 1,
-                padding: "0.5rem 1rem",
+                padding: "0.5rem 0.75rem",
                 borderRadius: "10px",
                 border: "none",
                 backgroundColor: active ? "#fff" : "transparent",
                 color: active ? "var(--foreground)" : "hsl(200, 10%, 50%)",
                 fontWeight: 700,
-                fontSize: "0.85rem",
+                fontSize: "0.82rem",
                 boxShadow: active ? "var(--card-shadow)" : "none",
                 cursor: "pointer",
                 transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -633,6 +672,125 @@ export default function InsightsPage() {
           );
         })}
       </div>
+
+      {/* Expandable Custom Date Range Picker */}
+      {showCustomPicker && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.75rem",
+            backgroundColor: "#f8fafc",
+            padding: "1.25rem",
+            borderRadius: "12px",
+            border: "1px solid var(--border)",
+            maxWidth: "420px",
+            marginInline: "auto",
+            marginBottom: "2rem",
+            boxShadow: "var(--card-shadow)",
+            animation: "fadeIn 0.3s ease",
+          }}
+        >
+          <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.35rem",
+              }}
+            >
+              <span
+                style={{ fontSize: "0.75rem", fontWeight: 700, color: "#666" }}
+              >
+                Start Date
+              </span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                style={{
+                  padding: "0.45rem 0.65rem",
+                  borderRadius: "6px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "0.85rem",
+                  width: "100%",
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.35rem",
+              }}
+            >
+              <span
+                style={{ fontSize: "0.75rem", fontWeight: 700, color: "#666" }}
+              >
+                End Date
+              </span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                style={{
+                  padding: "0.45rem 0.65rem",
+                  borderRadius: "6px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "0.85rem",
+                  width: "100%",
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+          </div>
+          {validationError && (
+            <div
+              style={{
+                color: "var(--accent-danger)",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                textAlign: "center",
+                marginTop: "0.25rem",
+              }}
+            >
+              ⚠️ {validationError}
+            </div>
+          )}
+          <button
+            type="button"
+            disabled={!!validationError || !customStartDate || !customEndDate}
+            onClick={() => {
+              fetchTrends("custom", customStartDate, customEndDate);
+            }}
+            style={{
+              width: "100%",
+              padding: "0.55rem",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "var(--soft-blue)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              cursor:
+                !!validationError || !customStartDate || !customEndDate
+                  ? "not-allowed"
+                  : "pointer",
+              opacity:
+                !!validationError || !customStartDate || !customEndDate
+                  ? 0.6
+                  : 1,
+              transition: "all 0.2s",
+            }}
+          >
+            Apply Custom Filter
+          </button>
+        </div>
+      )}
 
       {fetchingStats ? (
         <p style={{ textAlign: "center", color: "hsl(200, 10%, 45%)" }}>
@@ -1001,76 +1159,136 @@ export default function InsightsPage() {
                         gap: "2rem",
                       }}
                     >
-                      {/* Donut container */}
+                      {/* Donut block wrapper */}
                       <div
                         style={{
-                          position: "relative",
-                          width: "220px",
-                          height: "220px",
-                          flexShrink: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
                         }}
                       >
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={distortionStats}
-                              dataKey="count"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={65}
-                              outerRadius={90}
-                              paddingAngle={3}
-                            >
-                              {distortionStats.map((entry, index) => (
-                                <Cell
-                                  key={`cell-${index}`}
-                                  fill={
-                                    DONUT_COLORS[index % DONUT_COLORS.length]
-                                  }
-                                />
-                              ))}
-                            </Pie>
-                            <Tooltip content={<CustomDistortionTooltip />} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        {/* Central text layer for total traps sum */}
+                        {/* Donut container */}
                         <div
                           style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            pointerEvents: "none",
+                            position: "relative",
+                            width: "220px",
+                            height: "220px",
+                            flexShrink: 0,
                           }}
                         >
-                          <span
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={distortionStats}
+                                dataKey="count"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={65}
+                                outerRadius={90}
+                                paddingAngle={3}
+                                // @ts-ignore
+                                activeIndex={activeIndex}
+                                // @ts-ignore
+                                activeShape={(props: any) => (
+                                  <Sector
+                                    {...props}
+                                    outerRadius={props.outerRadius + 5}
+                                  />
+                                )}
+                                onMouseEnter={(data: any, index: number) => {
+                                  setActiveIndex(index);
+                                  setHoveredData({
+                                    name: data.name,
+                                    percentage: data.percentage,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setActiveIndex(-1);
+                                  setHoveredData(null);
+                                }}
+                              >
+                                {distortionStats.map((entry, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={
+                                      DONUT_COLORS[index % DONUT_COLORS.length]
+                                    }
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                content={<CustomDistortionTooltip />}
+                                isAnimationActive={false}
+                                offset={20}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          {/* Central Dynamic Text/Icon Layer */}
+                          <div
                             style={{
-                              fontSize: "2.2rem",
-                              fontWeight: 800,
-                              color: "var(--foreground)",
-                              lineHeight: 1,
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              pointerEvents: "none",
                             }}
                           >
-                            {totalDistortionsCount}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              fontWeight: 700,
-                              color: "hsl(200, 10%, 50%)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em",
-                              marginTop: "6px",
-                            }}
-                          >
-                            Total Traps
-                          </span>
+                            {hoveredData ? (
+                              <span
+                                style={{
+                                  fontSize: "2.2rem",
+                                  fontWeight: 800,
+                                  color: "var(--foreground)",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                {hoveredData.percentage}%
+                              </span>
+                            ) : (
+                              /* Stylized minimal vault lock SVG icon */
+                              <svg
+                                width="38"
+                                height="38"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="var(--soft-blue)"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{ opacity: 0.8 }}
+                              >
+                                <rect
+                                  x="3"
+                                  y="11"
+                                  width="18"
+                                  height="11"
+                                  rx="2"
+                                  ry="2"
+                                />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                <circle cx="12" cy="16" r="1.5" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Center bottom caption for total traps count */}
+                        <div
+                          style={{
+                            textAlign: "center",
+                            fontWeight: 600,
+                            marginTop: "1.25rem",
+                            color: "var(--foreground)",
+                            fontSize: "0.95rem",
+                          }}
+                        >
+                          {totalDistortionsCount} Total Traps
                         </div>
                       </div>
 
