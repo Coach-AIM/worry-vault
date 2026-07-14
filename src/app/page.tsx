@@ -195,12 +195,11 @@ export default function Home() {
 
   return (
     <div
-      className="animate-fade-in"
+      className="animate-fade-in pb-36"
       style={{
         maxWidth: "650px",
         margin: "0 auto",
         paddingTop: "1.5rem",
-        paddingBottom: "1rem",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -297,28 +296,10 @@ export default function Home() {
             alignItems: "center",
           }}
         >
-          <h2
-            style={{
-              fontSize: "1.6rem",
-              marginBottom: "0.75rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-            }}
-          >
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mb-3 flex items-center justify-center gap-2">
             📝 CBT Journal & Reflections
           </h2>
-          <p
-            style={{
-              color: "var(--foreground)",
-              opacity: 0.8,
-              lineHeight: 1.6,
-              marginBottom: "1.75rem",
-              fontSize: "1rem",
-              textAlign: "center",
-            }}
-          >
+          <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal mb-6">
             Process distressing moments with our guided 5-step CBT Thought
             Record wizard to challenge thinking traps, or log positive victories
             to anchor and savor your strengths.
@@ -328,15 +309,7 @@ export default function Home() {
           >
             <Link
               href="/journal"
-              className="btn-primary"
-              style={{
-                display: "block",
-                textAlign: "center",
-                fontSize: "1.05rem",
-                padding: "0.85rem 1.5rem",
-                width: "100%",
-                maxWidth: "320px",
-              }}
+              className="btn-primary text-base font-semibold tracking-wide py-3 px-6 rounded-xl transition-all shadow-sm block text-center w-full max-w-[320px]"
             >
               ✍️ Open Guided Journal
             </Link>
@@ -357,24 +330,13 @@ export default function Home() {
             }}
           >
             {/* Perspective Header */}
-            <h4 className="text-lg font-bold text-slate-800 mb-2">Perspective</h4>
+            <h4 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mb-3">Perspective</h4>
             
             <span style={{ fontSize: "3rem", color: "var(--sage-green)", opacity: 0.3, display: "block", height: "1.5rem", lineHeight: 0.5 }}>“</span>
-            <p
-              style={{
-                fontSize: "1.15rem",
-                fontStyle: "italic",
-                color: "var(--foreground)",
-                opacity: 0.9,
-                lineHeight: 1.6,
-                margin: "0.5rem 0 1.25rem 0",
-                textAlign: "center",
-                maxWidth: "500px",
-              }}
-            >
+            <p className="text-xl sm:text-2xl font-medium italic text-slate-800 tracking-wide leading-relaxed my-4 px-4 max-w-xl mx-auto">
               {quote.text}
             </p>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "hsl(200, 10%, 45%)" }}>
+            <span className="text-xs font-bold tracking-widest text-slate-400 uppercase mt-2">
               — {quote.author}
             </span>
           </section>
@@ -383,8 +345,8 @@ export default function Home() {
         {/* Centered Mini-Planner Card */}
         <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center mt-6">
           {/* Centered Title */}
-          <h4 className="text-lg font-bold text-slate-800 mb-2">Today's Focus</h4>
-          <p className="text-sm text-slate-500 mb-4">Small daily habits build long-term momentum.</p>
+          <h4 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mb-3">Today's Focus</h4>
+          <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal mb-4">Small daily habits build long-term momentum.</p>
 
           {/* Compact Tasks Grid/Flex */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full my-2 text-slate-700">
@@ -414,6 +376,9 @@ export default function Home() {
             Open Full Action Planner
           </Link>
         </div>
+
+        {/* Spacing safeguard to push content completely above the fixed navigation bar */}
+        <div className="h-32 w-full" />
       </div>
     </div>
   );
