@@ -200,7 +200,7 @@ export default function Home() {
         maxWidth: "650px",
         margin: "0 auto",
         paddingTop: "1.5rem",
-        paddingBottom: "3.5rem",
+        paddingBottom: "1rem",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -340,22 +340,6 @@ export default function Home() {
             >
               ✍️ Open Guided Journal
             </Link>
-            <div style={{ textAlign: "center", marginTop: "0.5rem" }}>
-              <span style={{ fontSize: "0.9rem", color: "hsl(200, 10%, 50%)" }}>
-                Winding down for the day?{" "}
-              </span>
-              <Link
-                href="/reflect"
-                style={{
-                  fontSize: "0.9rem",
-                  color: "var(--sage-green)",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                }}
-              >
-                Start End-of-Day Reflection &rarr;
-              </Link>
-            </div>
           </div>
         </section>
 
@@ -404,11 +388,23 @@ export default function Home() {
 
           {/* Compact Tasks Grid/Flex */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full my-2 text-slate-700">
-            <div>
-              <span className="font-semibold text-slate-900">Today:</span> [X] Meditate  [ ] Read  [ ] Walk
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-slate-700">
+              <span className="font-semibold text-slate-900">Today:</span>
+              <div className="flex items-center gap-1.5">
+                <input type="checkbox" checked readOnly className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                <span>Meditate</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input type="checkbox" disabled className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                <span>Read</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input type="checkbox" disabled className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                <span>Walk</span>
+              </div>
             </div>
             <div className="text-slate-400 hidden sm:block">|</div>
-            <div>
+            <div className="text-sm font-medium">
               <span className="font-semibold text-slate-900">Tomorrow:</span> • Therapy Prep
             </div>
           </div>

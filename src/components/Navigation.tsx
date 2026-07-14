@@ -125,7 +125,7 @@ export default function Navigation() {
                 className={`nav-link ${isActive ? "active" : ""}`}
               >
                 <div className="nav-icon-wrapper">{tab.icon}</div>
-                <span className="nav-label">{tab.name}</span>
+                <span className="nav-label" style={{ whiteSpace: "nowrap" }}>{tab.name}</span>
               </Link>
             </li>
           );
