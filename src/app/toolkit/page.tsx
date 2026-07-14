@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface GlossaryTerm {
   term: string;
   definition: string;
   category: "CBT Core" | "Distortions" | "Techniques";
+  example?: string;
+  action?: string;
 }
 
 const glossaryTerms: GlossaryTerm[] = [
@@ -14,46 +16,64 @@ const glossaryTerms: GlossaryTerm[] = [
     term: "Cognitive Distortions",
     definition: "Inaccurate, biased, or exaggerated thinking patterns that reinforce negative emotions and worry.",
     category: "CBT Core",
+    example: "Assuming you failed a whole test because you got one question wrong.",
+    action: "Challenge the distortion by writing out evidence for/against the thought.",
   },
   {
     term: "CBT (Cognitive Behavioral Therapy)",
     definition: "A structured, evidence-based psychotherapy focusing on how thoughts, feelings, and behaviors influence one another.",
     category: "CBT Core",
+    example: "Using a Thought Record to trace how a negative event triggered physical panic.",
+    action: "Practice identifying automatic thoughts when you feel an emotional shift.",
   },
   {
     term: "Cognitive Reframing",
     definition: "The process of identifying unhelpful thoughts, disputing them, and generating balanced, constructive perspectives.",
     category: "Techniques",
+    example: "Replacing 'I'll fail this talk' with 'I've prepared well, and even if it's not perfect, I will get through it.'",
+    action: "Identify the absolute worst case scenario and build a constructive action plan for it.",
   },
   {
     term: "Grounding Techniques",
     definition: "Exercises designed to bring your focus back to the present physical moment, helping manage acute anxiety or panic.",
     category: "Techniques",
+    example: "The 5-4-3-2-1 technique (finding 5 things you can see, 4 touch, 3 hear, 2 smell, 1 taste).",
+    action: "Implement a physical anchor (e.g. holding an ice cube) to disrupt high intensity emotional spirals.",
   },
   {
     term: "Thought Record",
     definition: "A written tool used to systematically break down situations, automatic thoughts, physical feelings, distortions, and reframed thoughts.",
     category: "CBT Core",
+    example: "A standard 5-step CBT log analyzing a recent conflict at work.",
+    action: "Commit to completing at least one Thought Record per week to track automatic thinking habits.",
   },
   {
     term: "All-or-Nothing Thinking",
     definition: "Viewing situations in black-and-white, absolute categories (e.g., failing completely if a goal isn't met perfectly).",
     category: "Distortions",
+    example: "If I don't get an A on this test, I'm a complete failure.",
+    action: "Look for shades of gray. Ask: Is there a middle ground between perfection and failure?",
   },
   {
     term: "Catastrophizing",
     definition: "Anticipating the worst-case scenario and assuming it will be an unmitigated disaster that you cannot handle.",
     category: "Distortions",
+    example: "If I'm late to the meeting, I'll get fired immediately.",
+    action: "Evaluate the likelihood. What is the most realistic outcome, and how would I handle it?",
   },
   {
     term: "Mind Reading",
     definition: "Assuming you know what others are thinking, usually imagining they are judging or thinking negatively of you.",
     category: "Distortions",
+    example: "They didn't reply to my text; they must hate me.",
+    action: "List alternative explanations. Could they be busy, driving, or away from their phone?",
   },
   {
     term: "Emotional Reasoning",
     definition: "Believing that because you feel a certain way, it must be the objective truth (e.g., 'I feel anxious, therefore I am in danger').",
     category: "Distortions",
+    example: "I feel anxious about this flight, so it's unsafe.",
+    action: "Distinguish feelings from facts. Remind yourself: An emotion is a reaction, not a reflection of reality.",
   },
 ];
 
@@ -67,6 +87,38 @@ export default function ToolkitPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [expandedTerm, setExpandedTerm] = useState<string | null>(null);
+
+  // Dynamic user insights stats
+  const [entriesCount, setEntriesCount] = useState<number | null>(null);
+  const [distortionsCount, setDistortionsCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/journal");
+        const data = await res.json();
+        if (data.entries) {
+          setEntriesCount(data.entries.length);
+          let count = 0;
+          data.entries.forEach((e: any) => {
+            if (e.distortionsJson) {
+              try {
+                const parsed = JSON.parse(e.distortionsJson);
+                if (Array.isArray(parsed)) {
+                  count += parsed.length;
+                }
+              } catch (err) {}
+            }
+          });
+          setDistortionsCount(count);
+        }
+      } catch (err) {
+        console.error("Failed to load toolkit stats:", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const filteredGlossary = glossaryTerms.filter((item) => {
     const matchesSearch = item.term.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -99,6 +151,14 @@ export default function ToolkitPage() {
     },
   };
 
+  const toggleExpandTerm = (term: string) => {
+    if (expandedTerm === term) {
+      setExpandedTerm(null);
+    } else {
+      setExpandedTerm(term);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-32 animate-fade-in">
       <header className="text-center mb-12">
@@ -109,6 +169,22 @@ export default function ToolkitPage() {
           Explore interactive tools, break down negative feedback loops, and master key concepts.
         </p>
       </header>
+
+      {/* Personal Insights Summary Widget */}
+      <div className="bg-slate-50 border border-slate-100 p-6 rounded-3xl mb-10 grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
+        <div className="text-center sm:text-left">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">CBT PROGRESS</span>
+          <h3 className="text-xl font-bold text-slate-800">Your Insights</h3>
+        </div>
+        <div className="bg-white border border-slate-100/80 p-4 rounded-2xl text-center shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+          <span className="text-2xl font-bold text-slate-900 block">{entriesCount !== null ? entriesCount : "—"}</span>
+          <span className="text-xs text-slate-400 font-medium">Thought Records Logged</span>
+        </div>
+        <div className="bg-white border border-slate-100/80 p-4 rounded-2xl text-center shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+          <span className="text-2xl font-bold text-slate-900 block">{distortionsCount !== null ? distortionsCount : "—"}</span>
+          <span className="text-xs text-slate-400 font-medium">Distortions Challenged</span>
+        </div>
+      </div>
 
       {/* SECTION 1: INTERACTIVE CBT TRIANGLE */}
       <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100 mb-12">
@@ -251,7 +327,7 @@ export default function ToolkitPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="text-left">
             <h2 className="text-2xl font-bold text-slate-900">CBT Concept Glossary</h2>
-            <p className="text-sm text-slate-500 mt-1">Quick explanations of vital mental models and terms.</p>
+            <p className="text-sm text-slate-500 mt-1">Quick explanations of vital mental models and terms. Click to expand.</p>
           </div>
           
           {/* Category Tabs */}
@@ -284,25 +360,56 @@ export default function ToolkitPage() {
         </div>
 
         {/* Glossary Results List */}
-        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
           {filteredGlossary.length > 0 ? (
-            filteredGlossary.map((item) => (
-              <div key={item.term} className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 hover:bg-slate-50/70 transition-colors">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-slate-800">{item.term}</h3>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    item.category === "CBT Core"
-                      ? "bg-sky-50 text-sky-700 border border-sky-100"
-                      : item.category === "Distortions"
-                      ? "bg-rose-50 text-rose-700 border border-rose-100"
-                      : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                  }`}>
-                    {item.category}
-                  </span>
+            filteredGlossary.map((item) => {
+              const isExpanded = expandedTerm === item.term;
+              return (
+                <div
+                  key={item.term}
+                  onClick={() => toggleExpandTerm(item.term)}
+                  className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                    isExpanded 
+                      ? "border-slate-300 bg-slate-50 shadow-sm" 
+                      : "border-slate-50 bg-slate-50/30 hover:bg-slate-50/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-800">{item.term}</h3>
+                      <span className="text-slate-400 text-xs">{isExpanded ? "▲" : "▼"}</span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      item.category === "CBT Core"
+                        ? "bg-sky-50 text-sky-700 border border-sky-100"
+                        : item.category === "Distortions"
+                        ? "bg-rose-50 text-rose-700 border border-rose-100"
+                        : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                    }`}>
+                      {item.category}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed">{item.definition}</p>
+                  
+                  {isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fade-in">
+                      {item.example && (
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                          <span className="font-bold text-slate-400 uppercase block mb-1">Example</span>
+                          <p className="text-slate-700 italic leading-relaxed">"{item.example}"</p>
+                        </div>
+                      )}
+                      {item.action && (
+                        <div className="bg-emerald-50/40 p-3 rounded-xl border border-emerald-100/50">
+                          <span className="font-bold text-emerald-600 uppercase block mb-1">CBT Action Tip</span>
+                          <p className="text-slate-700 leading-relaxed">{item.action}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-slate-600 leading-relaxed">{item.definition}</p>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-8 text-slate-400 text-sm">
               No matching glossary terms found.

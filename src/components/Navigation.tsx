@@ -112,7 +112,7 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] h-[76px] flex items-center justify-center">
+    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xl bg-white/95 backdrop-blur-md border border-slate-150 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] h-[68px] flex items-center justify-center">
       <ul className="flex flex-row w-full max-w-2xl mx-auto justify-around items-center list-none m-0 p-0 px-4 h-full">
         {tabs.map((tab) => {
           const isActive = tab.href === "/"
