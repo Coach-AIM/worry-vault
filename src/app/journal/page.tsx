@@ -611,7 +611,7 @@ export default function CBTJournal() {
     .join(", ");
 
   return (
-    <div style={{ padding: "2rem 0", maxWidth: "800px", margin: "0 auto" }}>
+    <div style={{ padding: "2rem 0", paddingBottom: "10rem", maxWidth: "800px", margin: "0 auto" }}>
       <header style={{ marginBottom: "2.5rem" }}>
         <h1
           style={{

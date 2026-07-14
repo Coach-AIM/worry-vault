@@ -16,18 +16,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div
-      className="animate-fade-in pb-36"
-      style={{
-        maxWidth: "650px",
-        margin: "0 auto",
-        paddingTop: "1.5rem",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <header style={{ marginBottom: "3rem", textAlign: "center" }}>
+    <div className="animate-fade-in pb-40 flex flex-col items-center justify-center min-h-[80vh] gap-y-8 sm:gap-y-12 py-10 w-full max-w-3xl mx-auto">
+      <header className="text-center mb-6">
         <h1
           style={{
             fontSize: "3.5rem",
@@ -56,10 +46,10 @@ export default function Home() {
         {isEvening && (
           <div className="card-glass flex flex-col items-center justify-center text-center p-8 w-full border-l-4 border-amber-500 rounded-3xl shadow-[0_4px_15px_rgba(92,127,102,0.04)]">
             <span className="text-3xl mb-2">🌙</span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
               Evening Reflection
             </h2>
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-6">
+            <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mx-auto mb-6">
               Ready to release today's worries and plan a restful tomorrow?
             </p>
             <Link
@@ -74,10 +64,10 @@ export default function Home() {
 
         {/* PRIMARY FUNCTION: CBT Journal Card */}
         <section className="card-premium flex flex-col items-center justify-center text-center p-8 w-full border-t-4 border-emerald-500">
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3 flex items-center justify-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3 flex items-center justify-center gap-2">
             📝 CBT Journal & Reflections
           </h2>
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-6">
+          <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mx-auto mb-6">
             Process distressing moments with our guided 5-step CBT Thought
             Record wizard to challenge thinking traps, or log positive victories
             to anchor and savor your strengths.
@@ -98,15 +88,15 @@ export default function Home() {
         {quote && (
           <section className="card-premium flex flex-col items-center justify-center text-center p-8 w-full">
             {/* Perspective Header */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
               Perspective
             </h2>
             
             <span style={{ fontSize: "3rem", color: "var(--sage-green)", opacity: 0.3, display: "block", height: "1.5rem", lineHeight: 0.5 }}>“</span>
-            <p className="text-2xl sm:text-3xl font-medium italic text-slate-800 tracking-wide leading-relaxed my-6 px-4 max-w-xl mx-auto">
+            <p className="text-2xl sm:text-3xl font-bold italic text-slate-900 tracking-wide leading-relaxed my-6 px-4 max-w-xl mx-auto">
               {quote.text}
             </p>
-            <span className="text-xs font-bold tracking-widest text-slate-400 uppercase mt-2">
+            <span className="text-xs sm:text-sm font-extrabold tracking-widest text-slate-500 uppercase mt-2">
               — {quote.author}
             </span>
           </section>
@@ -115,10 +105,10 @@ export default function Home() {
         {/* Centered Mini-Planner Card */}
         <div className="card-premium flex flex-col items-center justify-center text-center p-8 w-full">
           {/* Centered Title */}
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
             Today's Focus
           </h2>
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-6">
+          <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mx-auto mb-6">
             Small daily habits build long-term momentum.
           </p>
 

@@ -160,7 +160,7 @@ export default function ToolkitPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-32 animate-fade-in">
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-40 animate-fade-in">
       <header className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
           CBT Mental Toolkit
