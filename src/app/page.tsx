@@ -16,106 +16,71 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="animate-fade-in pb-40 flex flex-col items-center justify-center min-h-[80vh] gap-y-8 sm:gap-y-12 py-10 w-full max-w-3xl mx-auto">
-      <header className="text-center mb-6">
-        <h1
-          style={{
-            fontSize: "3.5rem",
-            color: "var(--sage-green)",
-            marginBottom: "0.25rem",
-            fontWeight: 700,
-            letterSpacing: "-1px",
-          }}
-        >
-          Momentum
-        </h1>
-        <p
-          style={{
-            fontSize: "1.15rem",
-            color: "hsl(200, 10%, 50%)",
-            fontWeight: 500,
-          }}
-        >
-          Small, gentle steps forward.
-        </p>
-      </header>
+    <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto px-4 pt-8 pb-48 flex flex-col items-center">
+      
+      {/* Symmetrically Spaced Centered Feed Header */}
+      <div className="text-center mb-8 sm:mb-12">
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">Momentum</h1>
+        <p className="text-lg text-slate-600 mt-2 font-medium">Small, gentle steps forward.</p>
+      </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "2rem", width: "100%" }}>
+      {/* Vertically Distributed Cards Stack */}
+      <div className="w-full max-w-2xl flex flex-col gap-8 sm:gap-10 items-center justify-center my-auto">
         
         {/* Evening Reflection Card (Only rendered if isEvening is true) */}
         {isEvening && (
-          <div className="card-glass flex flex-col items-center justify-center text-center p-8 w-full border-l-4 border-amber-500 rounded-3xl shadow-[0_4px_15px_rgba(92,127,102,0.04)]">
-            <span className="text-3xl mb-2">🌙</span>
+          <div className="w-full bg-white p-8 rounded-2xl shadow-sm border border-l-4 border-l-amber-500 border-slate-200/60 flex flex-col items-center text-center">
+            <span className="text-3xl mb-2 animate-bounce">🌙</span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
               Evening Reflection
             </h2>
-            <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mx-auto mb-6">
+            <p className="text-base sm:text-lg text-slate-800 font-normal leading-relaxed max-w-xl mb-6">
               Ready to release today's worries and plan a restful tomorrow?
             </p>
             <Link
               href="/reflect"
-              className="btn-primary text-base sm:text-lg font-semibold tracking-wide py-3.5 px-8 rounded-2xl transition-all shadow-md block text-center w-full max-w-[320px] bg-amber-500 hover:bg-amber-600 text-white"
-              style={{ border: "none" }}
+              className="bg-amber-500 hover:bg-amber-600 text-white font-bold tracking-wide py-3.5 px-8 rounded-xl transition-all shadow-md text-base sm:text-lg block text-center w-full max-w-[320px]"
             >
               Start Reflection
             </Link>
           </div>
         )}
 
-        {/* PRIMARY FUNCTION: CBT Journal Card */}
-        <section className="card-premium flex flex-col items-center justify-center text-center p-8 w-full border-t-4 border-emerald-500">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3 flex items-center justify-center gap-2">
-            📝 CBT Journal & Reflections
-          </h2>
-          <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mx-auto mb-6">
-            Process distressing moments with our guided 5-step CBT Thought
-            Record wizard to challenge thinking traps, or log positive victories
-            to anchor and savor your strengths.
+        {/* 1. CBT Journal Card */}
+        <div className="w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">📝 CBT Journal & Reflections</h2>
+          <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mb-6">
+            Process distressing moments with our guided 5-step CBT Thought Record wizard to challenge thinking traps, or log positive victories to anchor and savor your strengths.
           </p>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", alignItems: "center" }}
+          <Link
+            href="/journal"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold tracking-wide py-3.5 px-8 rounded-xl transition-all shadow-md text-base sm:text-lg block text-center w-full max-w-[320px]"
           >
-            <Link
-              href="/journal"
-              className="btn-primary text-base sm:text-lg font-semibold tracking-wide py-3.5 px-8 rounded-2xl transition-all shadow-md block text-center w-full max-w-[320px]"
-            >
-              ✍️ Open Guided Journal
-            </Link>
-          </div>
-        </section>
+            ✍️ Open Guided Journal
+          </Link>
+        </div>
 
-        {/* Context-Aware Quote Deck */}
-        {quote && (
-          <section className="card-premium flex flex-col items-center justify-center text-center p-8 w-full">
-            {/* Perspective Header */}
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
-              Perspective
-            </h2>
-            
-            <span style={{ fontSize: "3rem", color: "var(--sage-green)", opacity: 0.3, display: "block", height: "1.5rem", lineHeight: 0.5 }}>“</span>
-            <p className="text-2xl sm:text-3xl font-bold italic text-slate-900 tracking-wide leading-relaxed my-6 px-4 max-w-xl mx-auto">
-              {quote.text}
-            </p>
-            <span className="text-xs sm:text-sm font-extrabold tracking-widest text-slate-500 uppercase mt-2">
-              — {quote.author}
-            </span>
-          </section>
-        )}
-
-        {/* Centered Mini-Planner Card */}
-        <div className="card-premium flex flex-col items-center justify-center text-center p-8 w-full">
-          {/* Centered Title */}
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
-            Today's Focus
-          </h2>
-          <p className="text-base sm:text-lg text-slate-700 font-normal leading-relaxed max-w-xl mx-auto mb-6">
-            Small daily habits build long-term momentum.
+        {/* 2. Perspective Quote Card */}
+        <div className="w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Perspective</h2>
+          <span className="text-4xl text-slate-300 font-serif leading-none">“</span>
+          <p className="text-2xl sm:text-3xl font-bold italic text-slate-900 tracking-wide leading-relaxed px-4 -mt-2 mb-4">
+            {quote ? quote.text : "Loading..."}
           </p>
+          <span className="text-xs sm:text-sm font-extrabold tracking-widest text-slate-500 uppercase">
+            — {quote ? quote.author : "CBT"}
+          </span>
+        </div>
 
-          {/* Compact Tasks Grid/Flex */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-base sm:text-lg font-semibold text-slate-700 my-4">
+        {/* 3. Today's Focus Mini-Planner Card */}
+        <div className="w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Today's Focus</h2>
+          <p className="text-base sm:text-lg text-slate-600 font-medium mb-6">Small daily habits build long-term momentum.</p>
+          
+          {/* Real Checkbox Elements */}
+          <div className="flex flex-wrap items-center justify-center gap-6 text-base sm:text-lg font-bold text-slate-800 mb-6">
             <div className="flex items-center gap-2">
-              <input type="checkbox" checked readOnly className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-5 w-5" />
+              <input type="checkbox" checked readOnly className="rounded border-slate-300 text-emerald-600 h-5 w-5 accent-emerald-600" />
               <span>Meditate</span>
             </div>
             <div className="flex items-center gap-2">
@@ -128,14 +93,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Centered Primary Action Button */}
-          <Link href="/tasks" className="mt-4 px-4 py-2 border border-slate-200 hover:bg-slate-50 text-sm font-medium text-slate-700 rounded-xl transition-colors">
+          <Link
+            href="/tasks"
+            className="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-base font-semibold text-slate-800 rounded-xl transition-colors block text-center"
+          >
             Open Full Action Planner
           </Link>
         </div>
 
-        {/* Spacing safeguard to push content completely above the fixed navigation bar */}
-        <div className="h-32 w-full" />
       </div>
     </div>
   );

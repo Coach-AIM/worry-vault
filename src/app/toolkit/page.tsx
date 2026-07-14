@@ -132,21 +132,21 @@ export default function ToolkitPage() {
       title: "Thoughts",
       desc: "What we tell ourselves. Automatic interpretations, beliefs, and internal dialogue about a situation.",
       impact: "Thoughts directly trigger our emotional states and guide our behavioral responses.",
-      color: "border-sky-200 bg-sky-50 text-sky-800",
+      color: "border-sky-200 bg-sky-50 text-sky-850",
       accent: "bg-sky-500",
     },
     feelings: {
       title: "Feelings / Emotions",
       desc: "Emotional states (e.g., anxiety, sadness, anger) and physical body sensations (e.g., rapid heartbeat, tightness).",
       impact: "Feelings reinforce our negative thoughts and tempt us to act in survival-oriented ways.",
-      color: "border-amber-200 bg-amber-50 text-amber-800",
+      color: "border-amber-200 bg-amber-50 text-amber-850",
       accent: "bg-amber-500",
     },
     behaviors: {
       title: "Behaviors",
       desc: "The actions we take or avoid (e.g., procrastination, avoidance, checking, practicing mindfulness).",
       impact: "Our behaviors can either break the feedback loop or further reinforce negative thoughts and emotions.",
-      color: "border-emerald-200 bg-emerald-50 text-emerald-800",
+      color: "border-emerald-200 bg-emerald-50 text-emerald-850",
       accent: "bg-emerald-500",
     },
   };
@@ -165,37 +165,37 @@ export default function ToolkitPage() {
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
           CBT Mental Toolkit
         </h1>
-        <p className="text-base sm:text-lg text-slate-500 max-w-xl mx-auto">
+        <p className="text-base sm:text-lg text-slate-700 max-w-xl mx-auto leading-relaxed font-normal">
           Explore interactive tools, break down negative feedback loops, and master key concepts.
         </p>
       </header>
 
       {/* Personal Insights Summary Widget */}
-      <div className="bg-slate-50 border border-slate-100 p-6 rounded-3xl mb-10 grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
+      <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl mb-10 grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
         <div className="text-center sm:text-left">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">CBT PROGRESS</span>
-          <h3 className="text-xl font-bold text-slate-800">Your Insights</h3>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">CBT PROGRESS</span>
+          <h3 className="text-xl font-extrabold text-slate-900">Your Insights</h3>
         </div>
-        <div className="bg-white border border-slate-100/80 p-4 rounded-2xl text-center shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-          <span className="text-2xl font-bold text-slate-900 block">{entriesCount !== null ? entriesCount : "—"}</span>
-          <span className="text-xs text-slate-400 font-medium">Thought Records Logged</span>
+        <div className="bg-white border border-slate-200 p-4 rounded-2xl text-center shadow-sm">
+          <span className="text-2xl font-black text-slate-900 block">{entriesCount !== null ? entriesCount : "—"}</span>
+          <span className="text-xs text-slate-600 font-bold">Thought Records Logged</span>
         </div>
-        <div className="bg-white border border-slate-100/80 p-4 rounded-2xl text-center shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-          <span className="text-2xl font-bold text-slate-900 block">{distortionsCount !== null ? distortionsCount : "—"}</span>
-          <span className="text-xs text-slate-400 font-medium">Distortions Challenged</span>
+        <div className="bg-white border border-slate-200 p-4 rounded-2xl text-center shadow-sm">
+          <span className="text-2xl font-black text-slate-900 block">{distortionsCount !== null ? distortionsCount : "—"}</span>
+          <span className="text-xs text-slate-600 font-bold">Distortions Challenged</span>
         </div>
       </div>
 
       {/* SECTION 1: INTERACTIVE CBT TRIANGLE */}
-      <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100 mb-12">
+      <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
         <div className="text-center mb-8">
-          <span className="text-xs font-bold tracking-widest text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">
+          <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase bg-emerald-50 px-3 py-1 rounded-full">
             Interactive Tool
           </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-3 mb-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-3 mb-2">
             The Cognitive Behavioral Triangle
           </h2>
-          <p className="text-sm sm:text-base text-slate-500 max-w-lg mx-auto">
+          <p className="text-base text-slate-700 font-normal leading-relaxed max-w-lg mx-auto">
             Thoughts, feelings, and behaviors are interconnected. Click each node to see how they feed into each other.
           </p>
         </div>
@@ -208,9 +208,9 @@ export default function ToolkitPage() {
             <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
               <svg width="280" height="240" viewBox="0 0 280 240" className="w-[280px] h-[240px] opacity-25">
                 {/* Arrow Paths */}
-                <path d="M 140 30 L 230 180" stroke="#64748b" strokeWidth="2" strokeDasharray="4 4" fill="none" />
-                <path d="M 230 180 L 50 180" stroke="#64748b" strokeWidth="2" strokeDasharray="4 4" fill="none" />
-                <path d="M 50 180 L 140 30" stroke="#64748b" strokeWidth="2" strokeDasharray="4 4" fill="none" />
+                <path d="M 140 30 L 230 180" stroke="#475569" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
+                <path d="M 230 180 L 50 180" stroke="#475569" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
+                <path d="M 50 180 L 140 30" stroke="#475569" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
               </svg>
             </div>
 
@@ -222,8 +222,8 @@ export default function ToolkitPage() {
                 onClick={() => setActiveNode("thoughts")}
                 className={`absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center font-bold transition-all duration-300 shadow-sm ${
                   activeNode === "thoughts"
-                    ? "border-sky-500 bg-sky-500 text-white scale-110 shadow-md ring-4 ring-sky-100"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-sky-600"
+                    ? "border-sky-600 bg-sky-600 text-white scale-110 shadow-md ring-4 ring-sky-100"
+                    : "border-slate-300 bg-white text-slate-800 hover:border-sky-400 hover:text-sky-700"
                 }`}
               >
                 <span className="text-2xl mb-1">💭</span>
@@ -235,8 +235,8 @@ export default function ToolkitPage() {
                 onClick={() => setActiveNode("feelings")}
                 className={`absolute bottom-0 left-0 w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center font-bold transition-all duration-300 shadow-sm ${
                   activeNode === "feelings"
-                    ? "border-amber-500 bg-amber-500 text-white scale-110 shadow-md ring-4 ring-amber-100"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-amber-300 hover:text-amber-600"
+                    ? "border-amber-600 bg-amber-600 text-white scale-110 shadow-md ring-4 ring-amber-100"
+                    : "border-slate-300 bg-white text-slate-800 hover:border-amber-400 hover:text-amber-700"
                 }`}
               >
                 <span className="text-2xl mb-1">❤️</span>
@@ -248,8 +248,8 @@ export default function ToolkitPage() {
                 onClick={() => setActiveNode("behaviors")}
                 className={`absolute bottom-0 right-0 w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center font-bold transition-all duration-300 shadow-sm ${
                   activeNode === "behaviors"
-                    ? "border-emerald-500 bg-emerald-500 text-white scale-110 shadow-md ring-4 ring-emerald-100"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-600"
+                    ? "border-emerald-600 bg-emerald-600 text-white scale-110 shadow-md ring-4 ring-emerald-100"
+                    : "border-slate-300 bg-white text-slate-800 hover:border-emerald-400 hover:text-emerald-700"
                 }`}
               >
                 <span className="text-2xl mb-1">🏃‍♂️</span>
@@ -257,7 +257,7 @@ export default function ToolkitPage() {
               </button>
 
               {/* Center Inter-connected Badge */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/3 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest pointer-events-none">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/3 bg-slate-200 border border-slate-300 px-3 py-1 rounded-full text-[10px] font-bold text-slate-700 uppercase tracking-widest pointer-events-none">
                 Feedback Loop
               </div>
 
@@ -267,52 +267,52 @@ export default function ToolkitPage() {
           {/* Interactive Node Breakdown & Live Inputs */}
           <div className="md:col-span-6">
             {activeNode && (
-              <div className={`p-5 rounded-2xl border transition-all duration-300 ${nodeDetails[activeNode].color}`}>
+              <div className={`p-5 rounded-2xl border-2 transition-all duration-300 ${nodeDetails[activeNode].color}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`w-2.5 h-2.5 rounded-full ${nodeDetails[activeNode].accent}`} />
                   <h3 className="text-lg font-bold">{nodeDetails[activeNode].title}</h3>
                 </div>
-                <p className="text-sm leading-relaxed mb-3">
+                <p className="text-sm font-medium leading-relaxed mb-3">
                   {nodeDetails[activeNode].desc}
                 </p>
-                <p className="text-xs font-semibold opacity-90 border-t border-slate-200/50 pt-2">
-                  <strong>System Impact:</strong> {nodeDetails[activeNode].impact}
+                <p className="text-xs font-bold opacity-90 border-t border-slate-200/50 pt-2">
+                  System Impact: {nodeDetails[activeNode].impact}
                 </p>
               </div>
             )}
 
             {/* Custom Input Practice */}
-            <div className="mt-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            <div className="mt-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                 Map Your Current Loop
               </h4>
               
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">My Automatic Thought:</label>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">My Automatic Thought:</label>
                   <input
                     type="text"
                     value={thoughtInput}
                     onChange={(e) => setThoughtInput(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-sky-300"
+                    className="w-full text-xs px-3 py-2 bg-white border border-slate-350 rounded-lg text-slate-800 focus:outline-none focus:border-sky-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">My Emotional/Physical Feel:</label>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">My Emotional/Physical Feel:</label>
                   <input
                     type="text"
                     value={feelingInput}
                     onChange={(e) => setFeelingInput(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-amber-300"
+                    className="w-full text-xs px-3 py-2 bg-white border border-slate-350 rounded-lg text-slate-800 focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">My Resulting Behavior:</label>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">My Resulting Behavior:</label>
                   <input
                     type="text"
                     value={behaviorInput}
                     onChange={(e) => setBehaviorInput(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-emerald-300"
+                    className="w-full text-xs px-3 py-2 bg-white border border-slate-350 rounded-lg text-slate-800 focus:outline-none focus:border-emerald-400"
                   />
                 </div>
               </div>
@@ -323,11 +323,11 @@ export default function ToolkitPage() {
       </section>
 
       {/* SECTION 2: GLOSSARY SECTION */}
-      <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
+      <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="text-left">
             <h2 className="text-2xl font-bold text-slate-900">CBT Concept Glossary</h2>
-            <p className="text-sm text-slate-500 mt-1">Quick explanations of vital mental models and terms. Click to expand.</p>
+            <p className="text-sm text-slate-700 font-medium mt-1">Quick explanations of vital mental models and terms. Click to expand.</p>
           </div>
           
           {/* Category Tabs */}
@@ -339,7 +339,7 @@ export default function ToolkitPage() {
                 className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
                   selectedCategory === cat
                     ? "bg-slate-800 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    : "bg-slate-100 text-slate-750 hover:bg-slate-200"
                 }`}
               >
                 {cat}
@@ -355,7 +355,7 @@ export default function ToolkitPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search glossary terms or definitions..."
-            className="w-full text-sm px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100"
+            className="w-full text-sm px-4 py-3 bg-slate-50 border border-slate-250 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           />
         </div>
 
@@ -370,39 +370,39 @@ export default function ToolkitPage() {
                   onClick={() => toggleExpandTerm(item.term)}
                   className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer ${
                     isExpanded 
-                      ? "border-slate-300 bg-slate-50 shadow-sm" 
-                      : "border-slate-50 bg-slate-50/30 hover:bg-slate-50/70"
+                      ? "border-slate-350 bg-slate-50 shadow-sm" 
+                      : "border-slate-200 bg-slate-50/30 hover:bg-slate-50/70"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-800">{item.term}</h3>
-                      <span className="text-slate-400 text-xs">{isExpanded ? "▲" : "▼"}</span>
+                      <h3 className="font-bold text-slate-900">{item.term}</h3>
+                      <span className="text-slate-500 text-xs">{isExpanded ? "▲" : "▼"}</span>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       item.category === "CBT Core"
-                        ? "bg-sky-50 text-sky-700 border border-sky-100"
+                        ? "bg-sky-50 text-sky-850 border border-sky-200"
                         : item.category === "Distortions"
-                        ? "bg-rose-50 text-rose-700 border border-rose-100"
-                        : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        ? "bg-rose-50 text-rose-850 border border-rose-200"
+                        : "bg-emerald-50 text-emerald-850 border border-emerald-200"
                     }`}>
                       {item.category}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-600 leading-relaxed">{item.definition}</p>
+                  <p className="text-base text-slate-800 font-normal leading-relaxed">{item.definition}</p>
                   
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fade-in">
                       {item.example && (
-                        <div className="bg-white p-3 rounded-xl border border-slate-100">
-                          <span className="font-bold text-slate-400 uppercase block mb-1">Example</span>
-                          <p className="text-slate-700 italic leading-relaxed">"{item.example}"</p>
+                        <div className="bg-white p-3 rounded-xl border border-slate-200">
+                          <span className="font-bold text-slate-500 uppercase block mb-1">Example</span>
+                          <p className="text-slate-800 italic leading-relaxed">"{item.example}"</p>
                         </div>
                       )}
                       {item.action && (
-                        <div className="bg-emerald-50/40 p-3 rounded-xl border border-emerald-100/50">
-                          <span className="font-bold text-emerald-600 uppercase block mb-1">CBT Action Tip</span>
-                          <p className="text-slate-700 leading-relaxed">{item.action}</p>
+                        <div className="bg-emerald-50/40 p-3 rounded-xl border border-emerald-250">
+                          <span className="font-bold text-emerald-700 uppercase block mb-1">CBT Action Tip</span>
+                          <p className="text-slate-850 leading-relaxed font-medium">{item.action}</p>
                         </div>
                       )}
                     </div>
@@ -411,7 +411,7 @@ export default function ToolkitPage() {
               );
             })
           ) : (
-            <div className="text-center py-8 text-slate-400 text-sm">
+            <div className="text-center py-8 text-slate-500 text-sm">
               No matching glossary terms found.
             </div>
           )}
