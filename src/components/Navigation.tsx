@@ -69,8 +69,8 @@ export default function Navigation() {
       ),
     },
     {
-      name: "Vaults",
-      href: "/vault",
+      name: "Toolkit",
+      href: "/toolkit",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -112,45 +112,39 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="bottom-nav">
-      <ul className="nav-list">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] h-[76px] flex items-center justify-center">
+      <ul className="flex flex-row w-full max-w-2xl mx-auto justify-around items-center list-none m-0 p-0 px-4 h-full">
         {tabs.map((tab) => {
           const isActive = tab.href === "/"
             ? pathname === "/"
             : pathname ? pathname.startsWith(tab.href) : false;
           return (
-            <li key={tab.href} className="nav-item">
+            <li key={tab.href} className="flex-1 flex justify-center items-center">
               <Link
                 href={tab.href}
-                className={`nav-link ${isActive ? "active" : ""}`}
+                className={`flex flex-col items-center justify-center text-slate-400 hover:text-emerald-600 p-2 rounded-xl transition-all duration-300 w-full ${
+                  isActive ? "active text-emerald-600 bg-emerald-50/50 font-semibold" : ""
+                }`}
               >
-                <div className="nav-icon-wrapper">{tab.icon}</div>
-                <span className="nav-label" style={{ whiteSpace: "nowrap" }}>{tab.name}</span>
+                <div className="mb-0.5 transition-transform duration-300">{tab.icon}</div>
+                <span className="text-[11px] sm:text-xs font-medium tracking-tight whitespace-nowrap">{tab.name}</span>
               </Link>
             </li>
           );
         })}
-        <li className="nav-item hidden md:flex">
+        <li className="flex-1 flex justify-center items-center hidden md:flex">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="nav-link"
+            className="flex flex-col items-center justify-center text-slate-400 hover:text-red-600 p-2 rounded-xl transition-all duration-300 w-full"
             style={{
               background: "none",
               border: "none",
               cursor: "pointer",
-              padding: "0.5rem",
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
               boxShadow: "none",
               transform: "none",
-              transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-              color: "inherit",
             }}
           >
-            <div className="nav-icon-wrapper">
+            <div className="mb-0.5">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -167,7 +161,7 @@ export default function Navigation() {
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
             </div>
-            <span className="nav-label">Sign Out</span>
+            <span className="text-[11px] sm:text-xs font-medium tracking-tight whitespace-nowrap">Sign Out</span>
           </button>
         </li>
       </ul>

@@ -2,196 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import ExportPdfButton from "@/components/ExportPdfButton";
 import { getRandomQuote, QuoteItem } from "@/utils/perspectiveQuotes";
-import { signOut } from "next-auth/react";
-
-type TherapistContact = {
-  name: string;
-  phone: string;
-  email: string;
-  notes: string;
-};
-
-const DISTORTION_MAP: Record<string, string> = {
-  "all-or-nothing": "All-or-Nothing",
-  catastrophizing: "Catastrophizing",
-  "should-statements": "Should Statements",
-  "mind-reading": "Mind Reading",
-  "emotional-reasoning": "Emotional Reasoning",
-  overgeneralization: "Overgeneralization",
-};
 
 export default function Home() {
-  const [contact, setContact] = useState<TherapistContact | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isNight, setIsNight] = useState(false);
-
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [notes, setNotes] = useState("");
-  const [backingUp, setBackingUp] = useState(false);
-
-  // Dynamic Dashboard Stats
-  const [entriesCount, setEntriesCount] = useState<number>(0);
-  const [recentTraps, setRecentTraps] = useState<string[]>([]);
+  const [isEvening, setIsEvening] = useState(false);
   const [quote, setQuote] = useState<QuoteItem | null>(null);
 
-  async function handleDownloadBackup() {
-    const password = prompt(
-      "Set a local extraction password to encrypt your backup file:",
-    );
-    if (!password) {
-      alert("Password is required to encrypt backup.");
-      return;
-    }
-
-    setBackingUp(true);
-    try {
-      const res = await fetch("/api/backup");
-      if (!res.ok) throw new Error("Failed to fetch backup data");
-      const data = await res.json();
-
-      const encoder = new TextEncoder();
-      const dataString = JSON.stringify(data);
-      const dataBytes = encoder.encode(dataString);
-
-      const salt = window.crypto.getRandomValues(new Uint8Array(16));
-      const passwordKey = await window.crypto.subtle.importKey(
-        "raw",
-        encoder.encode(password),
-        { name: "PBKDF2" },
-        false,
-        ["deriveKey"],
-      );
-
-      const key = await window.crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: salt,
-          iterations: 100000,
-          hash: "SHA-256",
-        },
-        passwordKey,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"],
-      );
-
-      const iv = window.crypto.getRandomValues(new Uint8Array(12));
-      const encrypted = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: iv },
-        key,
-        dataBytes,
-      );
-
-      const backupPackage = {
-        salt: Array.from(salt),
-        iv: Array.from(iv),
-        ciphertext: Array.from(new Uint8Array(encrypted)),
-        hint: "momentum encrypted backup",
-      };
-
-      const blob = new Blob([JSON.stringify(backupPackage, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "worry_vault_backup.json";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      alert("Encrypted backup downloaded successfully!");
-    } catch (err) {
-      console.error("Backup failed:", err);
-      alert("Failed to create encrypted backup.");
-    } finally {
-      setBackingUp(false);
-    }
-  }
-
-  async function fetchContact() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/therapist");
-      const data = await res.json();
-      if (data.contact) {
-        setContact(data.contact);
-        setName(data.contact.name || "");
-        setPhone(data.contact.phone || "");
-        setEmail(data.contact.email || "");
-        setNotes(data.contact.notes || "");
-      } else {
-        setContact(null);
-      }
-    } catch (err) {
-      console.error("Failed to fetch therapist details:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchJournalStats() {
-    try {
-      const res = await fetch("/api/journal");
-      const data = await res.json();
-      if (data.entries) {
-        setEntriesCount(data.entries.length);
-
-        // Extract cognitive distortions
-        const trapsSet = new Set<string>();
-        data.entries.forEach((e: any) => {
-          if (e.distortionsJson) {
-            try {
-              const parsed = JSON.parse(e.distortionsJson);
-              if (Array.isArray(parsed)) {
-                parsed.forEach((t) => {
-                  const resolvedName = DISTORTION_MAP[t] || t;
-                  trapsSet.add(resolvedName);
-                });
-              }
-            } catch (err) {}
-          }
-        });
-        setRecentTraps(Array.from(trapsSet).slice(0, 3));
-      }
-    } catch (err) {
-      console.error("Failed to fetch stats:", err);
-    }
-  }
-
   useEffect(() => {
-    fetchContact();
-    fetchJournalStats();
     const hour = new Date().getHours();
-    const evening = hour >= 18 || hour < 6;
-    setIsNight(evening);
+    const evening = hour >= 17; // 5:00 PM Logic
+    setIsEvening(evening);
     setQuote(getRandomQuote(evening));
   }, []);
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    try {
-      const res = await fetch("/api/therapist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, email, notes }),
-      });
-      if (res.ok) {
-        setIsEditing(false);
-        fetchContact();
-      }
-    } catch (err) {
-      console.error("Failed to save therapist details:", err);
-    }
-  }
 
   return (
     <div
@@ -229,77 +51,33 @@ export default function Home() {
       </header>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem", width: "100%" }}>
-        {/* Dynamic Time-Gated Check-in Banner */}
-        <div
-          className="card-glass"
-          style={{
-            borderLeft: isNight ? "4px solid var(--accent-gold)" : "4px solid var(--sage-green)",
-            borderRadius: "var(--radius)",
-            padding: "1.5rem",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "1.25rem",
-            textAlign: "center",
-            boxShadow: "0 4px 15px rgba(92, 127, 102, 0.04)",
-          }}
-        >
-          <div>
-            <span style={{ fontSize: "2rem", display: "block", marginBottom: "0.5rem" }}>
-              {isNight ? "🌙" : "☀️"}
-            </span>
-            <strong style={{ color: isNight ? "var(--accent-gold-text)" : "var(--sage-green)", fontSize: "1.1rem" }}>
-              {isNight ? "Evening Reflection" : "Day Check-In"}
-            </strong>{" "}
-            <p
-              style={{
-                color: "var(--foreground)",
-                fontSize: "0.95rem",
-                opacity: 0.9,
-                margin: "0.5rem 0 0 0",
-                lineHeight: 1.5,
-              }}
-            >
-              {isNight
-                ? "Ready to release today's worries and plan a restful tomorrow?"
-                : "Ready to log your focus, check in on your goals, or practice CBT thought reframing?"}
+        
+        {/* Evening Reflection Card (Only rendered if isEvening is true) */}
+        {isEvening && (
+          <div className="card-glass flex flex-col items-center justify-center text-center p-8 w-full border-l-4 border-amber-500 rounded-3xl shadow-[0_4px_15px_rgba(92,127,102,0.04)]">
+            <span className="text-3xl mb-2">🌙</span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+              Evening Reflection
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-6">
+              Ready to release today's worries and plan a restful tomorrow?
             </p>
+            <Link
+              href="/reflect"
+              className="btn-primary text-base sm:text-lg font-semibold tracking-wide py-3.5 px-8 rounded-2xl transition-all shadow-md block text-center w-full max-w-[320px] bg-amber-500 hover:bg-amber-600 text-white"
+              style={{ border: "none" }}
+            >
+              Start Reflection
+            </Link>
           </div>
-          <Link
-            href={isNight ? "/reflect" : "/journal"}
-            className="btn-primary"
-            style={{
-              backgroundColor: isNight ? "var(--accent-gold)" : "var(--sage-green)",
-              color: "#fff",
-              padding: "0.65rem 1.5rem",
-              borderRadius: "var(--radius)",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              boxShadow: "none",
-              width: "100%",
-              maxWidth: "240px",
-              textAlign: "center",
-            }}
-          >
-            {isNight ? "Start Reflection" : "Start Guided Journal"}
-          </Link>
-        </div>
+        )}
 
-        {/* PRIMARY FUNCTION: CBT Journal Card (Top of the Welcome Page) */}
-        <section
-          className="card-premium"
-          style={{
-            borderTop: "4px solid var(--sage-green)",
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mb-3 flex items-center justify-center gap-2">
+        {/* PRIMARY FUNCTION: CBT Journal Card */}
+        <section className="card-premium flex flex-col items-center justify-center text-center p-8 w-full border-t-4 border-emerald-500">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3 flex items-center justify-center gap-2">
             📝 CBT Journal & Reflections
           </h2>
-          <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal mb-6">
+          <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-6">
             Process distressing moments with our guided 5-step CBT Thought
             Record wizard to challenge thinking traps, or log positive victories
             to anchor and savor your strengths.
@@ -309,7 +87,7 @@ export default function Home() {
           >
             <Link
               href="/journal"
-              className="btn-primary text-base font-semibold tracking-wide py-3 px-6 rounded-xl transition-all shadow-sm block text-center w-full max-w-[320px]"
+              className="btn-primary text-base sm:text-lg font-semibold tracking-wide py-3.5 px-8 rounded-2xl transition-all shadow-md block text-center w-full max-w-[320px]"
             >
               ✍️ Open Guided Journal
             </Link>
@@ -318,22 +96,14 @@ export default function Home() {
 
         {/* Context-Aware Quote Deck */}
         {quote && (
-          <section
-            className="card-premium"
-            style={{
-              textAlign: "center",
-              padding: "2.5rem 2rem",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <section className="card-premium flex flex-col items-center justify-center text-center p-8 w-full">
             {/* Perspective Header */}
-            <h4 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mb-3">Perspective</h4>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+              Perspective
+            </h2>
             
             <span style={{ fontSize: "3rem", color: "var(--sage-green)", opacity: 0.3, display: "block", height: "1.5rem", lineHeight: 0.5 }}>“</span>
-            <p className="text-xl sm:text-2xl font-medium italic text-slate-800 tracking-wide leading-relaxed my-4 px-4 max-w-xl mx-auto">
+            <p className="text-2xl sm:text-3xl font-medium italic text-slate-800 tracking-wide leading-relaxed my-6 px-4 max-w-xl mx-auto">
               {quote.text}
             </p>
             <span className="text-xs font-bold tracking-widest text-slate-400 uppercase mt-2">
@@ -343,31 +113,28 @@ export default function Home() {
         )}
 
         {/* Centered Mini-Planner Card */}
-        <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center mt-6">
+        <div className="card-premium flex flex-col items-center justify-center text-center p-8 w-full">
           {/* Centered Title */}
-          <h4 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mb-3">Today's Focus</h4>
-          <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal mb-4">Small daily habits build long-term momentum.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+            Today's Focus
+          </h2>
+          <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-6">
+            Small daily habits build long-term momentum.
+          </p>
 
           {/* Compact Tasks Grid/Flex */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full my-2 text-slate-700">
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-slate-700">
-              <span className="font-semibold text-slate-900">Today:</span>
-              <div className="flex items-center gap-1.5">
-                <input type="checkbox" checked readOnly className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
-                <span>Meditate</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <input type="checkbox" disabled className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
-                <span>Read</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <input type="checkbox" disabled className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
-                <span>Walk</span>
-              </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-base sm:text-lg font-semibold text-slate-700 my-4">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked readOnly className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-5 w-5" />
+              <span>Meditate</span>
             </div>
-            <div className="text-slate-400 hidden sm:block">|</div>
-            <div className="text-sm font-medium">
-              <span className="font-semibold text-slate-900">Tomorrow:</span> • Therapy Prep
+            <div className="flex items-center gap-2">
+              <input type="checkbox" disabled className="rounded border-slate-300 text-slate-300 h-5 w-5" />
+              <span>Read</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" disabled className="rounded border-slate-300 text-slate-300 h-5 w-5" />
+              <span>Walk</span>
             </div>
           </div>
 

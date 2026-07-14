@@ -17,7 +17,7 @@ describe("Navigation Component", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Journal")).toBeInTheDocument();
     expect(screen.getByText("Action Planner")).toBeInTheDocument();
-    expect(screen.getByText("Vaults")).toBeInTheDocument();
+    expect(screen.getByText("Toolkit")).toBeInTheDocument();
     expect(screen.getByText("Insights")).toBeInTheDocument();
     expect(screen.getByText("Sign Out")).toBeInTheDocument();
   });
