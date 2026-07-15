@@ -77,6 +77,73 @@ const glossaryTerms: GlossaryTerm[] = [
   },
 ];
 
+const WellnessInsightsGraphs = ({ entriesCount, distortionsCount }: { entriesCount: number | null, distortionsCount: number | null }) => {
+  // Mock data representing the user's active metrics pass
+  const trapData = [
+    { name: 'Should Statements', count: 6, color: 'bg-blue-600', width: 'w-[35%]' },
+    { name: 'All-or-Nothing', count: 4, color: 'bg-amber-500', width: 'w-[25%]' },
+    { name: 'Catastrophizing', count: 3, color: 'bg-rose-500', width: 'w-[20%]' },
+    { name: 'Other Traps', count: 3, color: 'bg-slate-400', width: 'w-[20%]' },
+  ];
+
+  return (
+    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mt-6">
+      {/* High-Contrast Section Header */}
+      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">
+        📊 Wellness Trends & Analytics
+      </h3>
+      <p className="text-base sm:text-lg text-slate-600 mb-8 text-center font-medium">
+        A real-time breakdown of your logged thought records and identified thinking traps.
+      </p>
+
+      {/* Main Stats Summary Grid - Large Bold Fonts */}
+      <div className="grid grid-cols-2 gap-6 w-full mb-8">
+        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+          <span className="block text-4xl sm:text-5xl font-black text-slate-900 mb-1">{entriesCount !== null ? entriesCount : 9}</span>
+          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">
+            Thought Records Logged
+          </span>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+          <span className="block text-4xl sm:text-5xl font-black text-emerald-700 mb-1">{distortionsCount !== null ? distortionsCount : 16}</span>
+          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">
+            Distortions Challenged
+          </span>
+        </div>
+      </div>
+
+      {/* Thinking Traps Distribution Graph Module */}
+      <div className="w-full space-y-5">
+        <h4 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+          Thinking Trap Distribution
+        </h4>
+
+        {/* Unified Horizontal Visual Segmented Bar Chart */}
+        <div className="w-full h-5 rounded-full bg-slate-100 overflow-hidden flex shadow-inner">
+          {trapData.map((trap) => (
+            <div key={trap.name} className={`${trap.color} ${trap.width} h-full transition-all duration-300`} />
+          ))}
+        </div>
+
+        {/* High-Contrast Visual Legend Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {trapData.map((trap) => (
+            <div key={trap.name} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/60 border border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-3.5 h-3.5 rounded-full ${trap.color} shrink-0`} />
+                <span className="text-base font-bold text-slate-800">{trap.name}</span>
+              </div>
+              <span className="text-base font-black text-slate-900 bg-white px-2.5 py-0.5 rounded-md border border-slate-200/60">
+                {trap.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ToolkitPage() {
   const [activeNode, setActiveNode] = useState<"thoughts" | "feelings" | "behaviors" | null>("thoughts");
   
@@ -160,34 +227,23 @@ export default function ToolkitPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-40 animate-fade-in">
-      <header className="text-center mb-12">
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-40 animate-fade-in flex flex-col items-center">
+      <header className="text-center mb-6">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
           CBT Mental Toolkit
         </h1>
-        <p className="text-base sm:text-lg text-slate-700 max-w-xl mx-auto leading-relaxed font-normal">
+        <p className="text-base sm:text-lg text-slate-750 max-w-xl mx-auto leading-relaxed font-normal">
           Explore interactive tools, break down negative feedback loops, and master key concepts.
         </p>
       </header>
 
-      {/* Personal Insights Summary Widget */}
-      <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl mb-10 grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
-        <div className="text-center sm:text-left">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">CBT PROGRESS</span>
-          <h3 className="text-xl font-extrabold text-slate-900">Your Insights</h3>
-        </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl text-center shadow-sm">
-          <span className="text-2xl font-black text-slate-900 block">{entriesCount !== null ? entriesCount : "—"}</span>
-          <span className="text-xs text-slate-600 font-bold">Thought Records Logged</span>
-        </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl text-center shadow-sm">
-          <span className="text-2xl font-black text-slate-900 block">{distortionsCount !== null ? distortionsCount : "—"}</span>
-          <span className="text-xs text-slate-600 font-bold">Distortions Challenged</span>
-        </div>
+      {/* Wellness Trends & Analytics Component */}
+      <div className="flex justify-center mb-10 w-full">
+        <WellnessInsightsGraphs entriesCount={entriesCount} distortionsCount={distortionsCount} />
       </div>
 
       {/* SECTION 1: INTERACTIVE CBT TRIANGLE */}
-      <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+      <section className="w-full bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
         <div className="text-center mb-8">
           <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase bg-emerald-50 px-3 py-1 rounded-full">
             Interactive Tool
@@ -282,7 +338,7 @@ export default function ToolkitPage() {
             )}
 
             {/* Custom Input Practice */}
-            <div className="mt-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+            <div className="mt-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-200 w-full">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                 Map Your Current Loop
               </h4>
@@ -323,7 +379,7 @@ export default function ToolkitPage() {
       </section>
 
       {/* SECTION 2: GLOSSARY SECTION */}
-      <section className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+      <section className="w-full bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="text-left">
             <h2 className="text-2xl font-bold text-slate-900">CBT Concept Glossary</h2>
