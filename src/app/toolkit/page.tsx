@@ -1,478 +1,203 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState } from 'react';
 
-interface GlossaryTerm {
-  term: string;
-  definition: string;
-  category: "CBT Core" | "Distortions" | "Techniques";
-  example?: string;
-  action?: string;
-}
-
-const glossaryTerms: GlossaryTerm[] = [
-  {
-    term: "Cognitive Distortions",
-    definition: "Inaccurate, biased, or exaggerated thinking patterns that reinforce negative emotions and worry.",
-    category: "CBT Core",
-    example: "Assuming you failed a whole test because you got one question wrong.",
-    action: "Challenge the distortion by writing out evidence for/against the thought.",
-  },
-  {
-    term: "CBT (Cognitive Behavioral Therapy)",
-    definition: "A structured, evidence-based psychotherapy focusing on how thoughts, feelings, and behaviors influence one another.",
-    category: "CBT Core",
-    example: "Using a Thought Record to trace how a negative event triggered physical panic.",
-    action: "Practice identifying automatic thoughts when you feel an emotional shift.",
-  },
-  {
-    term: "Cognitive Reframing",
-    definition: "The process of identifying unhelpful thoughts, disputing them, and generating balanced, constructive perspectives.",
-    category: "Techniques",
-    example: "Replacing 'I'll fail this talk' with 'I've prepared well, and even if it's not perfect, I will get through it.'",
-    action: "Identify the absolute worst case scenario and build a constructive action plan for it.",
-  },
-  {
-    term: "Grounding Techniques",
-    definition: "Exercises designed to bring your focus back to the present physical moment, helping manage acute anxiety or panic.",
-    category: "Techniques",
-    example: "The 5-4-3-2-1 technique (finding 5 things you can see, 4 touch, 3 hear, 2 smell, 1 taste).",
-    action: "Implement a physical anchor (e.g. holding an ice cube) to disrupt high intensity emotional spirals.",
-  },
-  {
-    term: "Thought Record",
-    definition: "A written tool used to systematically break down situations, automatic thoughts, physical feelings, distortions, and reframed thoughts.",
-    category: "CBT Core",
-    example: "A standard 5-step CBT log analyzing a recent conflict at work.",
-    action: "Commit to completing at least one Thought Record per week to track automatic thinking habits.",
-  },
-  {
-    term: "All-or-Nothing Thinking",
-    definition: "Viewing situations in black-and-white, absolute categories (e.g., failing completely if a goal isn't met perfectly).",
-    category: "Distortions",
-    example: "If I don't get an A on this test, I'm a complete failure.",
-    action: "Look for shades of gray. Ask: Is there a middle ground between perfection and failure?",
-  },
-  {
-    term: "Catastrophizing",
-    definition: "Anticipating the worst-case scenario and assuming it will be an unmitigated disaster that you cannot handle.",
-    category: "Distortions",
-    example: "If I'm late to the meeting, I'll get fired immediately.",
-    action: "Evaluate the likelihood. What is the most realistic outcome, and how would I handle it?",
-  },
-  {
-    term: "Mind Reading",
-    definition: "Assuming you know what others are thinking, usually imagining they are judging or thinking negatively of you.",
-    category: "Distortions",
-    example: "They didn't reply to my text; they must hate me.",
-    action: "List alternative explanations. Could they be busy, driving, or away from their phone?",
-  },
-  {
-    term: "Emotional Reasoning",
-    definition: "Believing that because you feel a certain way, it must be the objective truth (e.g., 'I feel anxious, therefore I am in danger').",
-    category: "Distortions",
-    example: "I feel anxious about this flight, so it's unsafe.",
-    action: "Distinguish feelings from facts. Remind yourself: An emotion is a reaction, not a reflection of reality.",
-  },
+// ==========================================
+// 1. DATA DICTIONARIES (QUOTES & DISTORTIONS)
+// ==========================================
+const distortionsData = [
+  { id: 'should', title: 'Should Statements', short: 'Expecting things to be exactly as you think they "must" be.', def: 'Holding yourself or others to rigid, unrealistic internal rules. This inevitably generates intense, unnecessary feelings of guilt, frustration, and resentment when reality doesn\'t match your exact blueprint.', head: '"I should have gone to the gym today, I am completely lazy." or "They must arrive exactly on time or they don\'t respect me."', antidote: 'Pivot your vocabulary from rigid obligations to flexible preferences. Reframe your inner dialogue by swapping out words like "should," "must," and "ought" for phrases like "I would prefer to," "It would be nice if," or "Next time I will try to."' },
+  { id: 'allnothing', title: 'All-or-Nothing Thinking', short: 'Viewing your performance or situations in absolute black-or-white terms.', def: 'Evaluating yourself and your life events using absolute, binary categories. If a performance falls short of absolute perfection, you categorize the entire outcome as a total, complete failure, completely ignoring any nuances.', head: '"I ate one slice of pizza, my entire diet is completely ruined." or "If I don\'t get an A on this project, I am a total failure."', antidote: 'Actively search for the shades of gray. Evaluate your situation on a granular scale from 0 to 100 rather than an absolute binary pass/fail toggle. Remind yourself that a partial setback does not erase your entire progress.' },
+  { id: 'catastrophe', title: 'Catastrophizing', short: 'Automatically anticipating the absolute worst-case scenario.', def: 'Taking a minor negative event or an unknown future variable and inflating it exponentially into an absolute disaster, while simultaneously underestimating your psychological capacity to adapt or handle the outcome.', head: '"I stumbled over my words during the opening statement. I am going to get fired and lose my apartment." or "They haven\'t texted back; something terrible must have happened."', antidote: 'Perform a realistic probability check. Force your brain to map out three distinct scenarios: The absolute worst case, the absolute best case, and the most likely realistic outcome. Prepare a basic action step for the realistic outcome.' },
+  { id: 'mindreading', title: 'Mind Reading', short: 'Assuming you know exactly what others are thinking without proof.', def: 'Making absolute, arbitrary assumptions about the negative thoughts, motives, or evaluations of other people toward you, and treating those unproven mental assumptions as established, undeniable objective facts.', head: '"He looked at his watch while I was presenting; he clearly thinks I am boring and completely unqualified." or "Everyone at this meeting thinks I look out of place."', antidote: 'Demand objective evidence. Gently remind yourself that you are not telepathic. Force your brain to list alternate, non-critical interpretations for their behavior (e.g., "He looked at his watch because he has a tight schedule, not because of me").' },
+  { id: 'overgen', title: 'Overgeneralization', short: 'Seeing a single negative event as a never-ending pattern of defeat.', def: 'Taking a isolated, single negative incident (such as a rejection or a mistake) and making a sweeping, absolute rule about your entire life identity based on that one individual occurrence.', head: '"I didn\'t get this client. Nothing ever goes right for me. I will never succeed in this market."', antidote: 'Confine the event strictly to its actual boundaries. Use precise, localized language. Replace global keywords like "always," "never," and "everyone" with targeted words like "this time," "in this specific instance," or "today."' },
+  { id: 'emotional', title: 'Emotional Reasoning', short: 'Believing your raw feelings represent absolute factual reality.', def: 'Assuming that your intense negative emotional states reflect the literal objective truth of the surrounding environment. You let your feelings dictate your facts: "I feel completely overwhelmed, therefore this problem is totally unfixable."', head: '"I feel incredibly anxious about this flight, which means flying must be inherently dangerous." or "I feel stupid, so I must be stupid."', antidote: 'Separate raw emotion from absolute objective truth. Write down a clear split statement: "I am currently experiencing a temporary feeling of anxiety, but that feeling does not alter the factual safety metrics of the situation." Review the physical evidence.' }
 ];
 
-const WellnessInsightsGraphs = ({ entriesCount, distortionsCount }: { entriesCount: number | null, distortionsCount: number | null }) => {
-  // Mock data representing the user's active metrics pass
-  const trapData = [
-    { name: 'Should Statements', count: 6, color: 'bg-blue-600', width: 'w-[35%]' },
-    { name: 'All-or-Nothing', count: 4, color: 'bg-amber-500', width: 'w-[25%]' },
-    { name: 'Catastrophizing', count: 3, color: 'bg-rose-500', width: 'w-[20%]' },
-    { name: 'Other Traps', count: 3, color: 'bg-slate-400', width: 'w-[20%]' },
-  ];
+export default function Toolkit() {
+  const [activeNode, setActiveNode] = useState<'thoughts' | 'feelings' | 'behaviors'>('thoughts');
+  const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(null);
 
-  return (
-    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mt-6">
-      {/* High-Contrast Section Header */}
-      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">
-        📊 Wellness Trends & Analytics
-      </h3>
-      <p className="text-base sm:text-lg text-slate-600 mb-8 text-center font-medium">
-        A real-time breakdown of your logged thought records and identified thinking traps.
-      </p>
-
-      {/* Main Stats Summary Grid - Large Bold Fonts */}
-      <div className="grid grid-cols-2 gap-6 w-full mb-8">
-        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
-          <span className="block text-4xl sm:text-5xl font-black text-slate-900 mb-1">{entriesCount !== null ? entriesCount : 9}</span>
-          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">
-            Thought Records Logged
-          </span>
-        </div>
-        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
-          <span className="block text-4xl sm:text-5xl font-black text-emerald-700 mb-1">{distortionsCount !== null ? distortionsCount : 16}</span>
-          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">
-            Distortions Challenged
-          </span>
-        </div>
-      </div>
-
-      {/* Thinking Traps Distribution Graph Module */}
-      <div className="w-full space-y-5">
-        <h4 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
-          Thinking Trap Distribution
-        </h4>
-
-        {/* Unified Horizontal Visual Segmented Bar Chart */}
-        <div className="w-full h-5 rounded-full bg-slate-100 overflow-hidden flex shadow-inner">
-          {trapData.map((trap) => (
-            <div key={trap.name} className={`${trap.color} ${trap.width} h-full transition-all duration-300`} />
-          ))}
-        </div>
-
-        {/* High-Contrast Visual Legend Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-          {trapData.map((trap) => (
-            <div key={trap.name} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/60 border border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <span className={`w-3.5 h-3.5 rounded-full ${trap.color} shrink-0`} />
-                <span className="text-base font-bold text-slate-800">{trap.name}</span>
-              </div>
-              <span className="text-base font-black text-slate-900 bg-white px-2.5 py-0.5 rounded-md border border-slate-200/60">
-                {trap.count}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default function ToolkitPage() {
-  const [activeNode, setActiveNode] = useState<"thoughts" | "feelings" | "behaviors" | null>("thoughts");
-  
-  // Custom user inputs for the triangle demonstration
-  const [thoughtInput, setThoughtInput] = useState("I am going to fail this presentation.");
-  const [feelingInput, setFeelingInput] = useState("Anxious, overwhelmed, scared.");
-  const [behaviorInput, setBehaviorInput] = useState("Procrastinating prep, avoiding eye contact.");
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [expandedTerm, setExpandedTerm] = useState<string | null>(null);
-
-  // Dynamic user insights stats
-  const [entriesCount, setEntriesCount] = useState<number | null>(null);
-  const [distortionsCount, setDistortionsCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch("/api/journal");
-        const data = await res.json();
-        if (data.entries) {
-          setEntriesCount(data.entries.length);
-          let count = 0;
-          data.entries.forEach((e: any) => {
-            if (e.distortionsJson) {
-              try {
-                const parsed = JSON.parse(e.distortionsJson);
-                if (Array.isArray(parsed)) {
-                  count += parsed.length;
-                }
-              } catch (err) {}
-            }
-          });
-          setDistortionsCount(count);
-        }
-      } catch (err) {
-        console.error("Failed to load toolkit stats:", err);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  const filteredGlossary = glossaryTerms.filter((item) => {
-    const matchesSearch = item.term.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          item.definition.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const nodeDetails = {
-    thoughts: {
-      title: "Thoughts",
-      desc: "What we tell ourselves. Automatic interpretations, beliefs, and internal dialogue about a situation.",
-      impact: "Thoughts directly trigger our emotional states and guide our behavioral responses.",
-      color: "border-sky-200 bg-sky-50 text-sky-850",
-      accent: "bg-sky-500",
-    },
-    feelings: {
-      title: "Feelings / Emotions",
-      desc: "Emotional states (e.g., anxiety, sadness, anger) and physical body sensations (e.g., rapid heartbeat, tightness).",
-      impact: "Feelings reinforce our negative thoughts and tempt us to act in survival-oriented ways.",
-      color: "border-amber-200 bg-amber-50 text-amber-850",
-      accent: "bg-amber-500",
-    },
-    behaviors: {
-      title: "Behaviors",
-      desc: "The actions we take or avoid (e.g., procrastination, avoidance, checking, practicing mindfulness).",
-      impact: "Our behaviors can either break the feedback loop or further reinforce negative thoughts and emotions.",
-      color: "border-emerald-200 bg-emerald-50 text-emerald-850",
-      accent: "bg-emerald-500",
-    },
-  };
-
-  const toggleExpandTerm = (term: string) => {
-    if (expandedTerm === term) {
-      setExpandedTerm(null);
-    } else {
-      setExpandedTerm(term);
-    }
+  const triangleContent = {
+    thoughts: { title: "Thoughts", desc: "What we say to ourselves in our minds. (e.g., 'I will mess this up.')", color: "border-blue-500 text-blue-800 bg-blue-50/50" },
+    feelings: { title: "Feelings", desc: "The emotions and body sensations that result. (e.g., Anxiety, heart racing.)", color: "border-amber-500 text-amber-800 bg-amber-50/50" },
+    behaviors: { title: "Behaviors", desc: "The actions we take or avoid. (e.g., Procrastinating or withdrawing.)", color: "border-emerald-500 text-emerald-800 bg-emerald-50/50" }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-40 animate-fade-in flex flex-col items-center">
-      <header className="text-center mb-6">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
-          CBT Mental Toolkit
-        </h1>
-        <p className="text-base sm:text-lg text-slate-750 max-w-xl mx-auto leading-relaxed font-normal">
-          Explore interactive tools, break down negative feedback loops, and master key concepts.
-        </p>
-      </header>
-
-      {/* Wellness Trends & Analytics Component */}
-      <div className="flex justify-center mb-10 w-full">
-        <WellnessInsightsGraphs entriesCount={entriesCount} distortionsCount={distortionsCount} />
+    <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto px-4 pt-10 pb-48 flex flex-col items-center">
+      
+      {/* ==========================================
+          HEADER SECTION
+         ========================================== */}
+      <div className="text-center mb-10">
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">CBT Mental Toolkit</h1>
+        <p className="text-lg sm:text-xl text-slate-600 mt-2 font-medium">Explore interactive tools, analyze core trends, and master key concepts.</p>
       </div>
 
-      {/* SECTION 1: INTERACTIVE CBT TRIANGLE */}
-      <section className="w-full bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
-        <div className="text-center mb-8">
-          <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase bg-emerald-50 px-3 py-1 rounded-full">
-            Interactive Tool
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-3 mb-2">
-            The Cognitive Behavioral Triangle
-          </h2>
-          <p className="text-base text-slate-700 font-normal leading-relaxed max-w-lg mx-auto">
-            Thoughts, feelings, and behaviors are interconnected. Click each node to see how they feed into each other.
-          </p>
+      {/* ==========================================
+          📊 WELLNESS INSIGHTS & GRAPHS SECTION (NATIVE SVG)
+         ========================================== */}
+      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-8">
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">📊 Wellness Trends & Analytics</h3>
+        <p className="text-base sm:text-lg text-slate-600 mb-8 text-center font-medium">A real-time breakdown of your logged thought records and identified thinking traps.</p>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-6 w-full mb-8">
+          <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+            <span className="block text-4xl sm:text-5xl font-black text-slate-900 mb-1">9</span>
+            <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">Thought Records Logged</span>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+            <span className="block text-4xl sm:text-5xl font-black text-emerald-700 mb-1">16</span>
+            <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">Distortions Challenged</span>
+          </div>
         </div>
 
-        {/* Triangle Visual Map */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-          <div className="md:col-span-6 flex justify-center items-center py-8 relative">
-            
-            {/* SVG Connector Lines in Background */}
-            <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-              <svg width="280" height="240" viewBox="0 0 280 240" className="w-[280px] h-[240px] opacity-25">
-                {/* Arrow Paths */}
-                <path d="M 140 30 L 230 180" stroke="#475569" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
-                <path d="M 230 180 L 50 180" stroke="#475569" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
-                <path d="M 50 180 L 140 30" stroke="#475569" strokeWidth="2.5" strokeDasharray="4 4" fill="none" />
-              </svg>
-            </div>
-
-            {/* Absolute positioning nodes */}
-            <div className="relative w-[280px] h-[240px] z-10">
-              
-              {/* Thoughts Node (Top) */}
-              <button
-                onClick={() => setActiveNode("thoughts")}
-                className={`absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center font-bold transition-all duration-300 shadow-sm ${
-                  activeNode === "thoughts"
-                    ? "border-sky-600 bg-sky-600 text-white scale-110 shadow-md ring-4 ring-sky-100"
-                    : "border-slate-300 bg-white text-slate-800 hover:border-sky-400 hover:text-sky-700"
-                }`}
-              >
-                <span className="text-2xl mb-1">💭</span>
-                <span className="text-xs tracking-wide">Thoughts</span>
-              </button>
-
-              {/* Feelings Node (Bottom Left) */}
-              <button
-                onClick={() => setActiveNode("feelings")}
-                className={`absolute bottom-0 left-0 w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center font-bold transition-all duration-300 shadow-sm ${
-                  activeNode === "feelings"
-                    ? "border-amber-600 bg-amber-600 text-white scale-110 shadow-md ring-4 ring-amber-100"
-                    : "border-slate-300 bg-white text-slate-800 hover:border-amber-400 hover:text-amber-700"
-                }`}
-              >
-                <span className="text-2xl mb-1">❤️</span>
-                <span className="text-xs tracking-wide">Feelings</span>
-              </button>
-
-              {/* Behaviors Node (Bottom Right) */}
-              <button
-                onClick={() => setActiveNode("behaviors")}
-                className={`absolute bottom-0 right-0 w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center font-bold transition-all duration-300 shadow-sm ${
-                  activeNode === "behaviors"
-                    ? "border-emerald-600 bg-emerald-600 text-white scale-110 shadow-md ring-4 ring-emerald-100"
-                    : "border-slate-300 bg-white text-slate-800 hover:border-emerald-400 hover:text-emerald-700"
-                }`}
-              >
-                <span className="text-2xl mb-1">🏃‍♂️</span>
-                <span className="text-xs tracking-wide">Behaviors</span>
-              </button>
-
-              {/* Center Inter-connected Badge */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/3 bg-slate-200 border border-slate-300 px-3 py-1 rounded-full text-[10px] font-bold text-slate-700 uppercase tracking-widest pointer-events-none">
-                Feedback Loop
-              </div>
-
+        {/* High-Contrast SVG Ring Donut Chart Layout */}
+        <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 border-t border-slate-100 pt-6">
+          <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4.5"></circle>
+              {/* Should Statements - 35% */}
+              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#2563eb" strokeWidth="4.5" strokeDasharray="35 65" strokeDashoffset="100"></circle>
+              {/* All-or-Nothing - 25% */}
+              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="4.5" strokeDasharray="25 75" strokeDashoffset="65"></circle>
+              {/* Catastrophizing - 20% */}
+              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="40"></circle>
+              {/* Other Traps - 20% */}
+              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="20"></circle>
+            </svg>
+            <div className="absolute text-center">
+              <span className="block text-2xl font-black text-slate-900">Top Trap</span>
+              <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Shoulds</span>
             </div>
           </div>
 
-          {/* Interactive Node Breakdown & Live Inputs */}
-          <div className="md:col-span-6">
-            {activeNode && (
-              <div className={`p-5 rounded-2xl border-2 transition-all duration-300 ${nodeDetails[activeNode].color}`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`w-2.5 h-2.5 rounded-full ${nodeDetails[activeNode].accent}`} />
-                  <h3 className="text-lg font-bold">{nodeDetails[activeNode].title}</h3>
-                </div>
-                <p className="text-sm font-medium leading-relaxed mb-3">
-                  {nodeDetails[activeNode].desc}
-                </p>
-                <p className="text-xs font-bold opacity-90 border-t border-slate-200/50 pt-2">
-                  System Impact: {nodeDetails[activeNode].impact}
-                </p>
-              </div>
-            )}
-
-            {/* Custom Input Practice */}
-            <div className="mt-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-200 w-full">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                Map Your Current Loop
-              </h4>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">My Automatic Thought:</label>
-                  <input
-                    type="text"
-                    value={thoughtInput}
-                    onChange={(e) => setThoughtInput(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-350 rounded-lg text-slate-800 focus:outline-none focus:border-sky-400"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">My Emotional/Physical Feel:</label>
-                  <input
-                    type="text"
-                    value={feelingInput}
-                    onChange={(e) => setFeelingInput(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-350 rounded-lg text-slate-800 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">My Resulting Behavior:</label>
-                  <input
-                    type="text"
-                    value={behaviorInput}
-                    onChange={(e) => setBehaviorInput(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-350 rounded-lg text-slate-800 focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-              </div>
+          {/* Visual Data Legend */}
+          <div className="w-full space-y-3">
+            <h4 className="text-lg font-bold text-slate-900 mb-2">Thinking Trap Distribution</h4>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-blue-600" /> <span className="text-base font-bold text-slate-800">Should Statements</span></div>
+              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">6</span>
             </div>
-
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-amber-500" /> <span className="text-base font-bold text-slate-800">All-or-Nothing</span></div>
+              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">4</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-rose-500" /> <span className="text-base font-bold text-slate-800">Catastrophizing</span></div>
+              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-slate-400" /> <span className="text-base font-bold text-slate-800">Other Traps</span></div>
+              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* SECTION 2: GLOSSARY SECTION */}
-      <section className="w-full bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div className="text-left">
-            <h2 className="text-2xl font-bold text-slate-900">CBT Concept Glossary</h2>
-            <p className="text-sm text-slate-700 font-medium mt-1">Quick explanations of vital mental models and terms. Click to expand.</p>
-          </div>
-          
-          {/* Category Tabs */}
-          <div className="flex flex-wrap gap-2">
-            {["All", "CBT Core", "Distortions", "Techniques"].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                  selectedCategory === cat
-                    ? "bg-slate-800 text-white"
-                    : "bg-slate-100 text-slate-750 hover:bg-slate-200"
-                }`}
+      {/* ==========================================
+          🧠 TWO-COLUMN CORE UTILITIES GRID
+         ========================================== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl mb-8">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h4 className="text-xl font-extrabold text-slate-900 mb-1">🧠 Decision Assistant</h4>
+          <p className="text-sm sm:text-base text-slate-700 font-normal mb-4">Align standard options with your core values & calculate pros/cons.</p>
+          <button className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-sm transition-colors">Open Assistant</button>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h4 className="text-xl font-extrabold text-slate-900 mb-1">📞 My Support Contact</h4>
+          <p className="text-sm sm:text-base text-slate-700 font-normal mb-4">Reach out to your pre-configured emergency contact or therapist in one tap.</p>
+          <button className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm transition-colors">+ Add Support Contact</button>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h4 className="text-xl font-extrabold text-slate-900 mb-1">📄 Therapy Integration</h4>
+          <p className="text-sm sm:text-base text-slate-700 font-normal mb-4">Export complete grounding steps and thought records to clear formats.</p>
+          <button className="w-full py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold rounded-xl text-sm transition-colors">⬇️ Export Week to PDF</button>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center">
+          <h4 className="text-xl font-extrabold text-slate-900 mb-1">🔒 Secure Vault Backup</h4>
+          <p className="text-sm sm:text-base text-slate-700 font-normal mb-4">Download an encrypted local file of your complete application records.</p>
+          <button className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm transition-colors">🔐 Create Encrypted Backup</button>
+        </div>
+      </div>
+
+      {/* ==========================================
+          🔄 INTERACTIVE CBT TRIANGLE
+         ========================================== */}
+      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-8">
+        <span className="bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-3">Interactive Model</span>
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">The Cognitive Behavioral Triangle</h3>
+        <p className="text-base sm:text-lg text-slate-600 mb-6 text-center font-medium">Thoughts, feelings, and behaviors are deeply interconnected. Click a node below to review the link patterns.</p>
+        
+        <div className="flex gap-3 mb-6">
+          {['thoughts', 'feelings', 'behaviors'].map((node) => (
+            <button 
+              key={node}
+              onClick={() => setActiveNode(node as any)}
+              className={`px-4 py-2 rounded-xl border-2 font-bold capitalize text-sm transition-all ${activeNode === node ? 'border-slate-800 bg-slate-900 text-white shadow-sm' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+            >
+              {node}
+            </button>
+          ))}
+        </div>
+
+        <div className={`p-5 rounded-2xl border-2 w-full text-center transition-all ${triangleContent[activeNode].color}`}>
+          <h4 className="text-lg font-extrabold mb-1">{triangleContent[activeNode].title}</h4>
+          <p className="text-base leading-relaxed">{triangleContent[activeNode].desc}</p>
+        </div>
+      </div>
+
+      {/* ==========================================
+          📖 DEEP-DIVE ACCORDION CONCEPT GLOSSARY
+         ========================================== */}
+      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-10">
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">CBT Concept Glossary</h3>
+        <p className="text-base sm:text-lg text-slate-600 mb-6 text-center font-medium">Click any distortion card to reveal explicit definitions, real-world patterns, and actionable antidotes.</p>
+
+        <div className="w-full space-y-4">
+          {distortionsData.map((term) => {
+            const isExpanded = expandedGlossaryId === term.id;
+            return (
+              <div 
+                key={term.id}
+                onClick={() => setExpandedGlossaryId(isExpanded ? null : term.id)}
+                className={`w-full p-5 rounded-2xl border transition-all duration-200 cursor-pointer text-left ${isExpanded ? 'border-slate-800 bg-slate-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
               >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Search input */}
-        <div className="mb-6">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search glossary terms or definitions..."
-            className="w-full text-sm px-4 py-3 bg-slate-50 border border-slate-250 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-          />
-        </div>
-
-        {/* Glossary Results List */}
-        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-          {filteredGlossary.length > 0 ? (
-            filteredGlossary.map((item) => {
-              const isExpanded = expandedTerm === item.term;
-              return (
-                <div
-                  key={item.term}
-                  onClick={() => toggleExpandTerm(item.term)}
-                  className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer ${
-                    isExpanded 
-                      ? "border-slate-350 bg-slate-50 shadow-sm" 
-                      : "border-slate-200 bg-slate-50/30 hover:bg-slate-50/70"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-900">{item.term}</h3>
-                      <span className="text-slate-500 text-xs">{isExpanded ? "▲" : "▼"}</span>
-                    </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      item.category === "CBT Core"
-                        ? "bg-sky-50 text-sky-850 border border-sky-200"
-                        : item.category === "Distortions"
-                        ? "bg-rose-50 text-rose-850 border border-rose-200"
-                        : "bg-emerald-50 text-emerald-850 border border-emerald-200"
-                    }`}>
-                      {item.category}
-                    </span>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="text-lg sm:text-xl font-bold text-slate-900">{term.title}</h4>
+                    {!isExpanded && <p className="text-sm sm:text-base text-slate-600 mt-1 font-medium">{term.short}</p>}
                   </div>
-                  <p className="text-base text-slate-800 font-normal leading-relaxed">{item.definition}</p>
-                  
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fade-in">
-                      {item.example && (
-                        <div className="bg-white p-3 rounded-xl border border-slate-200">
-                          <span className="font-bold text-slate-500 uppercase block mb-1">Example</span>
-                          <p className="text-slate-800 italic leading-relaxed">"{item.example}"</p>
-                        </div>
-                      )}
-                      {item.action && (
-                        <div className="bg-emerald-50/40 p-3 rounded-xl border border-emerald-250">
-                          <span className="font-bold text-emerald-700 uppercase block mb-1">CBT Action Tip</span>
-                          <p className="text-slate-850 leading-relaxed font-medium">{item.action}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <span className="text-xl font-bold text-slate-400 ml-4">{isExpanded ? '−' : '+'}</span>
                 </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              No matching glossary terms found.
-            </div>
-          )}
+
+                {isExpanded && (
+                  <div className="mt-5 space-y-4 border-t border-slate-200/80 pt-4">
+                    <div>
+                      <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Plain English Definition</span>
+                      <p className="text-base text-slate-800 font-normal leading-relaxed">{term.def}</p>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">What It Sounds Like Inside Your Head</span>
+                      <p className="text-base italic text-slate-900 bg-slate-100 p-3 rounded-xl border border-slate-200/50 font-medium">
+                        {term.head}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-black uppercase tracking-widest text-emerald-600 mb-1">The CBT Antidote Script</span>
+                      <p className="text-base text-emerald-900 font-bold bg-emerald-50 border border-emerald-200 p-4 rounded-xl leading-relaxed">
+                        {term.antidote}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </section>
+      </div>
 
     </div>
   );
