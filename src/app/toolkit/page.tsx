@@ -14,15 +14,72 @@ const distortionsData = [
   { id: 'emotional', title: 'Emotional Reasoning', short: 'Believing your raw feelings represent absolute factual reality.', def: 'Assuming that your intense negative emotional states reflect the literal objective truth of the surrounding environment. You let your feelings dictate your facts: "I feel completely overwhelmed, therefore this problem is totally unfixable."', head: '"I feel incredibly anxious about this flight, which means flying must be inherently dangerous." or "I feel stupid, so I must be stupid."', antidote: 'Separate raw emotion from absolute objective truth. Write down a clear split statement: "I am currently experiencing a temporary feeling of anxiety, but that feeling does not alter the factual safety metrics of the situation." Review the physical evidence.' }
 ];
 
-export default function Toolkit() {
+const CbtTriangle = () => {
   const [activeNode, setActiveNode] = useState<'thoughts' | 'feelings' | 'behaviors'>('thoughts');
-  const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(null);
 
-  const triangleContent = {
-    thoughts: { title: "Thoughts", desc: "What we say to ourselves in our minds. (e.g., 'I will mess this up.')", color: "border-blue-500 text-blue-800 bg-blue-50/50" },
-    feelings: { title: "Feelings", desc: "The emotions and body sensations that result. (e.g., Anxiety, heart racing.)", color: "border-amber-500 text-amber-800 bg-amber-50/50" },
-    behaviors: { title: "Behaviors", desc: "The actions we take or avoid. (e.g., Procrastinating or withdrawing.)", color: "border-emerald-500 text-emerald-800 bg-emerald-50/50" }
+  const nodes = {
+    thoughts: { title: "💭 Thoughts", desc: "The automatic words, phrases, and narratives your brain loops. (e.g., 'I am going to fail this presentation.') Directly dictates your subsequent emotional chemistry.", color: "border-blue-500 text-blue-900 bg-blue-50/70" },
+    feelings: { title: "❤️ Feelings", desc: "The visceral emotions and immediate physical body sensations that follow a thought. (e.g., Dread, chest tightening, racing heart pulse.)", color: "border-amber-500 text-amber-900 bg-amber-50/70" },
+    behaviors: { title: "🏃 Behaviors", desc: "The physical actions you execute or avoid. (e.g., Procrastinating preparation, avoiding eye contact, or social withdrawal.) It reinforces the unhelpful loop.", color: "border-emerald-500 text-emerald-900 bg-emerald-50/70" }
   };
+
+  return (
+    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mt-8">
+      <span className="bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-3">Interactive Engine</span>
+      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">The Cognitive Behavioral Triangle</h3>
+      <p className="text-base sm:text-lg text-slate-600 mb-12 text-center font-medium">Thoughts, feelings, and behaviors reinforce each other. Tap any apex point to trace the circuit.</p>
+
+      {/* The Visual Geometric Triangle Layout Workspace */}
+      <div className="relative w-72 h-64 flex items-center justify-center mb-8">
+        
+        {/* SVG Background Vector for Connecting Loop Arrows */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 288 256">
+          <polygon points="144,30 40,210 248,210" fill="transparent" stroke="#e2e8f0" strokeWidth="3" strokeDasharray="6 6" />
+          {/* Visual indicator paths connecting loop states */}
+          <path d="M 144 45 L 60 200" stroke={activeNode === 'thoughts' || activeNode === 'feelings' ? '#f59e0b' : '#cbd5e1'} strokeWidth="2" fill="none" />
+          <path d="M 60 210 L 230 210" stroke={activeNode === 'feelings' || activeNode === 'behaviors' ? '#10b981' : '#cbd5e1'} strokeWidth="2" fill="none" />
+          <path d="M 230 200 L 144 45" stroke={activeNode === 'behaviors' || activeNode === 'thoughts' ? '#3b82f6' : '#cbd5e1'} strokeWidth="2" fill="none" />
+        </svg>
+
+        {/* Apex Node: Thoughts (Top Center) */}
+        <button 
+          onClick={() => setActiveNode('thoughts')}
+          className={`absolute top-0 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center font-extrabold text-sm transition-all duration-200 shadow-sm ${activeNode === 'thoughts' ? 'border-blue-600 bg-blue-600 text-white scale-110 shadow-md z-10' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'}`}
+        >
+          <span>💭</span>
+          <span className="mt-1">Thoughts</span>
+        </button>
+
+        {/* Left Node: Feelings (Bottom Left) */}
+        <button 
+          onClick={() => setActiveNode('feelings')}
+          className={`absolute bottom-0 left-0 w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center font-extrabold text-sm transition-all duration-200 shadow-sm ${activeNode === 'feelings' ? 'border-amber-500 bg-amber-500 text-white scale-110 shadow-md z-10' : 'border-slate-200 bg-white text-slate-700 hover:border-amber-300'}`}
+        >
+          <span>❤️</span>
+          <span className="mt-1">Feelings</span>
+        </button>
+
+        {/* Right Node: Behaviors (Bottom Right) */}
+        <button 
+          onClick={() => setActiveNode('behaviors')}
+          className={`absolute bottom-0 right-0 w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center font-extrabold text-sm transition-all duration-200 shadow-sm ${activeNode === 'behaviors' ? 'border-emerald-600 bg-emerald-600 text-white scale-110 shadow-md z-10' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300'}`}
+        >
+          <span>🏃</span>
+          <span className="mt-1">Behaviors</span>
+        </button>
+      </div>
+
+      {/* Dynamic Explanation Panel Box */}
+      <div className={`p-6 rounded-2xl border-2 w-full text-center transition-all duration-300 ${nodes[activeNode].color}`}>
+        <h4 className="text-xl font-black mb-2 tracking-tight">{nodes[activeNode].title}</h4>
+        <p className="text-base font-medium leading-relaxed">{nodes[activeNode].desc}</p>
+      </div>
+    </div>
+  );
+};
+
+export default function Toolkit() {
+  const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(null);
 
   return (
     <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto px-4 pt-10 pb-48 flex flex-col items-center">
@@ -126,28 +183,7 @@ export default function Toolkit() {
       {/* ==========================================
           🔄 INTERACTIVE CBT TRIANGLE
          ========================================== */}
-      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-8">
-        <span className="bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-3">Interactive Model</span>
-        <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">The Cognitive Behavioral Triangle</h3>
-        <p className="text-base sm:text-lg text-slate-600 mb-6 text-center font-medium">Thoughts, feelings, and behaviors are deeply interconnected. Click a node below to review the link patterns.</p>
-        
-        <div className="flex gap-3 mb-6">
-          {['thoughts', 'feelings', 'behaviors'].map((node) => (
-            <button 
-              key={node}
-              onClick={() => setActiveNode(node as any)}
-              className={`px-4 py-2 rounded-xl border-2 font-bold capitalize text-sm transition-all ${activeNode === node ? 'border-slate-800 bg-slate-900 text-white shadow-sm' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-            >
-              {node}
-            </button>
-          ))}
-        </div>
-
-        <div className={`p-5 rounded-2xl border-2 w-full text-center transition-all ${triangleContent[activeNode].color}`}>
-          <h4 className="text-lg font-extrabold mb-1">{triangleContent[activeNode].title}</h4>
-          <p className="text-base leading-relaxed">{triangleContent[activeNode].desc}</p>
-        </div>
-      </div>
+      <CbtTriangle />
 
       {/* ==========================================
           📖 DEEP-DIVE ACCORDION CONCEPT GLOSSARY
