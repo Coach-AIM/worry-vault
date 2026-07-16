@@ -78,6 +78,203 @@ const CbtTriangle = () => {
   );
 };
 
+const WellnessInsightsGraphs = () => {
+  const [dateFilter, setDateFilter] = useState<'week' | 'month'>('week');
+  const [hoveredPoint, setHoveredPoint] = useState<{x: number, y: number, mood: number, label: string} | null>(null);
+
+  // High-contrast coordinates mapped for native SVG line rendering
+  const timelineData = {
+    week: [
+      { label: 'Mon', mood: 65, x: 40, y: 110 },
+      { label: 'Tue', mood: 45, x: 120, y: 150 },
+      { label: 'Wed', mood: 80, x: 200, y: 80 },
+      { label: 'Thu', mood: 55, x: 280, y: 130 },
+      { label: 'Fri', mood: 85, x: 360, y: 70 },
+      { label: 'Sat', mood: 70, x: 440, y: 100 },
+      { label: 'Sun', mood: 90, x: 520, y: 60 }
+    ],
+    month: [
+      { label: 'Wk 1', mood: 50, x: 40, y: 140 },
+      { label: 'Wk 2', mood: 70, x: 200, y: 100 },
+      { label: 'Wk 3', mood: 60, x: 360, y: 120 },
+      { label: 'Wk 4', mood: 85, x: 520, y: 70 }
+    ]
+  };
+
+  const activePoints = timelineData[dateFilter];
+  // Construct the geometric path string natively based on active points
+  const pathString = activePoints.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+
+  const trapData = [
+    { name: 'Should Statements', count: 6, color: 'bg-blue-600', width: 'w-[35%]' },
+    { name: 'All-or-Nothing', count: 4, color: 'bg-amber-500', width: 'w-[25%]' },
+    { name: 'Catastrophizing', count: 3, color: 'bg-rose-500', width: 'w-[20%]' },
+    { name: 'Other Traps', count: 3, color: 'bg-slate-400', width: 'w-[20%]' },
+  ];
+
+  return (
+    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-8">
+      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">📊 Wellness Trends & Analytics</h3>
+      <p className="text-base sm:text-lg text-slate-600 mb-6 text-center font-medium">A real-time breakdown of your logged thought records and identified thinking traps.</p>
+
+      {/* Date Filter Switcher Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => { setDateFilter('week'); setHoveredPoint(null); }}
+          className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all ${dateFilter === 'week' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+        >
+          Weekly view
+        </button>
+        <button
+          onClick={() => { setDateFilter('month'); setHoveredPoint(null); }}
+          className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all ${dateFilter === 'month' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+        >
+          Monthly view
+        </button>
+      </div>
+
+      {/* Interactive Line Chart (Mood Trends) */}
+      <div className="relative w-full h-56 bg-slate-50/50 rounded-2xl border border-slate-150 p-4 mb-8 overflow-visible">
+        <span className="absolute top-2 left-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Mood & Anxiety Trends</span>
+        <svg className="w-full h-full overflow-visible" viewBox="0 0 560 180" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25"/>
+              <stop offset="100%" stopColor="#2563eb" stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+
+          {/* Grid lines */}
+          <line x1="30" y1="50" x2="530" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+          <line x1="30" y1="100" x2="530" y2="100" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+          <line x1="30" y1="150" x2="530" y2="150" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+
+          {/* Y-Axis labels */}
+          <text x="25" y="54" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="end">Good</text>
+          <text x="25" y="104" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="end">Neutral</text>
+          <text x="25" y="154" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="end">Low</text>
+
+          {/* Shading area */}
+          {activePoints.length > 0 && (
+            <path
+              d={`${pathString} L ${activePoints[activePoints.length - 1].x} 150 L ${activePoints[0].x} 150 Z`}
+              fill="url(#moodGradient)"
+            />
+          )}
+
+          {/* Trend Line */}
+          <path
+            d={pathString}
+            fill="none"
+            stroke="#2563eb"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Nodes */}
+          {activePoints.map((p, idx) => (
+            <g key={idx}>
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={hoveredPoint?.label === p.label ? 7 : 5}
+                fill={hoveredPoint?.label === p.label ? "#2563eb" : "#ffffff"}
+                stroke="#2563eb"
+                strokeWidth={3}
+                className="cursor-pointer transition-all duration-150"
+                onMouseEnter={() => setHoveredPoint({ x: p.x, y: p.y, mood: p.mood, label: p.label })}
+                onMouseLeave={() => setHoveredPoint(null)}
+              />
+              <text x={p.x} y="172" fill="#64748b" fontSize="10" fontWeight="bold" textAnchor="middle">
+                {p.label}
+              </text>
+            </g>
+          ))}
+
+          {/* Tooltip */}
+          {hoveredPoint && (
+            <g className="transition-all duration-200 pointer-events-none">
+              <rect
+                x={hoveredPoint.x - 45}
+                y={hoveredPoint.y - 45}
+                width="90"
+                height="32"
+                rx="8"
+                fill="#0f172a"
+              />
+              <text
+                x={hoveredPoint.x}
+                y={hoveredPoint.y - 25}
+                fill="#ffffff"
+                fontSize="10"
+                fontWeight="black"
+                textAnchor="middle"
+              >
+                {hoveredPoint.mood}% Mood
+              </text>
+            </g>
+          )}
+        </svg>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-6 w-full mb-8">
+        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+          <span className="block text-4xl sm:text-5xl font-black text-slate-900 mb-1">9</span>
+          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">Thought Records Logged</span>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+          <span className="block text-4xl sm:text-5xl font-black text-emerald-700 mb-1">16</span>
+          <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">Distortions Challenged</span>
+        </div>
+      </div>
+
+      {/* High-Contrast SVG Ring Donut Chart Layout */}
+      <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 border-t border-slate-100 pt-6">
+        <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 42 42">
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4.5"></circle>
+            {/* Should Statements - 35% */}
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#2563eb" strokeWidth="4.5" strokeDasharray="35 65" strokeDashoffset="100"></circle>
+            {/* All-or-Nothing - 25% */}
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="4.5" strokeDasharray="25 75" strokeDashoffset="65"></circle>
+            {/* Catastrophizing - 20% */}
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="40"></circle>
+            {/* Other Traps - 20% */}
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="20"></circle>
+          </svg>
+          <div className="absolute text-center">
+            <span className="block text-2xl font-black text-slate-900">Top Trap</span>
+            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Shoulds</span>
+          </div>
+        </div>
+
+        {/* Visual Data Legend */}
+        <div className="w-full space-y-3">
+          <h4 className="text-lg font-bold text-slate-900 mb-2">Thinking Trap Distribution</h4>
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-blue-600" /> <span className="text-base font-bold text-slate-800">Should Statements</span></div>
+            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">6</span>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-amber-500" /> <span className="text-base font-bold text-slate-800">All-or-Nothing</span></div>
+            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">4</span>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-rose-500" /> <span className="text-base font-bold text-slate-800">Catastrophizing</span></div>
+            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-slate-400" /> <span className="text-base font-bold text-slate-800">Other Traps</span></div>
+            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Toolkit() {
   const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(null);
 
@@ -93,66 +290,9 @@ export default function Toolkit() {
       </div>
 
       {/* ==========================================
-          📊 WELLNESS INSIGHTS & GRAPHS SECTION (NATIVE SVG)
+          📊 WELLNESS INSIGHTS & GRAPHS SECTION
          ========================================== */}
-      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-8">
-        <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">📊 Wellness Trends & Analytics</h3>
-        <p className="text-base sm:text-lg text-slate-600 mb-8 text-center font-medium">A real-time breakdown of your logged thought records and identified thinking traps.</p>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-6 w-full mb-8">
-          <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
-            <span className="block text-4xl sm:text-5xl font-black text-slate-900 mb-1">9</span>
-            <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">Thought Records Logged</span>
-          </div>
-          <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
-            <span className="block text-4xl sm:text-5xl font-black text-emerald-700 mb-1">16</span>
-            <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-500">Distortions Challenged</span>
-          </div>
-        </div>
-
-        {/* High-Contrast SVG Ring Donut Chart Layout */}
-        <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 border-t border-slate-100 pt-6">
-          <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 42 42">
-              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4.5"></circle>
-              {/* Should Statements - 35% */}
-              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#2563eb" strokeWidth="4.5" strokeDasharray="35 65" strokeDashoffset="100"></circle>
-              {/* All-or-Nothing - 25% */}
-              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="4.5" strokeDasharray="25 75" strokeDashoffset="65"></circle>
-              {/* Catastrophizing - 20% */}
-              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="40"></circle>
-              {/* Other Traps - 20% */}
-              <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="20"></circle>
-            </svg>
-            <div className="absolute text-center">
-              <span className="block text-2xl font-black text-slate-900">Top Trap</span>
-              <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Shoulds</span>
-            </div>
-          </div>
-
-          {/* Visual Data Legend */}
-          <div className="w-full space-y-3">
-            <h4 className="text-lg font-bold text-slate-900 mb-2">Thinking Trap Distribution</h4>
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-blue-600" /> <span className="text-base font-bold text-slate-800">Should Statements</span></div>
-              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">6</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-amber-500" /> <span className="text-base font-bold text-slate-800">All-or-Nothing</span></div>
-              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">4</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-rose-500" /> <span className="text-base font-bold text-slate-800">Catastrophizing</span></div>
-              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-slate-400" /> <span className="text-base font-bold text-slate-800">Other Traps</span></div>
-              <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <WellnessInsightsGraphs />
 
       {/* ==========================================
           🧠 TWO-COLUMN CORE UTILITIES GRID
