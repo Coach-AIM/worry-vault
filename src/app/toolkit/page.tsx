@@ -78,147 +78,155 @@ const CbtTriangle = () => {
   );
 };
 
-const WellnessInsightsGraphs = () => {
-  const [dateFilter, setDateFilter] = useState<'week' | 'month'>('week');
-  const [hoveredPoint, setHoveredPoint] = useState<{x: number, y: number, mood: number, label: string} | null>(null);
+function WellnessInsightsGraphs() {
+  // Active State Controls
+  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [activeHoverTrap, setActiveHoverTrap] = useState<string | null>(null);
+  const [hoveredTimelinePoint, setHoveredTimelinePoint] = useState<{ label: string; mood: number } | null>(null);
 
-  // High-contrast coordinates mapped for native SVG line rendering
+  // 1. Dynamic Coordinate Sets for the Line Graph
   const timelineData = {
-    week: [
-      { label: 'Mon', mood: 65, x: 40, y: 110 },
-      { label: 'Tue', mood: 45, x: 120, y: 150 },
-      { label: 'Wed', mood: 80, x: 200, y: 80 },
-      { label: 'Thu', mood: 55, x: 280, y: 130 },
-      { label: 'Fri', mood: 85, x: 360, y: 70 },
-      { label: 'Sat', mood: 70, x: 440, y: 100 },
-      { label: 'Sun', mood: 90, x: 520, y: 60 }
-    ],
-    month: [
-      { label: 'Wk 1', mood: 50, x: 40, y: 140 },
-      { label: 'Wk 2', mood: 70, x: 200, y: 100 },
-      { label: 'Wk 3', mood: 60, x: 360, y: 120 },
-      { label: 'Wk 4', mood: 85, x: 520, y: 70 }
-    ]
+    weekly: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      points: [
+        { label: 'Mon', mood: 60, x: 40, y: 110 },
+        { label: 'Tue', mood: 40, x: 120, y: 150 },
+        { label: 'Wed', mood: 75, x: 200, y: 80 },
+        { label: 'Thu', mood: 50, x: 280, y: 130 },
+        { label: 'Fri', mood: 80, x: 360, y: 70 },
+        { label: 'Sat', mood: 65, x: 440, y: 100 },
+        { label: 'Sun', mood: 85, x: 520, y: 60 }
+      ],
+      path: "M 40 110 L 120 150 L 200 80 L 280 130 L 360 70 L 440 100 L 520 60"
+    },
+    monthly: {
+      labels: ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'],
+      points: [
+        { label: 'Wk 1', mood: 55, x: 40, y: 130 },
+        { label: 'Wk 2', mood: 85, x: 200, y: 70 },
+        { label: 'Wk 3', mood: 60, x: 360, y: 120 },
+        { label: 'Wk 4', mood: 90, x: 520, y: 50 }
+      ],
+      path: "M 40 130 L 200 70 L 360 120 L 520 50"
+    }
   };
 
-  const activePoints = timelineData[dateFilter];
-  // Construct the geometric path string natively based on active points
-  const pathString = activePoints.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+  const currentTimeline = timelineData[viewMode];
 
-  const trapData = [
-    { name: 'Should Statements', count: 6, color: 'bg-blue-600', width: 'w-[35%]' },
-    { name: 'All-or-Nothing', count: 4, color: 'bg-amber-500', width: 'w-[25%]' },
-    { name: 'Catastrophizing', count: 3, color: 'bg-rose-500', width: 'w-[20%]' },
-    { name: 'Other Traps', count: 3, color: 'bg-slate-400', width: 'w-[20%]' },
+  // 2. Data Structures Matrix for the Interactive Donut Chart
+  const trapLegendData = [
+    { id: 'should', name: 'Should Statements', count: 6, color: 'stroke-blue-600', bg: 'bg-blue-600', fillText: 'Shoulds', dashArray: '35 65', dashOffset: '100' },
+    { id: 'allnothing', name: 'All-or-Nothing', count: 4, color: 'stroke-amber-500', bg: 'bg-amber-500', fillText: 'Binary', dashArray: '25 75', dashOffset: '65' },
+    { id: 'catastrophe', name: 'Catastrophizing', count: 3, color: 'stroke-rose-500', bg: 'bg-rose-500', fillText: 'Worst-Case', dashArray: '20 80', dashOffset: '40' },
+    { id: 'other', name: 'Other Traps', count: 3, color: 'stroke-slate-400', bg: 'bg-slate-400', fillText: 'Others', dashArray: '20 80', dashOffset: '20' }
   ];
 
+  // Dynamic calculation system for center of Donut Hole text label parameters
+  const getDonutCenterLabel = () => {
+    if (!activeHoverTrap) return { title: "Top Trap", text: "SHOULDS", style: "text-blue-600" };
+    const activeMatch = trapLegendData.find(t => t.id === activeHoverTrap);
+    if (!activeMatch) return { title: "Top Trap", text: "SHOULDS", style: "text-blue-600" };
+    
+    const total = 16;
+    const percentage = Math.round((activeMatch.count / total) * 100);
+    return {
+      title: activeMatch.fillText,
+      text: `${percentage}% Focus`,
+      style: activeMatch.id === 'should' ? 'text-blue-600' : activeMatch.id === 'allnothing' ? 'text-amber-500' : activeMatch.id === 'catastrophe' ? 'text-rose-500' : 'text-slate-500'
+    };
+  };
+
+  const centerLabel = getDonutCenterLabel();
+
   return (
-    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-8">
-      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">📊 Wellness Trends & Analytics</h3>
-      <p className="text-base sm:text-lg text-slate-600 mb-6 text-center font-medium">A real-time breakdown of your logged thought records and identified thinking traps.</p>
+    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center">
+      
+      {/* Module Title Section */}
+      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 text-center">
+        📊 Wellness Trends & Analytics
+      </h3>
+      <p className="text-base sm:text-lg text-slate-600 mb-6 text-center font-medium">
+        A real-time breakdown of your logged thought records and identified thinking traps.
+      </p>
 
-      {/* Date Filter Switcher Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => { setDateFilter('week'); setHoveredPoint(null); }}
-          className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all ${dateFilter === 'week' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+      {/* ==========================================
+          1. INTERACTIVE DATE VIEW CHANGER TOGGLES
+         ========================================== */}
+      <div className="flex items-center justify-center gap-2 bg-slate-100 p-1.5 rounded-xl mb-6 shadow-inner">
+        <button 
+          onClick={() => setViewMode('weekly')}
+          className={`px-5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150 ${viewMode === 'weekly' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
         >
-          Weekly view
+          Weekly View
         </button>
-        <button
-          onClick={() => { setDateFilter('month'); setHoveredPoint(null); }}
-          className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all ${dateFilter === 'month' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+        <button 
+          onClick={() => setViewMode('monthly')}
+          className={`px-5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150 ${viewMode === 'monthly' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
         >
-          Monthly view
+          Monthly View
         </button>
       </div>
 
-      {/* Interactive Line Chart (Mood Trends) */}
-      <div className="relative w-full h-56 bg-slate-50/50 rounded-2xl border border-slate-150 p-4 mb-8 overflow-visible">
-        <span className="absolute top-2 left-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Mood & Anxiety Trends</span>
-        <svg className="w-full h-full overflow-visible" viewBox="0 0 560 180" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25"/>
-              <stop offset="100%" stopColor="#2563eb" stopOpacity="0"/>
-            </linearGradient>
-          </defs>
+      {/* ==========================================
+          2. ACTIVE LINE CHART CONTAINER FRAME
+         ========================================== */}
+      <div className="w-full border border-slate-200 rounded-2xl p-6 bg-white mb-8 relative">
+        <div className="flex justify-between items-center mb-6">
+          <span className="text-xs font-black uppercase tracking-widest text-slate-400">Mood & Anxiety Trends</span>
+          {hoveredTimelinePoint && (
+            <span className="text-xs font-black bg-slate-900 text-white px-2 py-0.5 rounded animate-fadeIn uppercase tracking-wider">
+              {hoveredTimelinePoint.label}: {hoveredTimelinePoint.mood}% Stability
+            </span>
+          )}
+        </div>
 
-          {/* Grid lines */}
-          <line x1="30" y1="50" x2="530" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-          <line x1="30" y1="100" x2="530" y2="100" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-          <line x1="30" y1="150" x2="530" y2="150" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+        <div className="relative w-full h-44 overflow-visible">
+          {/* Native High-Contrast Graphic Grid Array */}
+          <svg className="w-full h-full overflow-visible" viewBox="0 0 560 180" preserveAspectRatio="none">
+            <line x1="40" y1="40" x2="520" y2="40" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+            <line x1="40" y1="100" x2="520" y2="100" stroke="#e2e8f0" strokeWidth="1.5" strokeDasharray="4 4" />
+            <line x1="40" y1="150" x2="520" y2="150" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
 
-          {/* Y-Axis labels */}
-          <text x="25" y="54" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="end">Good</text>
-          <text x="25" y="104" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="end">Neutral</text>
-          <text x="25" y="154" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="end">Low</text>
-
-          {/* Shading area */}
-          {activePoints.length > 0 && (
-            <path
-              d={`${pathString} L ${activePoints[activePoints.length - 1].x} 150 L ${activePoints[0].x} 150 Z`}
-              fill="url(#moodGradient)"
+            {/* Dynamic Interactive Render Path String */}
+            <path 
+              d={currentTimeline.path} 
+              fill="transparent" 
+              stroke="#2563eb" 
+              strokeWidth="4" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="transition-all duration-500 ease-in-out"
             />
-          )}
 
-          {/* Trend Line */}
-          <path
-            d={pathString}
-            fill="none"
-            stroke="#2563eb"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {/* Nodes */}
-          {activePoints.map((p, idx) => (
-            <g key={idx}>
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r={hoveredPoint?.label === p.label ? 7 : 5}
-                fill={hoveredPoint?.label === p.label ? "#2563eb" : "#ffffff"}
-                stroke="#2563eb"
-                strokeWidth={3}
-                className="cursor-pointer transition-all duration-150"
-                onMouseEnter={() => setHoveredPoint({ x: p.x, y: p.y, mood: p.mood, label: p.label })}
-                onMouseLeave={() => setHoveredPoint(null)}
+            {/* Vector Active Points Mapper */}
+            {currentTimeline.points.map((pt) => (
+              <circle 
+                key={pt.label}
+                cx={pt.x}
+                cy={pt.y}
+                r={hoveredTimelinePoint?.label === pt.label ? "7" : "5"}
+                onMouseEnter={() => setHoveredTimelinePoint(pt)}
+                onMouseLeave={() => setHoveredTimelinePoint(null)}
+                className="fill-white stroke-blue-600 stroke-[3.5] cursor-pointer transition-all duration-150 hover:scale-125"
               />
-              <text x={p.x} y="172" fill="#64748b" fontSize="10" fontWeight="bold" textAnchor="middle">
-                {p.label}
-              </text>
-            </g>
-          ))}
+            ))}
+          </svg>
 
-          {/* Tooltip */}
-          {hoveredPoint && (
-            <g className="transition-all duration-200 pointer-events-none">
-              <rect
-                x={hoveredPoint.x - 45}
-                y={hoveredPoint.y - 45}
-                width="90"
-                height="32"
-                rx="8"
-                fill="#0f172a"
-              />
-              <text
-                x={hoveredPoint.x}
-                y={hoveredPoint.y - 25}
-                fill="#ffffff"
-                fontSize="10"
-                fontWeight="black"
-                textAnchor="middle"
-              >
-                {hoveredPoint.mood}% Mood
-              </text>
-            </g>
-          )}
-        </svg>
+          {/* Left Y-Axis Static Visual Annotations */}
+          <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 pointer-events-none">
+            <span>Good</span>
+            <span>Neutral</span>
+            <span>Low</span>
+          </div>
+
+          {/* Bottom X-Axis Dynamic Label Loop Array */}
+          <div className="absolute bottom-0 left-10 right-10 flex justify-between text-xs font-black text-slate-500 uppercase tracking-wider pointer-events-none px-2">
+            {currentTimeline.labels.map(lbl => <span key={lbl}>{lbl}</span>)}
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Core Core Aggregate Counters */}
       <div className="grid grid-cols-2 gap-6 w-full mb-8">
         <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
           <span className="block text-4xl sm:text-5xl font-black text-slate-900 mb-1">9</span>
@@ -230,50 +238,67 @@ const WellnessInsightsGraphs = () => {
         </div>
       </div>
 
-      {/* High-Contrast SVG Ring Donut Chart Layout */}
+      {/* ==========================================
+          3. INTERACTIVE DONUT HOVER ENGINE MODULE
+         ========================================== */}
       <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 border-t border-slate-100 pt-6">
+        
+        {/* Responsive Interactive SVG Donut Object Canvas */}
         <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 42 42">
+          <svg className="w-full h-full transform -rotate-90 overflow-visible" viewBox="0 0 42 42">
             <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4.5"></circle>
-            {/* Should Statements - 35% */}
-            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#2563eb" strokeWidth="4.5" strokeDasharray="35 65" strokeDashoffset="100"></circle>
-            {/* All-or-Nothing - 25% */}
-            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="4.5" strokeDasharray="25 75" strokeDashoffset="65"></circle>
-            {/* Catastrophizing - 20% */}
-            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="40"></circle>
-            {/* Other Traps - 20% */}
-            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray="20 80" strokeDashoffset="20"></circle>
+            
+            {trapLegendData.map((slice) => (
+              <circle 
+                key={slice.id}
+                cx="21" 
+                cy="21" 
+                r="15.915" 
+                fill="transparent" 
+                className={`${slice.color} transition-all duration-200 cursor-pointer origin-center`}
+                strokeWidth={activeHoverTrap === slice.id ? "6" : "4.5"}
+                strokeDasharray={slice.dashArray} 
+                strokeDashoffset={slice.dashOffset}
+                onMouseEnter={() => setActiveHoverTrap(slice.id)}
+                onMouseLeave={() => setActiveHoverTrap(null)}
+              />
+            ))}
           </svg>
-          <div className="absolute text-center">
-            <span className="block text-2xl font-black text-slate-900">Top Trap</span>
-            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Shoulds</span>
+          
+          {/* Dynamic Core Ring Core Label Box Primitives */}
+          <div className="absolute text-center select-none pointer-events-none transition-all duration-200">
+            <span className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-0.5">{centerLabel.title}</span>
+            <span className={`block text-xl font-black tracking-tight ${centerLabel.style}`}>{centerLabel.text}</span>
           </div>
         </div>
 
-        {/* Visual Data Legend */}
-        <div className="w-full space-y-3">
-          <h4 className="text-lg font-bold text-slate-900 mb-2">Thinking Trap Distribution</h4>
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-blue-600" /> <span className="text-base font-bold text-slate-800">Should Statements</span></div>
-            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">6</span>
-          </div>
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-amber-500" /> <span className="text-base font-bold text-slate-800">All-or-Nothing</span></div>
-            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">4</span>
-          </div>
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-rose-500" /> <span className="text-base font-bold text-slate-800">Catastrophizing</span></div>
-            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
-          </div>
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-full bg-slate-400" /> <span className="text-base font-bold text-slate-800">Other Traps</span></div>
-            <span className="text-base font-black text-slate-900 bg-white px-2 rounded border border-slate-200">3</span>
-          </div>
+        {/* Legend Panel Sync Group Grid */}
+        <div className="w-full space-y-2.5">
+          <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Thinking Trap Distribution</h4>
+          
+          {trapLegendData.map((row) => (
+            <div 
+              key={row.id}
+              onMouseEnter={() => setActiveHoverTrap(row.id)}
+              onMouseLeave={() => setActiveHoverTrap(null)}
+              className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-150 cursor-default ${activeHoverTrap === row.id ? 'border-slate-800 bg-slate-50 shadow-sm translate-x-1' : 'border-slate-100 bg-slate-50/50'}`}
+            >
+              <div className="flex items-center gap-3">
+                <span className={`w-3.5 h-3.5 rounded-full ${row.bg} shadow-sm shrink-0`} />
+                <span className="text-base font-bold text-slate-800">{row.name}</span>
+              </div>
+              <span className="text-base font-black text-slate-900 bg-white px-2.5 py-0.5 rounded border border-slate-200 shadow-sm">
+                {row.count}
+              </span>
+            </div>
+          ))}
         </div>
+
       </div>
+
     </div>
   );
-};
+}
 
 export default function Toolkit() {
   const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(null);
