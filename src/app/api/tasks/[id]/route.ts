@@ -77,3 +77,28 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const taskId = parseInt(id, 10);
+    if (isNaN(taskId)) {
+      return NextResponse.json({ error: "Invalid task ID" }, { status: 400 });
+    }
+
+    await db
+      .delete(tasks)
+      .where(eq(tasks.id, taskId));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DB Task Delete Error", error);
+    return NextResponse.json(
+      { error: "Failed to delete task" },
+      { status: 500 },
+    );
+  }
+}

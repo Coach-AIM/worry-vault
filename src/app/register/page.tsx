@@ -68,7 +68,7 @@ export default function RegisterPage() {
             style={{
               fontSize: "2.5rem",
               color: "var(--sage-green)",
-              fontFamily: "serif",
+              fontFamily: "var(--font-serif)",
               margin: "0 0 0.5rem 0",
               fontWeight: 600,
             }}

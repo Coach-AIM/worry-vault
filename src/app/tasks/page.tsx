@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { awardPoints, POINT_VALUES } from "@/lib/points";
 
 type Task = {
   id: number;
@@ -16,7 +17,14 @@ type Task = {
   recurrence: string;
 };
 
+// Per-task metadata stored in localStorage (keyed by task id)
+type TaskMeta = {
+  predictedDifficulty?: number; // 1–10
+  actionType?: 'habit' | 'oneoff';
+};
+
 type ViewMode = "all" | "today" | "week";
+type TaskTypeFilter = "all" | "habit" | "oneoff";
 
 function parseTimeStr(timeStr: string) {
   if (!timeStr) return { value: "15", unit: "mins" };
@@ -33,16 +41,29 @@ function parseTimeStr(timeStr: string) {
 export default function TasksTab() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<ViewMode>("all");
+  const [activeView, setActiveView] = useState<ViewMode>("today");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [todayFocusIds, setTodayFocusIds] = useState<string[]>([]);
+  const [taskTypeFilter, setTaskTypeFilter] = useState<TaskTypeFilter>("all");
+  // Per-task metadata (prediction + type), keyed by task id string
+  const [taskMeta, setTaskMeta] = useState<Record<string, TaskMeta>>({});
+
+  // Rating popover state (0-10 completion rating)
+  const [ratingPopoverId, setRatingPopoverId] = useState<number | null>(null);
+  // Actual relief ratings keyed by task id string
+  const [actualReliefs, setActualReliefs] = useState<Record<string, number>>({});
 
   // Add top-level task form state
   const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [timeValue, setTimeValue] = useState("15");
   const [timeUnit, setTimeUnit] = useState("mins");
   const [intensity, setIntensity] = useState("Low");
   const [dueDate, setDueDate] = useState("");
   const [recurrence, setRecurrence] = useState("none");
+  const [actionType, setActionType] = useState<'habit' | 'oneoff'>("habit");
+  const [predictedDifficulty, setPredictedDifficulty] = useState<string>("");
 
   // Inline edit state
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
@@ -72,37 +93,181 @@ export default function TasksTab() {
       const data = await res.json();
       if (data.tasks) {
         setTasks(data.tasks);
+        try {
+          localStorage.setItem("momentum_actions", JSON.stringify(data.tasks));
+        } catch (_) {}
       }
+    } catch (_) {
+      try {
+        const stored = localStorage.getItem("momentum_actions");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTasks(parsed);
+          }
+        }
+      } catch (_) {}
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    // Initial load from localStorage cache for instant rendering
+    try {
+      const storedActions = localStorage.getItem("momentum_actions");
+      if (storedActions) {
+        const parsed = JSON.parse(storedActions);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTasks(parsed);
+        }
+      }
+    } catch (_) {}
+
+    // Load per-task meta (predictions, action types)
+    try {
+      const storedMeta = localStorage.getItem("momentum_task_meta");
+      if (storedMeta) {
+        const parsed = JSON.parse(storedMeta);
+        if (parsed && typeof parsed === 'object') setTaskMeta(parsed);
+      }
+    } catch (_) {}
+
+    // Load actual relief ratings from localStorage
+    try {
+      const storedReliefs = localStorage.getItem('momentum_actual_reliefs');
+      if (storedReliefs) {
+        const parsed = JSON.parse(storedReliefs);
+        if (parsed && typeof parsed === 'object') setActualReliefs(parsed);
+      }
+    } catch (_) {}
+
     fetchTasks();
+
+    try {
+      const saved = localStorage.getItem("momentum_today_focus_actions");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setTodayFocusIds(parsed.map((a: any) => String(a.id)));
+        }
+      }
+    } catch (_) {}
   }, []);
+
+  function toggleTodayFocus(t: Task) {
+    const taskIdStr = String(t.id);
+    const isCurrentlyFocused = todayFocusIds.includes(taskIdStr);
+    let nextIds: string[];
+    if (isCurrentlyFocused) {
+      nextIds = todayFocusIds.filter((id) => id !== taskIdStr);
+    } else {
+      nextIds = [...todayFocusIds, taskIdStr];
+    }
+    setTodayFocusIds(nextIds);
+
+    try {
+      const currentStored = JSON.parse(localStorage.getItem("momentum_today_focus_actions") || "[]");
+      let nextActions = Array.isArray(currentStored) ? [...currentStored] : [];
+      if (isCurrentlyFocused) {
+        nextActions = nextActions.filter((a: any) => String(a.id) !== taskIdStr);
+      } else {
+        if (!nextActions.some((a: any) => String(a.id) === taskIdStr)) {
+          nextActions.push({
+            id: taskIdStr,
+            title: t.title,
+            completed: Boolean(t.completed),
+          });
+        }
+      }
+      localStorage.setItem("momentum_today_focus_actions", JSON.stringify(nextActions));
+      window.dispatchEvent(new Event("storage"));
+    } catch (_) {}
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setTitleError("Please enter a title for your action.");
+      return;
+    }
+    setTitleError(null);
 
-    await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tasks: [
-          {
-            title,
-            description: description.trim() || null,
-            estimatedTime: `${timeValue} ${timeUnit}`,
-            emotionalIntensity: intensity,
-            dueDate: dueDate || null,
-            recurrence,
-            parentId: null,
-          },
-        ],
-      }),
-    });
+    // Ensure dueDate is optional and defaults to today's date if empty
+    const nowIso = new Date().toISOString();
+    const finalDueDate = dueDate ? new Date(dueDate).toISOString() : nowIso;
+
+    const newTaskPayload = {
+      title: title.trim(),
+      description: description.trim() || null,
+      estimatedTime: `${timeValue} ${timeUnit}`,
+      emotionalIntensity: intensity,
+      dueDate: finalDueDate,
+      recurrence,
+      parentId: null,
+    };
+
+    // Optimistically update tasks state immediately
+    const tempId = Date.now();
+    const optimisticTask: Task = {
+      id: tempId,
+      ...newTaskPayload,
+      completed: 0,
+      sortOrder: 0,
+    };
+
+    setTasks((prev) => [optimisticTask, ...prev]);
+
+    // Persist to localStorage immediately
+    try {
+      const existing = JSON.parse(localStorage.getItem("momentum_actions") || "[]");
+      const updated = [optimisticTask, ...(Array.isArray(existing) ? existing : [])];
+      localStorage.setItem("momentum_actions", JSON.stringify(updated));
+    } catch (_) {}
+
+    // Persist per-task meta (actionType + predictedDifficulty) keyed by temp ID
+    const newMeta: TaskMeta = { actionType };
+    if (predictedDifficulty.trim()) {
+      const parsed = parseInt(predictedDifficulty, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 10) {
+        newMeta.predictedDifficulty = parsed;
+      }
+    }
+    const nextMeta = { ...taskMeta, [String(tempId)]: newMeta };
+    setTaskMeta(nextMeta);
+    try {
+      localStorage.setItem("momentum_task_meta", JSON.stringify(nextMeta));
+    } catch (_) {}
+
+    try {
+      await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tasks: [newTaskPayload],
+        }),
+      });
+      // After server responds, fetchTasks will replace tempId with real id;
+      // re-key meta from tempId to real id
+      const res = await fetch("/api/tasks");
+      const data = await res.json();
+      if (data.tasks && Array.isArray(data.tasks)) {
+        setTasks(data.tasks);
+        // Find the newly created task (last-inserted should be at top after fetchTasks ordering)
+        const newTask = data.tasks.find((t: Task) => t.title === title.trim() && !t.parentId);
+        if (newTask && String(newTask.id) !== String(tempId)) {
+          const rekeyed = { ...nextMeta };
+          rekeyed[String(newTask.id)] = newMeta;
+          delete rekeyed[String(tempId)];
+          setTaskMeta(rekeyed);
+          try {
+            localStorage.setItem("momentum_task_meta", JSON.stringify(rekeyed));
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      console.error("Task server save failed, persisted locally:", err);
+    }
 
     setTitle("");
     setDescription("");
@@ -111,7 +276,9 @@ export default function TasksTab() {
     setIntensity("Low");
     setDueDate("");
     setRecurrence("none");
-    fetchTasks();
+    setActionType("habit");
+    setPredictedDifficulty("");
+    setIsFormOpen(false);
   }
 
   async function handleAddSub(parentId: number) {
@@ -147,13 +314,51 @@ export default function TasksTab() {
   }
 
   async function toggleComplete(id: number, currentStatus: number) {
-    await fetch(`/api/tasks/${id}`, {
+    const nextCompleted = !currentStatus;
+    if (nextCompleted) {
+      // Open rating popover instead of immediately completing
+      setRatingPopoverId(id);
+    } else {
+      // Un-completing: just toggle back
+      await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: 0 }),
+      });
+      fetchTasks();
+    }
+  }
+
+  async function handleSelectRelief(taskId: number, rating: number) {
+    setRatingPopoverId(null);
+
+    // Persist relief rating
+    const nextReliefs = { ...actualReliefs, [String(taskId)]: rating };
+    setActualReliefs(nextReliefs);
+    try {
+      localStorage.setItem('momentum_actual_reliefs', JSON.stringify(nextReliefs));
+    } catch (_) {}
+
+    // Award points
+    const task = tasks.find((t) => t.id === taskId);
+    const meta = taskMeta[String(taskId)];
+    const isHabit = meta?.actionType === 'habit' || (task?.recurrence && task.recurrence !== 'none');
+    if (isHabit) {
+      awardPoints(POINT_VALUES.DAILY_HABIT);
+    } else {
+      const difficulty = meta?.predictedDifficulty ?? (task?.emotionalIntensity === 'High' ? 8 : task?.emotionalIntensity === 'Medium' ? 5 : 2);
+      awardPoints(POINT_VALUES.highDiscomfortAction(difficulty));
+    }
+
+    // Mark as complete on server
+    await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: currentStatus ? 0 : 1 }),
+      body: JSON.stringify({ completed: 1 }),
     });
     fetchTasks();
   }
+
 
   async function startEdit(task: Task) {
     setEditingTaskId(task.id);
@@ -192,6 +397,45 @@ export default function TasksTab() {
       if (res.ok) fetchTasks();
     } catch (err) {
       console.error("Failed to clear completed tasks:", err);
+    }
+  }
+
+  async function handleDeleteTask(id: number) {
+    if (!confirm("Are you sure you want to delete this action?")) return;
+    
+    // Optimistic removal from state
+    setTasks((prev) => prev.filter((t) => t.id !== id && t.parentId !== id));
+    
+    // Update momentum_actions cache
+    try {
+      const stored = localStorage.getItem("momentum_actions");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const updated = parsed.filter((t: any) => t.id !== id && t.parentId !== id);
+          localStorage.setItem("momentum_actions", JSON.stringify(updated));
+        }
+      }
+    } catch (_) {}
+
+    // If pinned in Today's Focus, remove it and sync storage
+    const taskIdStr = String(id);
+    if (todayFocusIds.includes(taskIdStr)) {
+      setTodayFocusIds((prev) => prev.filter((i) => i !== taskIdStr));
+      try {
+        const focusStored = JSON.parse(localStorage.getItem("momentum_today_focus_actions") || "[]");
+        if (Array.isArray(focusStored)) {
+          const updatedFocus = focusStored.filter((a: any) => String(a.id) !== taskIdStr);
+          localStorage.setItem("momentum_today_focus_actions", JSON.stringify(updatedFocus));
+          window.dispatchEvent(new Event("storage"));
+        }
+      } catch (_) {}
+    }
+
+    try {
+      await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Failed to delete task on server:", err);
     }
   }
 
@@ -444,8 +688,8 @@ export default function TasksTab() {
   }
 
   // Filter Helpers for views
-  const isDateToday = (dateStr: string) => {
-    if (!dateStr) return false;
+  const isDateToday = (dateStr: string | null | undefined) => {
+    if (!dateStr) return true; // Tasks without explicit due date appear in today's view by default
     const today = new Date();
     const d = new Date(dateStr);
     return (
@@ -506,16 +750,36 @@ export default function TasksTab() {
   const parentTasks = tasks.filter((t) => !t.parentId);
   const subTasks = tasks.filter((t) => t.parentId);
 
+  // Helper: does a task match the current taskTypeFilter?
+  function matchesTypeFilter(t: Task): boolean {
+    if (taskTypeFilter === "all") return true;
+    const meta = taskMeta[String(t.id)];
+    const isHabit =
+      t.recurrence === "daily" ||
+      t.recurrence === "twice-daily" ||
+      t.recurrence === "weekly" ||
+      meta?.actionType === "habit";
+    if (taskTypeFilter === "habit") return isHabit;
+    if (taskTypeFilter === "oneoff") return !isHabit || meta?.actionType === "oneoff";
+    return true;
+  }
+
+  const filteredParentTasks = parentTasks.filter(matchesTypeFilter);
+
   // Flat list of today's tasks
   const todayTasks = tasks.filter(
     (t) =>
+      !t.dueDate ||
       isDateToday(t.dueDate) ||
       t.recurrence === "daily" ||
-      t.recurrence === "twice-daily",
+      t.recurrence === "twice-daily" ||
+      todayFocusIds.includes(String(t.id)),
   );
 
+  const filteredTodayTasks = todayTasks.filter(matchesTypeFilter);
+
   return (
-    <div style={{ padding: "2rem 0", maxWidth: "850px", margin: "0 auto" }}>
+    <div style={{ padding: "2rem 1rem", maxWidth: "850px", margin: "0 auto", boxSizing: "border-box" }}>
       <header
         style={{
           marginBottom: "2rem",
@@ -581,68 +845,140 @@ export default function TasksTab() {
         )}
       </header>
 
-      {/* View Switcher Menu */}
+      {/* View Switcher Menu & New Action Toggle */}
       <div
         style={{
           display: "flex",
-          gap: "0.5rem",
-          marginBottom: "2rem",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
           borderBottom: "1px solid var(--border)",
           paddingBottom: "1rem",
           flexWrap: "wrap",
+          gap: "0.75rem",
         }}
       >
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setActiveView("today")}
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.9rem",
+              backgroundColor:
+                activeView === "today" ? "var(--sage-green)" : "transparent",
+              color: activeView === "today" ? "#fff" : "#666",
+              border: activeView === "today" ? "none" : "1px solid var(--border)",
+              borderRadius: "8px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            📅 Today's View
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("week")}
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.9rem",
+              backgroundColor:
+                activeView === "week" ? "var(--sage-green)" : "transparent",
+              color: activeView === "week" ? "#fff" : "#666",
+              border: activeView === "week" ? "none" : "1px solid var(--border)",
+              borderRadius: "8px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            🗓️ Weekly Agenda View
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("all")}
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.9rem",
+              backgroundColor:
+                activeView === "all" ? "var(--sage-green)" : "transparent",
+              color: activeView === "all" ? "#fff" : "#666",
+              border: activeView === "all" ? "none" : "1px solid var(--border)",
+              borderRadius: "8px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            📋 All Actions (List)
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={() => setActiveView("all")}
+          onClick={() => setIsFormOpen(!isFormOpen)}
           style={{
-            padding: "0.5rem 1rem",
+            padding: "0.55rem 1.1rem",
             fontSize: "0.9rem",
-            backgroundColor:
-              activeView === "all" ? "var(--sage-green)" : "transparent",
-            color: activeView === "all" ? "#fff" : "#666",
-            border: activeView === "all" ? "none" : "1px solid var(--border)",
+            backgroundColor: isFormOpen ? "#475569" : "#0f172a",
+            color: "#fff",
+            border: "none",
+            borderRadius: "10px",
             fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
           }}
         >
-          📋 By Task View (List)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveView("today")}
-          style={{
-            padding: "0.5rem 1rem",
-            fontSize: "0.9rem",
-            backgroundColor:
-              activeView === "today" ? "var(--sage-green)" : "transparent",
-            color: activeView === "today" ? "#fff" : "#666",
-            border: activeView === "today" ? "none" : "1px solid var(--border)",
-            fontWeight: 600,
-          }}
-        >
-          📅 Today's View
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveView("week")}
-          style={{
-            padding: "0.5rem 1rem",
-            fontSize: "0.9rem",
-            backgroundColor:
-              activeView === "week" ? "var(--sage-green)" : "transparent",
-            color: activeView === "week" ? "#fff" : "#666",
-            border: activeView === "week" ? "none" : "1px solid var(--border)",
-            fontWeight: 600,
-          }}
-        >
-          🗓️ Weekly Agenda View
+          <span>{isFormOpen ? "✕ Close Form" : "+ New Action"}</span>
         </button>
       </div>
 
-      {/* Manual Parent Task Add Form */}
-      {activeView === "all" && (
+      {/* Task Type Filter Strip */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.4rem",
+          marginBottom: "1.25rem",
+          flexWrap: "wrap",
+        }}
+      >
+        {(["all", "habit", "oneoff"] as TaskTypeFilter[]).map((f) => {
+          const labels: Record<TaskTypeFilter, string> = {
+            all: "All Actions",
+            habit: "🔁 Daily Habits",
+            oneoff: "📌 One-Off Tasks",
+          };
+          return (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setTaskTypeFilter(f)}
+              style={{
+                padding: "0.3rem 0.85rem",
+                fontSize: "0.8rem",
+                backgroundColor: taskTypeFilter === f ? "#0f172a" : "transparent",
+                color: taskTypeFilter === f ? "#fff" : "#64748b",
+                border: taskTypeFilter === f ? "none" : "1px solid #e2e8f0",
+                borderRadius: "20px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {labels[f]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Expandable Action Creation Form */}
+      {isFormOpen && (
         <form
-          onSubmit={handleAdd}
+          onSubmit={async (e) => {
+            await handleAdd(e);
+            setIsFormOpen(false);
+          }}
           style={{
             backgroundColor: "#fff",
             padding: "1.5rem",
@@ -654,6 +990,7 @@ export default function TasksTab() {
             gap: "1rem",
             alignItems: "flex-end",
             boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
+            animation: "fadeIn 0.25s ease",
           }}
         >
           <div
@@ -688,15 +1025,24 @@ export default function TasksTab() {
                 <input
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (titleError) setTitleError(null);
+                  }}
                   placeholder="E.g., Prepare Presentation"
                   style={{
                     width: "100%",
                     padding: "0.75rem",
                     borderRadius: "var(--radius)",
-                    border: "1px solid var(--border)",
+                    border: titleError ? "1.5px solid #ef4444" : "1px solid var(--border)",
+                    backgroundColor: titleError ? "#fef2f2" : "#fff",
                   }}
                 />
+                {titleError && (
+                  <p style={{ color: "#ef4444", fontSize: "0.8rem", marginTop: "0.3rem", fontWeight: 600 }}>
+                    {titleError}
+                  </p>
+                )}
               </div>
             </div>
             <div style={{ width: "100%" }}>
@@ -853,8 +1199,102 @@ export default function TasksTab() {
               <option value="weekly">Weekly</option>
             </select>
           </div>
-          <button type="submit" style={{ padding: "0.75rem 1.5rem" }}>
-            Add Project
+          {/* Action Type selector */}
+          <div style={{ width: "auto" }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.9rem",
+                marginBottom: "0.3rem",
+                color: "var(--foreground)",
+                fontWeight: 600,
+              }}
+            >
+              Type
+            </label>
+            <div style={{ display: "flex", gap: "0.25rem" }}>
+              {(["habit", "oneoff"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setActionType(t)}
+                  style={{
+                    padding: "0.75rem 0.9rem",
+                    fontSize: "0.8rem",
+                    backgroundColor: actionType === t ? "#0f172a" : "#f1f5f9",
+                    color: actionType === t ? "#fff" : "#64748b",
+                    border: actionType === t ? "2px solid #0f172a" : "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                    fontWeight: actionType === t ? 700 : 500,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    boxShadow: actionType === t ? "0 1px 3px rgba(0,0,0,0.15)" : "none",
+                    outline: "none",
+                  }}
+                >
+                  {t === "habit" ? "🔁 Daily Habit" : "📌 One-Off"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Predicted Difficulty */}
+          <div style={{ width: "130px" }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.9rem",
+                marginBottom: "0.3rem",
+                color: "var(--foreground)",
+                fontWeight: 600,
+              }}
+            >
+              Predicted Difficulty
+            </label>
+            <div style={{ position: "relative" }}>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={predictedDifficulty}
+                onChange={(e) => setPredictedDifficulty(e.target.value)}
+                placeholder="1–10"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  paddingRight: "2rem",
+                  borderRadius: "var(--radius)",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "#fff",
+                }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  right: "0.5rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: "0.7rem",
+                  color: "#94a3b8",
+                  pointerEvents: "none",
+                }}
+              >
+                /10
+              </span>
+            </div>
+          </div>
+          <button
+            type="submit"
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#0f172a",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Add Action
           </button>
         </form>
       )}
@@ -865,7 +1305,7 @@ export default function TasksTab() {
         <>
           {/* ALL TASKS (BY TASK) VIEW */}
           {activeView === "all" &&
-            (parentTasks.length === 0 ? (
+            (filteredParentTasks.length === 0 ? (
               <div
                 style={{
                   padding: "3rem",
@@ -876,8 +1316,9 @@ export default function TasksTab() {
                 }}
               >
                 <p style={{ color: "#888", fontSize: "1.1rem" }}>
-                  You have no projects or actions yet. Visit the Vaults or add
-                  one above!
+                  {taskTypeFilter === "all"
+                    ? "You have no actions yet. Schedule your first action above!"
+                    : `No ${taskTypeFilter === "habit" ? "daily habits" : "one-off tasks"} found.`}
                 </p>
               </div>
             ) : (
@@ -889,7 +1330,7 @@ export default function TasksTab() {
                   animation: "fadeIn 0.3s ease",
                 }}
               >
-                {parentTasks.map((pt, parentIndex) => {
+                {filteredParentTasks.map((pt, parentIndex) => {
                   const currentChildren = subTasks.filter(
                     (st) => st.parentId === pt.id,
                   );
@@ -1288,6 +1729,100 @@ export default function TasksTab() {
                                   </span>
                                 )}
                               </div>
+
+                              {/* Completion rating badge — All Actions view */}
+                              {!!pt.completed && (() => {
+                                const meta = taskMeta[String(pt.id)];
+                                const actualRelief = actualReliefs[String(pt.id)];
+                                const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
+                                const delta = (predicted !== null && actualRelief !== undefined) ? actualRelief - predicted : null;
+                                if (predicted !== null && actualRelief !== undefined) {
+                                  return (
+                                    <div style={{ marginTop: "0.4rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setRatingPopoverId(pt.id)}
+                                        style={{
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "0.35rem",
+                                          fontSize: "0.75rem",
+                                          fontWeight: 700,
+                                          backgroundColor: "#f0fdf4",
+                                          border: "1px solid #bbf7d0",
+                                          borderRadius: "20px",
+                                          padding: "0.2rem 0.7rem",
+                                          color: "#15803d",
+                                          cursor: "pointer",
+                                          width: "fit-content",
+                                        }}
+                                      >
+                                        <span style={{ color: "#94a3b8", fontWeight: 600 }}>Predicted: {predicted}/10</span>
+                                        <span style={{ color: "#94a3b8" }}>➔</span>
+                                        <span>Actual Relief: {actualRelief}/10</span>
+                                        <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>✏️</span>
+                                      </button>
+                                      {delta !== null && delta >= 0 && (
+                                        <span style={{
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "0.25rem",
+                                          fontSize: "0.72rem",
+                                          fontWeight: 800,
+                                          color: "#059669",
+                                          backgroundColor: "#ecfdf5",
+                                          border: "1px solid #a7f3d0",
+                                          borderRadius: "20px",
+                                          padding: "0.15rem 0.6rem",
+                                          width: "fit-content",
+                                        }}>
+                                          🎉 Overcame Dread
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                } else if (actualRelief !== undefined) {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => setRatingPopoverId(pt.id)}
+                                      style={{
+                                        marginTop: "0.4rem",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.35rem",
+                                        fontSize: "0.75rem",
+                                        fontWeight: 700,
+                                        backgroundColor: "#f0fdf4",
+                                        border: "1px solid #bbf7d0",
+                                        borderRadius: "20px",
+                                        padding: "0.2rem 0.7rem",
+                                        color: "#15803d",
+                                        cursor: "pointer",
+                                        width: "fit-content",
+                                      }}
+                                    >
+                                      Completed (Rating: {actualRelief}/10) ✏️
+                                    </button>
+                                  );
+                                } else {
+                                  return (
+                                    <span style={{
+                                      marginTop: "0.4rem",
+                                      display: "inline-flex",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 700,
+                                      backgroundColor: "#f0fdf4",
+                                      border: "1px solid #bbf7d0",
+                                      borderRadius: "20px",
+                                      padding: "0.2rem 0.7rem",
+                                      color: "#15803d",
+                                    }}>
+                                      ✅ Completed
+                                    </span>
+                                  );
+                                }
+                              })()}
                             </div>
 
                             {/* Parent Actions */}
@@ -1319,6 +1854,23 @@ export default function TasksTab() {
                                 </button>
                                 <button
                                   type="button"
+                                  onClick={() => toggleTodayFocus(pt)}
+                                  title={todayFocusIds.includes(String(pt.id)) ? "Remove from Today's Focus" : "Pin to Today's Focus"}
+                                  style={{
+                                    backgroundColor: todayFocusIds.includes(String(pt.id)) ? "#fef3c7" : "#f1f5f9",
+                                    border: todayFocusIds.includes(String(pt.id)) ? "1px solid #f59e0b" : "1px solid #cbd5e1",
+                                    color: todayFocusIds.includes(String(pt.id)) ? "#b45309" : "#475569",
+                                    borderRadius: "8px",
+                                    padding: "0.35rem 0.6rem",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {todayFocusIds.includes(String(pt.id)) ? "⭐ Focused" : "☆ Focus"}
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => startEdit(pt)}
                                   className="secondary"
                                   style={{
@@ -1327,6 +1879,24 @@ export default function TasksTab() {
                                   }}
                                 >
                                   ✏️ Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTask(pt.id)}
+                                  title="Delete action"
+                                  style={{
+                                    background: "none",
+                                    border: "1px solid #fecaca",
+                                    backgroundColor: "#fef2f2",
+                                    color: "#dc2626",
+                                    borderRadius: "8px",
+                                    padding: "0.35rem 0.6rem",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  🗑️ Delete
                                 </button>
                                 <CalendarDropdown task={pt} />
                               </div>
@@ -1779,6 +2349,25 @@ export default function TasksTab() {
                                         >
                                           ✏️ Edit
                                         </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteTask(st.id)}
+                                          title="Delete sub-step"
+                                          style={{
+                                            background: "none",
+                                            border: "1px solid #fecaca",
+                                            backgroundColor: "#fef2f2",
+                                            color: "#dc2626",
+                                            borderRadius: "6px",
+                                            padding: "0.25rem 0.4rem",
+                                            fontSize: "0.7rem",
+                                            fontWeight: 600,
+                                            cursor: "pointer",
+                                            margin: 0,
+                                          }}
+                                        >
+                                          🗑️
+                                        </button>
                                         <CalendarDropdown task={st} />
                                       </div>
                                     )}
@@ -2056,7 +2645,7 @@ export default function TasksTab() {
 
           {/* TODAY'S VIEW */}
           {activeView === "today" &&
-            (todayTasks.length === 0 ? (
+            (filteredTodayTasks.length === 0 ? (
               <div
                 style={{
                   padding: "4rem 2rem",
@@ -2077,8 +2666,9 @@ export default function TasksTab() {
                     marginInline: "auto",
                   }}
                 >
-                  No tasks scheduled for today. Take a deep breath and enjoy the
-                  quiet space.
+                  {taskTypeFilter === "all"
+                    ? "No tasks scheduled for today. Take a deep breath and enjoy the quiet space."
+                    : `No ${taskTypeFilter === "habit" ? "daily habits" : "one-off tasks"} for today.`}
                 </p>
               </div>
             ) : (
@@ -2105,7 +2695,7 @@ export default function TasksTab() {
                   })}
                   )
                 </h3>
-                {todayTasks.map((t) => {
+                {filteredTodayTasks.map((t) => {
                   const parentTask = t.parentId
                     ? tasks.find((pt) => pt.id === t.parentId)
                     : null;
@@ -2192,10 +2782,160 @@ export default function TasksTab() {
                               🔁 {t.recurrence}
                             </span>
                           )}
+                          {/* Action type pill */}
+                          {(() => {
+                            const meta = taskMeta[String(t.id)];
+                            if (!meta?.actionType) return null;
+                            return (
+                              <span
+                                style={{
+                                  backgroundColor: meta.actionType === 'habit' ? "#ecfdf5" : "#f0f9ff",
+                                  padding: "0.15rem 0.5rem",
+                                  borderRadius: "8px",
+                                  color: meta.actionType === 'habit' ? "#065f46" : "#0369a1",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {meta.actionType === 'habit' ? '🔁 Habit' : '📌 One-Off'}
+                              </span>
+                            );
+                          })()}
                         </div>
+                        {/* Completion rating badge — Today's View */}
+                        {!!t.completed && (() => {
+                          const meta = taskMeta[String(t.id)];
+                          const actualRelief = actualReliefs[String(t.id)];
+                          const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
+                          const delta = (predicted !== null && actualRelief !== undefined) ? actualRelief - predicted : null;
+                          if (predicted !== null && actualRelief !== undefined) {
+                            return (
+                              <div style={{ marginTop: "0.4rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setRatingPopoverId(t.id)}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 700,
+                                    backgroundColor: "#f0fdf4",
+                                    border: "1px solid #bbf7d0",
+                                    borderRadius: "20px",
+                                    padding: "0.2rem 0.7rem",
+                                    color: "#15803d",
+                                    cursor: "pointer",
+                                    width: "fit-content",
+                                  }}
+                                >
+                                  <span style={{ color: "#94a3b8", fontWeight: 600 }}>Predicted: {predicted}/10</span>
+                                  <span style={{ color: "#94a3b8" }}>➔</span>
+                                  <span>Actual Relief: {actualRelief}/10</span>
+                                  <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>✏️</span>
+                                </button>
+                                {delta !== null && delta >= 0 && (
+                                  <span style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 800,
+                                    color: "#059669",
+                                    backgroundColor: "#ecfdf5",
+                                    border: "1px solid #a7f3d0",
+                                    borderRadius: "20px",
+                                    padding: "0.15rem 0.6rem",
+                                    width: "fit-content",
+                                  }}>
+                                    🎉 Overcame Dread (+{delta} Relief)
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          } else if (actualRelief !== undefined) {
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setRatingPopoverId(t.id)}
+                                style={{
+                                  marginTop: "0.4rem",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "0.35rem",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  backgroundColor: "#f0fdf4",
+                                  border: "1px solid #bbf7d0",
+                                  borderRadius: "20px",
+                                  padding: "0.2rem 0.7rem",
+                                  color: "#15803d",
+                                  cursor: "pointer",
+                                  width: "fit-content",
+                                }}
+                              >
+                                Completed (Rating: {actualRelief}/10) ✏️
+                              </button>
+                            );
+                          } else {
+                            return (
+                              <span style={{
+                                marginTop: "0.4rem",
+                                display: "inline-flex",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                backgroundColor: "#f0fdf4",
+                                border: "1px solid #bbf7d0",
+                                borderRadius: "20px",
+                                padding: "0.2rem 0.7rem",
+                                color: "#15803d",
+                              }}>
+                                ✅ Completed
+                              </span>
+                            );
+                          }
+                        })()}
                       </div>
 
-                      {!t.completed && <CalendarDropdown task={t} />}
+                      {!t.completed && (
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleTodayFocus(t)}
+                            title={todayFocusIds.includes(String(t.id)) ? "Remove from Today's Focus" : "Pin to Today's Focus"}
+                            style={{
+                              backgroundColor: todayFocusIds.includes(String(t.id)) ? "#fef3c7" : "#f1f5f9",
+                              border: todayFocusIds.includes(String(t.id)) ? "1px solid #f59e0b" : "1px solid #cbd5e1",
+                              color: todayFocusIds.includes(String(t.id)) ? "#b45309" : "#475569",
+                              borderRadius: "8px",
+                              padding: "0.35rem 0.6rem",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {todayFocusIds.includes(String(t.id)) ? "⭐ Focused" : "☆ Focus"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTask(t.id)}
+                            title="Delete action"
+                            style={{
+                              background: "none",
+                              border: "1px solid #fecaca",
+                              backgroundColor: "#fef2f2",
+                              color: "#dc2626",
+                              borderRadius: "8px",
+                              padding: "0.35rem 0.6rem",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            🗑️
+                          </button>
+                          <CalendarDropdown task={t} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -2331,6 +3071,26 @@ export default function TasksTab() {
                                   )}
                                 </div>
                               </div>
+
+                              {!t.completed && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTodayFocus(t)}
+                                  title={todayFocusIds.includes(String(t.id)) ? "Remove from Today's Focus" : "Pin to Today's Focus"}
+                                  style={{
+                                    backgroundColor: todayFocusIds.includes(String(t.id)) ? "#fef3c7" : "#f1f5f9",
+                                    border: todayFocusIds.includes(String(t.id)) ? "1px solid #f59e0b" : "1px solid #cbd5e1",
+                                    color: todayFocusIds.includes(String(t.id)) ? "#b45309" : "#475569",
+                                    borderRadius: "8px",
+                                    padding: "0.25rem 0.5rem",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {todayFocusIds.includes(String(t.id)) ? "⭐ Focused" : "☆ Focus"}
+                                </button>
+                              )}
                             </div>
                           );
                         })}
@@ -2343,6 +3103,129 @@ export default function TasksTab() {
           )}
         </>
       )}
+
+      {/* Rating Popover Overlay */}
+      {ratingPopoverId !== null && (() => {
+        const task = tasks.find((t) => t.id === ratingPopoverId);
+        const meta = taskMeta[String(ratingPopoverId)];
+        const currentRelief = actualReliefs[String(ratingPopoverId)];
+        return (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.4)",
+              zIndex: 50,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "1rem",
+            }}
+            onClick={() => setRatingPopoverId(null)}
+          >
+            <div
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "16px",
+                padding: "1.75rem",
+                maxWidth: "420px",
+                width: "100%",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                animation: "fadeIn 0.2s ease",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", marginBottom: "0.4rem" }}>
+                How do you feel about completing this?
+              </h3>
+              {task && (
+                <p style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: "1.25rem", fontStyle: "italic" }}>
+                  {task.title}
+                </p>
+              )}
+              {meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null && (
+                <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "1rem" }}>
+                  Predicted difficulty: <strong style={{ color: "#475569" }}>{meta.predictedDifficulty}/10</strong>
+                </p>
+              )}
+              <div style={{ marginBottom: "0.6rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.6rem" }}>
+                  <span>0 — Drained / Hard</span>
+                  <span>10 — Relieved / Energized</span>
+                </div>
+                {/* Row 1: 0–5 */}
+                <div style={{ display: "flex", gap: "0.45rem", justifyContent: "center", marginBottom: "0.45rem" }}>
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleSelectRelief(ratingPopoverId, i)}
+                      style={{
+                        width: "2.6rem",
+                        height: "2.6rem",
+                        borderRadius: "50%",
+                        border: currentRelief === i ? "2px solid #059669" : "1px solid #e2e8f0",
+                        backgroundColor: currentRelief === i ? "#ecfdf5" : (i <= 2 ? "#fef2f2" : "#fefce8"),
+                        color: currentRelief === i ? "#059669" : "#374151",
+                        fontWeight: currentRelief === i ? 800 : 600,
+                        fontSize: "0.9rem",
+                        cursor: "pointer",
+                        transition: "all 0.1s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+                {/* Row 2: 6–10 */}
+                <div style={{ display: "flex", gap: "0.45rem", justifyContent: "center" }}>
+                  {[6, 7, 8, 9, 10].map((i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleSelectRelief(ratingPopoverId, i)}
+                      style={{
+                        width: "2.6rem",
+                        height: "2.6rem",
+                        borderRadius: "50%",
+                        border: currentRelief === i ? "2px solid #059669" : "1px solid #e2e8f0",
+                        backgroundColor: currentRelief === i ? "#ecfdf5" : "#f0fdf4",
+                        color: currentRelief === i ? "#059669" : "#374151",
+                        fontWeight: currentRelief === i ? 800 : 600,
+                        fontSize: "0.9rem",
+                        cursor: "pointer",
+                        transition: "all 0.1s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRatingPopoverId(null)}
+                style={{
+                  marginTop: "1rem",
+                  width: "100%",
+                  padding: "0.6rem",
+                  backgroundColor: "#f1f5f9",
+                  color: "#64748b",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <style
         dangerouslySetInnerHTML={{

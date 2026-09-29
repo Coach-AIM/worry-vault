@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { checkSafety } from "@/lib/safetyIntercept";
@@ -10,6 +10,9 @@ import {
   DISTORTIONS,
 } from "@/lib/cbtDistortions";
 import { EMOTION_WHEEL, PRIMARY_EMOTIONS } from "@/lib/emotionWheel";
+import { safeGetItem, safeSetItem, safeRemoveItem } from "@/utils/storage";
+import CloseLoopModal, { type CloseLoopResult } from "@/components/CloseLoopModal";
+import { awardPoints, POINT_VALUES, useResiliencePoints } from "@/lib/points";
 
 type Entry = {
   id: number;
@@ -23,6 +26,10 @@ type Entry = {
   outcomeText?: string | null;
   lessonsLearned?: string | null;
   predictionEvaluation?: string | null;
+  // Close-the-loop reality check fields
+  loopAccuracy?: string | null;   // AccuracyLevel from CloseLoopModal
+  reliefRating?: number | null;   // 0–10
+  loopClosedAt?: string | null;   // ISO timestamp
 };
 
 type SelectedEmotion = {
@@ -84,6 +91,24 @@ export default function CBTJournal() {
     "Much better than expected",
   );
   const [savingOutcomeId, setSavingOutcomeId] = useState<number | null>(null);
+  // Close-the-Loop modal state
+  const [closeLoopModalEntryId, setCloseLoopModalEntryId] = useState<number | null>(null);
+  // SSR-safe Resilience Points
+  const { points: resiliencePoints, isLoaded: pointsLoaded } = useResiliencePoints();
+
+  // ── Auto-reframe soft limit ──────────────────────────────────
+  const [autoReframeCount, setAutoReframeCount] = useState<number>(0);
+  const [showAiOverride, setShowAiOverride] = useState(false);
+
+  // ── Reframe Later ────────────────────────────────────────────
+  const [showReframeLaterPicker, setShowReframeLaterPicker] = useState(false);
+  const [pendingReframeBanner, setPendingReframeBanner] = useState<{ situation: string; thought: string; ago: string } | null>(null);
+
+  // ── Post-save completion insight ─────────────────────────────
+  type TriangleCorner = 'thoughts' | 'feelings' | 'behaviors';
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [dominantCorners, setDominantCorners] = useState<TriangleCorner[]>([]);
+  const [completionSituation, setCompletionSituation] = useState('');
 
   const isSuggested = (trapName: string) => {
     if (!suggestedTraps || !Array.isArray(suggestedTraps)) return false;
@@ -232,8 +257,15 @@ export default function CBTJournal() {
   );
   const [fetching, setFetching] = useState(true);
   const [crisis, setCrisis] = useState(false);
+  // Inline API error — shown below the Analyze button instead of alert()
+  const [aiError, setAiError] = useState<string | null>(null);
+  // Whether to force-expand the manual distortion picker
+  const [showManualPicker, setShowManualPicker] = useState(false);
+  // Inline save error (replaces alert() on submit failure)
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  async function handleGoToStep2() {
+
+  function handleGoToStep2() {
     if (!situation.trim()) return;
 
     if (checkSafety(situation)) {
@@ -241,31 +273,7 @@ export default function CBTJournal() {
       return;
     }
 
-    setLoadingEmotions(true);
-    setStep(2); // Go to step 2 immediately for a responsive UI
-
-    try {
-      const res = await fetch("/api/gemini", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: situation, type: "emotions" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Gemini API Error");
-      }
-      if (data.result && Array.isArray(data.result)) {
-        const names = data.result.map((item: any) => item.name);
-        setApiSuggestedEmotions(names);
-      }
-    } catch (err: any) {
-      console.error("Failed to retrieve AI emotions:", err);
-      alert(
-        `AI Emotion Analysis Failed: ${err.message || "Gemini API Error. Check your environment variables."}`,
-      );
-    } finally {
-      setLoadingEmotions(false);
-    }
+    setStep(2);
   }
 
   async function fetchHistory() {
@@ -273,13 +281,39 @@ export default function CBTJournal() {
     try {
       const res = await fetch("/api/journal");
       const data = await res.json();
-      if (data.entries) setHistory(data.entries);
+      let entries: Entry[] = data.entries || [];
+
+      // Merge client-side enriched fields (like loopAccuracy, reliefRating) from momentum_journal_entries
+      try {
+        const localRaw = safeGetItem("momentum_journal_entries");
+        if (localRaw) {
+          const localEntries = JSON.parse(localRaw) as any[];
+          const localMap = new Map(localEntries.map((e) => [e.id, e]));
+          entries = entries.map((entry) => {
+            const local = localMap.get(entry.id);
+            if (local) {
+              return {
+                ...entry,
+                outcomeText: entry.outcomeText || local.outcomeText,
+                predictionEvaluation: entry.predictionEvaluation || local.predictionEvaluation,
+                loopAccuracy: local.loopAccuracy,
+                reliefRating: local.reliefRating,
+                loopClosedAt: local.loopClosedAt,
+              };
+            }
+            return entry;
+          });
+        }
+      } catch { /* best-effort */ }
+
+      setHistory(entries);
     } catch (err) {
       console.error(err);
     } finally {
       setFetching(false);
     }
   }
+
 
   async function fetchPositives() {
     try {
@@ -294,6 +328,24 @@ export default function CBTJournal() {
   useEffect(() => {
     fetchHistory();
     fetchPositives();
+
+    // Load auto-reframe counter
+    const stored = parseInt(safeGetItem('momentum_reframe_count') ?? '0', 10);
+    setAutoReframeCount(isNaN(stored) ? 0 : stored);
+
+    // Check for a pending reframe reminder
+    try {
+      const raw = safeGetItem('momentum_pending_reframe');
+      if (raw) {
+        const pending = JSON.parse(raw) as { remindAt: number; situation: string; thought: string };
+        if (pending.remindAt <= Date.now()) {
+          const diffMs = Date.now() - (pending.remindAt - (pending.remindAt % 3_600_000 === 0 ? 0 : 0));
+          const diffHrs = Math.round((Date.now() - pending.remindAt) / 3_600_000);
+          const ago = diffHrs <= 0 ? 'just now' : `${diffHrs}h ago`;
+          setPendingReframeBanner({ situation: pending.situation, thought: pending.thought, ago });
+        }
+      }
+    } catch { /* ignore corrupt data */ }
   }, []);
 
   // Dynamic Counter-Evidence Hook
@@ -334,23 +386,8 @@ export default function CBTJournal() {
     }
   }, [step, history, positives]);
 
-  // Delayed Heuristic Distortion Highlighting logic for step 3
-  useEffect(() => {
-    if (step !== 3) return;
-
-    const timeoutId = setTimeout(() => {
-      if (thought.trim()) {
-        const found = findDistortions(thought);
-        setLocalDistortions(found);
-        setSuggestedTraps(found.map((d) => d.id));
-      } else {
-        setLocalDistortions([]);
-        setSuggestedTraps([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [thought, step]);
+  // Heuristic distortion detection now runs only on explicit click of
+  // "Analyze Thought" — no debounce, no automatic background calls.
 
   function toggleEmotion(emotionName: string) {
     if (selectedEmotions.some((e) => e.name === emotionName)) {
@@ -381,15 +418,63 @@ export default function CBTJournal() {
     }
   }
 
+  function incrementReframeCount() {
+    const next = autoReframeCount + 1;
+    setAutoReframeCount(next);
+    safeSetItem('momentum_reframe_count', String(next));
+    setShowAiOverride(false);
+  }
+
+  async function handleReframeLater(remindHours: number | null) {
+    setShowReframeLaterPicker(false);
+    setLoading(true);
+    try {
+      await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryType,
+          situation,
+          emotionsJson: JSON.stringify(selectedEmotions),
+          automaticThought: entryType === 'negative' ? thought : null,
+          distortionsJson: entryType === 'negative' ? JSON.stringify(selectedDistortions) : null,
+          reframedThought: '[Pending Reframe]',
+        }),
+      });
+    } catch { /* best-effort */ } finally {
+      setLoading(false);
+    }
+    if (remindHours !== null) {
+      safeSetItem('momentum_pending_reframe', JSON.stringify({
+        remindAt: Date.now() + remindHours * 3_600_000,
+        situation,
+        thought,
+      }));
+    }
+    // Reset wizard and go home
+    setStep(1); setSituation(''); setSelectedEmotions([]);
+    setThought(''); setSelectedDistortions([]); setSuggestedTraps([]);
+    setAlternativeThought(''); setInsightsData(null); setApiSuggestedEmotions([]);
+    setSelectedExercise(null);
+    router.push('/');
+  }
+
+
   async function handleAnalyzeThoughts() {
     if (!thought.trim()) return;
 
     setCrisis(false);
+    setAiError(null);
 
     if (checkSafety(thought) || checkSafety(situation)) {
       setCrisis(true);
       return;
     }
+
+    // Run local heuristic detection synchronously on click (no debounce/background call)
+    const heuristicFound = findDistortions(thought);
+    setLocalDistortions(heuristicFound);
+    const heuristicIds = heuristicFound.map((d) => d.id);
 
     setLoading(true);
 
@@ -406,9 +491,13 @@ export default function CBTJournal() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Gemini API Error");
+      if (!res.ok || data.fallback || !data.result) {
+        const isRateLimit = res.status === 429;
+        const e = new Error(data.error || "Gemini API unavailable") as any;
+        e.isRateLimit = isRateLimit;
+        throw e;
       }
+
       if (data.result) {
         const aiDistortions = (data.result.distortions || [])
           .map((name: string) => {
@@ -473,43 +562,35 @@ export default function CBTJournal() {
           setAlternativeThought(data.result.reframed_thought);
         }
 
-        const heuristicDistortions = localDistortions.map((ld) => ld.id);
         const combinedDistortions = Array.from(
-          new Set([...heuristicDistortions, ...aiDistortions]),
+          new Set([...heuristicIds, ...aiDistortions]),
         );
         setSuggestedTraps(combinedDistortions);
         setSelectedDistortions(combinedDistortions);
         setStep(4);
       }
     } catch (err: any) {
-      console.error("Insight Error", err);
-      alert(
-        "AI CBT Analysis is currently offline. You can manually identify your thinking traps in the next steps.",
-      );
-      setInsightsData({
-        insights:
-          "AI analysis is offline. Please manually identify your thinking traps.",
-        reframeSuggestions: [
-          "Focus on what you can control in this situation.",
-          "Look at this situation with more self-compassion.",
-        ],
-        suggestedDistortions: [],
-      });
-      // Fallback: populate selectedDistortions and suggestedTraps with heuristic distortions if API is offline
-      const heuristicDistortions = localDistortions.map((ld) => ld.id);
-      setSuggestedTraps(heuristicDistortions);
-      setSelectedDistortions(heuristicDistortions);
+      console.warn("AI CBT Analysis offline, falling back to manual selection:", err);
+      setAiError("AI analysis unavailable right now. Select your traps below.");
+      // Surface heuristic hints only — never pre-select traps for the user
+      setSuggestedTraps(heuristicIds);
+      setSelectedDistortions([]);
+      setInsightsData(null);
+      setShowManualPicker(true); // auto-expand the manual picker so user isn't blocked
       setStep(4);
     } finally {
       setLoading(false);
     }
   }
 
+
   async function handleSaveEntry(e: React.FormEvent) {
     e.preventDefault();
+    setSaveError(null);
     setLoading(true);
 
     try {
+      const reframeToSave = alternativeThought.trim();
       const response = await fetch("/api/journal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -522,22 +603,60 @@ export default function CBTJournal() {
             entryType === "negative"
               ? JSON.stringify(selectedDistortions)
               : null,
-          reframedThought: alternativeThought,
+          reframedThought: reframeToSave,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("SERVER SIDE REJECTION ERROR DETECTED:", errorData);
-        alert(
-          `Submission Failed: ${errorData.message || errorData.error || "Unknown Server Error"}`,
+        setSaveError(
+          `Could not save: ${errorData.message || errorData.error || "Unknown server error"}. Please try again.`,
         );
         return;
       }
 
-      console.log("Database entry saved successfully! Redirecting...");
+      const savedData = await response.json().catch(() => ({}));
 
-      // Reset wizard
+      // Persist to localStorage so WellnessGraphs and other components can read it
+      try {
+        const existing = JSON.parse(localStorage.getItem("momentum_journal_entries") || "[]");
+        const newEntry = {
+          id: savedData?.data?.[0]?.id ?? Date.now(),
+          createdAt: new Date().toISOString(),
+          entryType,
+          situation,
+          emotionsJson: JSON.stringify(selectedEmotions),
+          automaticThought: entryType === "negative" ? thought : null,
+          distortionsJson: entryType === "negative" ? JSON.stringify(selectedDistortions) : null,
+          reframedThought: reframeToSave,
+        };
+        localStorage.setItem("momentum_journal_entries", JSON.stringify([newEntry, ...existing].slice(0, 100)));
+      } catch { /* best-effort */ }
+
+      // Award +25 resilience points for journal thought record
+      awardPoints(POINT_VALUES.JOURNAL_THOUGHT_RECORD);
+
+      // Clear any pending reframe reminder (it's now complete)
+      safeRemoveItem('momentum_pending_reframe');
+
+      // ── Infer dominant triangle corner ──
+      const corners: TriangleCorner[] = [];
+      const avgWeight = selectedEmotions.length > 0
+        ? selectedEmotions.reduce((s, e) => s + e.weight, 0) / selectedEmotions.length
+        : 0;
+      if (selectedEmotions.length >= 3 || avgWeight >= 65) corners.push('feelings');
+      if (selectedDistortions.length >= 1) corners.push('thoughts');
+      const behaviorKeywords = ['avoid', 'cancel', 'procrastin', "didn't", 'gave up', 'stopped', 'skipped', 'hide', 'escape', 'withdrew', 'isolat'];
+      if (behaviorKeywords.some(kw => situation.toLowerCase().includes(kw))) corners.push('behaviors');
+      if (corners.length === 0) corners.push('thoughts'); // fallback
+
+      setCompletionSituation(situation);
+      setDominantCorners(corners);
+      setShowCompletion(true);
+      fetchHistory();
+
+      // Reset wizard state
       setStep(1);
       setSituation("");
       setSelectedEmotions([]);
@@ -548,22 +667,19 @@ export default function CBTJournal() {
       setInsightsData(null);
       setApiSuggestedEmotions([]);
       setSelectedExercise(null);
-
-      router.push("/");
-      router.refresh();
+      setShowAiOverride(false);
+      setAiError(null);
+      setShowManualPicker(false);
     } catch (clientError: any) {
       console.error("CLIENT SIDE RUNTIME CRASH DETECTED:", clientError);
-      alert(`Client Error: ${clientError.message}`);
+      setSaveError(`Could not save your entry: ${clientError.message}`);
     } finally {
       setLoading(false);
     }
   }
 
   async function handleSaveOutcome(entryId: number) {
-    if (!tempOutcomeText.trim()) {
-      alert("Please enter what actually happened.");
-      return;
-    }
+    if (!tempOutcomeText.trim()) return; // silently ignore — placeholder tells user what to do
     setSavingOutcomeId(entryId);
     try {
       const res = await fetch(`/api/journal/${entryId}`, {
@@ -595,15 +711,44 @@ export default function CBTJournal() {
         setTempEvaluation("Much better than expected");
       } else {
         const data = await res.json();
-        alert(`Failed to save outcome: ${data.error || "Server error"}`);
+        console.warn("Failed to save outcome:", data.error || "Server error");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving outcome");
     } finally {
       setSavingOutcomeId(null);
     }
   }
+
+  const handleCompleteCloseLoop = useCallback((entryId: number, result: CloseLoopResult) => {
+    setHistory((prev) =>
+      prev.map((item) => {
+        if (item.id === entryId) {
+          return {
+            ...item,
+            outcomeText: result.outcomeText,
+            predictionEvaluation: result.predictionEvaluation,
+            loopAccuracy: result.accuracyLevel,
+            reliefRating: result.reliefRating,
+            loopClosedAt: result.completedAt,
+          };
+        }
+        return item;
+      })
+    );
+
+    // Also notify server via PATCH
+    fetch(`/api/journal/${entryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outcomeText: result.outcomeText,
+        predictionEvaluation: result.predictionEvaluation,
+      }),
+    }).catch((err) => console.warn("Background journal outcome PATCH failed:", err));
+  }, []);
+
+
 
   const selectedDistortionNames = selectedDistortions
     .map((id) => DISTORTIONS.find((d) => d.id === id)?.name)
@@ -613,20 +758,48 @@ export default function CBTJournal() {
   return (
     <div style={{ padding: "2rem 0", paddingBottom: "10rem", maxWidth: "800px", margin: "0 auto" }}>
       <header style={{ marginBottom: "2.5rem" }}>
-        <h1
-          style={{
-            color: "var(--sage-green)",
-            marginBottom: "0.5rem",
-            fontSize: "2.5rem",
-            fontWeight: 600,
-          }}
-        >
-          CBT Journal
-        </h1>
-        <p style={{ fontSize: "1.1rem", color: "#555" }}>
-          Gently analyze difficult moments using Cognitive Behavioral Therapy,
-          or log positive victories.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
+            <h1
+              style={{
+                color: "var(--sage-green)",
+                marginBottom: "0.5rem",
+                fontSize: "2.5rem",
+                fontWeight: 600,
+              }}
+            >
+              CBT Journal
+            </h1>
+            <p style={{ fontSize: "1.1rem", color: "#555", margin: 0 }}>
+              Gently analyze difficult moments using Cognitive Behavioral Therapy,
+              or log positive victories.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.6rem",
+              padding: "0.5rem 1rem",
+              backgroundColor: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              borderRadius: "14px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}
+          >
+            <span style={{ fontSize: "1.25rem" }}>🏆</span>
+            <div>
+              <span style={{ display: "block", fontSize: "0.68rem", fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Resilience Points
+              </span>
+              <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#15803d" }}>
+                {pointsLoaded ? resiliencePoints : 0} pts
+              </span>
+            </div>
+          </div>
+        </div>
+
         <Link
           href="/"
           style={{
@@ -663,7 +836,35 @@ export default function CBTJournal() {
         </div>
       )}
 
+      {/* ── Pending Reframe Reminder Banner ── */}
+      {pendingReframeBanner && (
+        <div style={{ padding: "1rem 1.25rem", backgroundColor: "#fffbeb", border: "1px solid #fcd34d", borderLeft: "4px solid #f59e0b", borderRadius: "var(--radius)", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+          <div>
+            <strong style={{ color: "#92400e", fontSize: "0.9rem", display: "block", marginBottom: "0.25rem" }}>
+              ⏰ Pending Reframe — reminder from {pendingReframeBanner.ago}
+            </strong>
+            <span style={{ color: "#78350f", fontSize: "0.85rem" }}>
+              "{pendingReframeBanner.situation.slice(0, 80)}{pendingReframeBanner.situation.length > 80 ? '…' : ''}"
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button type="button" onClick={() => {
+              setSituation(pendingReframeBanner.situation);
+              setThought(pendingReframeBanner.thought);
+              setStep(5);
+              setPendingReframeBanner(null);
+            }} style={{ padding: "0.4rem 0.9rem", fontSize: "0.85rem", backgroundColor: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600 }}>
+              Open Reframe
+            </button>
+            <button type="button" onClick={() => { safeRemoveItem('momentum_pending_reframe'); setPendingReframeBanner(null); }} style={{ padding: "0.4rem 0.9rem", fontSize: "0.85rem", background: "transparent", color: "#92400e", border: "1px solid #fcd34d", borderRadius: "8px", cursor: "pointer", minHeight: "44px" }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Progress Bar */}
+
       <div style={{ display: "flex", gap: "5px", marginBottom: "2rem" }}>
         {entryType === "negative"
           ? [1, 2, 3, 4, 5].map((s) => (
@@ -831,10 +1032,10 @@ export default function CBTJournal() {
             <button
               type="button"
               onClick={handleGoToStep2}
-              disabled={!situation.trim() || loadingEmotions}
+              disabled={!situation.trim()}
               style={{ width: "100%" }}
             >
-              {loadingEmotions ? "Analyzing Trigger..." : "Continue"}
+              Continue
             </button>
           </div>
         )}
@@ -1054,44 +1255,75 @@ export default function CBTJournal() {
                       key={emotion.name}
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                        flexWrap: "wrap",
+                        flexDirection: "column",
+                        gap: "0.4rem",
                       }}
                     >
-                      <span
-                        style={{
-                          width: "120px",
-                          fontWeight: 500,
-                          fontSize: "0.95rem",
-                        }}
-                      >
-                        {emotion.name}
-                      </span>
-                      <input
-                        type="range"
-                        min="10"
-                        max="100"
-                        value={emotion.weight}
-                        onChange={(e) =>
-                          updateEmotionWeight(
-                            emotion.name,
-                            parseInt(e.target.value),
-                          )
-                        }
-                        style={{ flex: 1, accentColor: "var(--soft-blue)" }}
-                      />
-                      <span
-                        style={{
-                          width: "45px",
-                          textAlign: "right",
-                          fontWeight: 600,
-                          fontSize: "0.9rem",
-                          color: "#666",
-                        }}
-                      >
-                        {emotion.weight}%
-                      </span>
+                      {/* Slider row */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                        <span
+                          style={{
+                            width: "120px",
+                            fontWeight: 500,
+                            fontSize: "0.95rem",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {emotion.name}
+                        </span>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={emotion.weight}
+                          onChange={(e) =>
+                            updateEmotionWeight(
+                              emotion.name,
+                              parseInt(e.target.value),
+                            )
+                          }
+                          style={{ flex: 1, accentColor: "var(--soft-blue)" }}
+                        />
+                        <span
+                          style={{
+                            width: "45px",
+                            textAlign: "right",
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            color: "#666",
+                          }}
+                        >
+                          {emotion.weight}%
+                        </span>
+                      </div>
+                      {/* Quick-tap preset buttons */}
+                      <div style={{ display: "flex", gap: "0.35rem", marginLeft: "128px" }}>
+                        {[25, 50, 75, 100].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => updateEmotionWeight(emotion.name, preset)}
+                            style={{
+                              padding: "0.18rem 0.55rem",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              borderRadius: "12px",
+                              border:
+                                emotion.weight === preset
+                                  ? "2px solid var(--soft-blue)"
+                                  : "1px solid #d1d5db",
+                              backgroundColor:
+                                emotion.weight === preset ? "#e6f0ff" : "#f8fafc",
+                              color:
+                                emotion.weight === preset ? "#004fe6" : "#6b7280",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {preset}%
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1247,7 +1479,7 @@ export default function CBTJournal() {
                     Analyzing Thought...
                   </span>
                 ) : (
-                  "Identify Thinking Traps"
+                  "🔍 Analyze Thought"
                 )}
               </button>
             </div>
@@ -1275,6 +1507,28 @@ export default function CBTJournal() {
               Select the cognitive distortions you believe you are experiencing.
               Read the definitions to learn more about them.
             </p>
+
+            {/* Inline AI error note — shown on 429 or network failure */}
+            {aiError && (
+              <div
+                style={{
+                  padding: "0.75rem 1rem",
+                  backgroundColor: "#fff7ed",
+                  border: "1px solid #fed7aa",
+                  borderLeft: "4px solid #fb923c",
+                  borderRadius: "var(--radius)",
+                  marginBottom: "1.5rem",
+                  fontSize: "0.9rem",
+                  color: "#9a3412",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <span style={{ fontSize: "1rem" }}>⚠️</span>
+                <span>{aiError}</span>
+              </div>
+            )}
 
             {loading ? (
               <div
@@ -1683,38 +1937,45 @@ export default function CBTJournal() {
                       gap: "0.5rem",
                     }}
                   >
-                    {/* AI Reframes */}
-                    {insightsData?.reframeSuggestions &&
-                      insightsData.reframeSuggestions.map((suggestion, idx) => (
-                        <button
-                          key={`ai-${idx}`}
-                          type="button"
-                          onClick={() => setAlternativeThought(suggestion)}
-                          style={{
-                            textAlign: "left",
-                            padding: "0.8rem 1rem",
-                            borderRadius: "var(--radius)",
-                            backgroundColor: "#f0f7f4",
-                            border: "1px solid #c2e0c6",
-                            color: "#2b5a2b",
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                            fontSize: "0.95rem",
-                            lineHeight: "1.4",
-                          }}
-                        >
-                          "{suggestion}"{" "}
-                          <span
-                            style={{
-                              float: "right",
-                              fontSize: "0.75rem",
-                              opacity: 0.6,
-                            }}
-                          >
-                            AI Option
-                          </span>
-                        </button>
-                      ))}
+                    {/* AI Reframes — gated by soft limit */}
+                    {insightsData?.reframeSuggestions && insightsData.reframeSuggestions.length > 0 && (
+                      autoReframeCount < 3 || showAiOverride ? (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                            <span style={{ fontSize: "0.78rem", color: "#888" }}>AI Suggestion</span>
+                            <span style={{ fontSize: "0.75rem", color: autoReframeCount >= 2 ? "#f59e0b" : "#aaa", fontWeight: 600 }}>
+                              {autoReframeCount}/3 AI reframes used this streak
+                            </span>
+                          </div>
+                          {insightsData.reframeSuggestions.map((suggestion, idx) => (
+                            <button
+                              key={`ai-${idx}`}
+                              type="button"
+                              onClick={() => { setAlternativeThought(suggestion); incrementReframeCount(); }}
+                              style={{ textAlign: "left", padding: "0.8rem 1rem", borderRadius: "var(--radius)", backgroundColor: "#f0f7f4", border: "1px solid #c2e0c6", color: "#2b5a2b", cursor: "pointer", transition: "all 0.2s", fontSize: "0.95rem", lineHeight: "1.4" }}
+                            >
+                              "{suggestion}"{" "}
+                              <span style={{ float: "right", fontSize: "0.75rem", opacity: 0.6 }}>AI Option</span>
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <div style={{ padding: "1rem 1.25rem", backgroundColor: "#faf5ff", border: "1px solid #e9d5ff", borderLeft: "4px solid #a855f7", borderRadius: "var(--radius)", animation: "fadeIn 0.3s ease" }}>
+                          <strong style={{ display: "block", color: "#6b21a8", fontSize: "0.9rem", marginBottom: "0.4rem" }}>
+                            🧠 Build the skill yourself first
+                          </strong>
+                          <p style={{ margin: "0 0 0.75rem 0", color: "#581c87", fontSize: "0.88rem", lineHeight: "1.5" }}>
+                            You've used AI reframe 3 times in a row. Writing your own reframe builds the neural pathway faster — try it in the box below. Once you've written something, you can optionally check it against the AI.
+                          </p>
+                          {alternativeThought.trim().length >= 20 && (
+                            <button type="button" onClick={() => setShowAiOverride(true)} style={{ fontSize: "0.82rem", color: "#7c3aed", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+                              ✨ Show me AI's take anyway
+                            </button>
+                          )}
+                        </div>
+                      )
+                    )}
+
                     {/* Heuristic Reframe */}
                     <button
                       type="button"
@@ -2101,27 +2362,160 @@ export default function CBTJournal() {
               }}
             />
 
-            <div style={{ display: "flex", gap: "1rem" }}>
+            {/* Button row */}
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
               <button
                 type="button"
-                onClick={() => {
-                  setStep(entryType === "positive" ? 2 : 4);
-                  setSelectedExercise(null);
-                }}
-                style={{
-                  background: "transparent",
-                  color: "#666",
-                  border: "1px solid #ccc",
-                  flex: 1,
-                }}
+                onClick={() => { setStep(entryType === "positive" ? 2 : 4); setSelectedExercise(null); }}
+                style={{ background: "transparent", color: "#666", border: "1px solid #ccc", flex: 1, minWidth: "80px" }}
               >
                 Back
               </button>
-              <button type="submit" disabled={loading} style={{ flex: 2 }}>
+              {entryType === "negative" && (
+                <button
+                  type="button"
+                  onClick={() => setShowReframeLaterPicker(true)}
+                  style={{ flex: 1, minWidth: "120px", background: "transparent", color: "#92400e", border: "1px solid #fcd34d", backgroundColor: "#fffbeb" }}
+                >
+                  ⏰ Reframe Later
+                </button>
+              )}
+              <button type="submit" disabled={loading} style={{ flex: 2, minWidth: "140px" }}>
                 {loading ? "Saving..." : "Save Entry & Finish"}
               </button>
             </div>
+
+            {/* Inline save error — replaces alert() popups */}
+            {saveError && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.75rem 1rem",
+                  backgroundColor: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderLeft: "4px solid #ef4444",
+                  borderRadius: "var(--radius)",
+                  fontSize: "0.9rem",
+                  color: "#991b1b",
+                }}
+              >
+                {saveError}
+              </div>
+            )}
+
+            {/* Reframe Later time picker */}
+            {showReframeLaterPicker && (
+              <div style={{ marginTop: "1rem", padding: "1.25rem", backgroundColor: "#fffbeb", border: "1px solid #fcd34d", borderRadius: "var(--radius)", animation: "fadeIn 0.3s ease" }}>
+                <strong style={{ display: "block", color: "#92400e", marginBottom: "0.75rem", fontSize: "0.95rem" }}>
+                  ⏰ When should we remind you to come back and reframe this?
+                </strong>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => handleReframeLater(6)} style={{ padding: "0.5rem 1.1rem", backgroundColor: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
+                    In 6 Hours
+                  </button>
+                  <button type="button" onClick={() => handleReframeLater(12)} style={{ padding: "0.5rem 1.1rem", backgroundColor: "#d97706", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
+                    In 12 Hours
+                  </button>
+                  <button type="button" onClick={() => handleReframeLater(null)} style={{ padding: "0.5rem 1.1rem", background: "transparent", color: "#78350f", border: "1px solid #fcd34d", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem" }}>
+                    Save without reminder
+                  </button>
+                  <button type="button" onClick={() => setShowReframeLaterPicker(false)} style={{ padding: "0.5rem 0.75rem", background: "none", color: "#aaa", border: "none", cursor: "pointer", fontSize: "0.85rem" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
+        )}
+
+        {/* ── Completion Insight Card ── */}
+        {showCompletion && (
+          <div style={{ animation: "fadeIn 0.5s ease" }}>
+            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+              <span style={{ fontSize: "2.5rem" }}>✅</span>
+              <h3 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1e293b", margin: "0.5rem 0 0.25rem" }}>
+                Entry Saved
+              </h3>
+              <p style={{ color: "#64748b", fontSize: "0.95rem" }}>
+                Here's what your entry reveals about your CBT triangle today.
+              </p>
+            </div>
+
+            {/* Mini CBT Triangle SVG */}
+            {(() => {
+              const APEX = {
+                thoughts:  { x: 200, y: 30,  label: '💭 Thoughts',  active: '#2563eb', rest: '#bfdbfe' },
+                feelings:  { x: 370, y: 310, label: '❤️ Feelings',  active: '#f43f5e', rest: '#fecdd3' },
+                behaviors: { x: 30,  y: 310, label: '🏃 Behaviors', active: '#10b981', rest: '#a7f3d0' },
+              } as const;
+              const corners = ['thoughts','feelings','behaviors'] as const;
+              const isDominant = (k: string) => dominantCorners.includes(k as TriangleCorner);
+              const cornerNotes: Record<string, { title: string; body: string }> = {
+                thoughts: {
+                  title: 'Your Thoughts corner is most active today.',
+                  body: `You identified ${dominantCorners.includes('thoughts') ? 'cognitive distortions' : 'patterns'} in your thinking. This is the most powerful lever — the thinking patterns you spotted today are the exact ones that fuel emotional distress and avoidance. Each time you name them, their grip weakens.`,
+                },
+                feelings: {
+                  title: 'Your Feelings corner is most active today.',
+                  body: 'High-intensity emotions were a central feature of this entry. Feelings are the output — they\'re generated by your thoughts and sustained by behaviors. You can\'t switch them off directly, but you just took a key step: naming and mapping them reduces amygdala activation.',
+                },
+                behaviors: {
+                  title: 'Your Behaviors corner is most active today.',
+                  body: 'Your situation description suggests behavioral patterns (avoidance, withdrawal, or cancellation) may be reinforcing the cycle. Behaviors are the highest-leverage intervention point — even a 5-minute opposite action creates real counter-evidence that updates both your thoughts and feelings.',
+                },
+              };
+              const primaryCorner = dominantCorners[0] ?? 'thoughts';
+              return (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
+                  <svg viewBox="0 0 400 340" width="100%" style={{ maxWidth: "340px" }}>
+                    {/* Edges */}
+                    <line x1={200} y1={30} x2={370} y2={310} stroke="#e2e8f0" strokeWidth="2"/>
+                    <line x1={200} y1={30} x2={30}  y2={310} stroke="#e2e8f0" strokeWidth="2"/>
+                    <line x1={30}  y1={310} x2={370} y2={310} stroke="#e2e8f0" strokeWidth="2"/>
+                    {/* Apex nodes */}
+                    {corners.map(k => {
+                      const a = APEX[k];
+                      const active = isDominant(k);
+                      return (
+                        <g key={k}>
+                          <circle cx={a.x} cy={a.y} r={active ? 28 : 22} fill={active ? a.active : a.rest} opacity={active ? 1 : 0.5}/>
+                          {active && <circle cx={a.x} cy={a.y} r={34} fill="none" stroke={a.active} strokeWidth="2" opacity="0.3"/>}
+                          <text x={a.x} y={a.y + 5} textAnchor="middle" fontSize={active ? "11" : "9"} fill={active ? "#fff" : "#64748b"} fontWeight={active ? "700" : "400"}>
+                            {a.label}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+
+                  {/* Clinical note */}
+                  <div style={{ width: "100%", padding: "1.25rem 1.5rem", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderLeft: `4px solid ${dominantCorners.includes('thoughts') ? '#2563eb' : dominantCorners.includes('feelings') ? '#f43f5e' : '#10b981'}`, borderRadius: "var(--radius)" }}>
+                    <strong style={{ display: "block", marginBottom: "0.4rem", color: "#1e293b", fontSize: "0.95rem" }}>
+                      {cornerNotes[primaryCorner].title}
+                    </strong>
+                    <p style={{ margin: 0, color: "#475569", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                      {cornerNotes[primaryCorner].body}
+                    </p>
+                    {dominantCorners.length > 1 && (
+                      <p style={{ margin: "0.75rem 0 0", color: "#64748b", fontSize: "0.85rem", fontStyle: "italic" }}>
+                        Also active: {dominantCorners.slice(1).map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' & ')}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Navigation */}
+                  <div style={{ display: "flex", gap: "0.75rem", width: "100%", flexWrap: "wrap" }}>
+                    <button type="button" onClick={() => { setShowCompletion(false); router.push('/'); router.refresh(); }} style={{ flex: 2 }}>
+                      Go to Dashboard
+                    </button>
+                    <Link href="/toolkit" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0.65rem 1rem", borderRadius: "var(--radius)", border: "1px solid #e2e8f0", color: "#2563eb", textDecoration: "none", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>
+                      Explore Triangle →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         )}
       </div>
 
@@ -2213,23 +2607,87 @@ export default function CBTJournal() {
                         timeStyle: "short",
                       })}
                     </span>
-                    <span
-                      style={{
-                        backgroundColor: isPositive ? "#fffbeb" : "#f0f7f4",
-                        color: isPositive ? "#b45309" : "#2b5a2b",
-                        padding: "0.15rem 0.6rem",
-                        borderRadius: "10px",
-                        fontWeight: 600,
-                        fontSize: "0.75rem",
-                        border: isPositive
-                          ? "1px solid #fde68a"
-                          : "1px solid #c2e0c6",
-                      }}
-                    >
-                      {isPositive
-                        ? "🏆 Victory Reflection"
-                        : "💭 CBT Thought Record"}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                      {!isPositive && (
+                        item.outcomeText ? (
+                          <span
+                            style={{
+                              backgroundColor:
+                                item.loopAccuracy === "Exactly as Feared" ||
+                                item.predictionEvaluation === "Worse than expected"
+                                  ? "#fff7ed"
+                                  : item.loopAccuracy === "Partially True" ||
+                                    item.predictionEvaluation === "As expected"
+                                    ? "#fefce8"
+                                    : "#f0fdf4",
+                              color:
+                                item.loopAccuracy === "Exactly as Feared" ||
+                                item.predictionEvaluation === "Worse than expected"
+                                  ? "#c2410c"
+                                  : item.loopAccuracy === "Partially True" ||
+                                    item.predictionEvaluation === "As expected"
+                                    ? "#a16207"
+                                    : "#15803d",
+                              padding: "0.15rem 0.65rem",
+                              borderRadius: "10px",
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                              border: `1px solid ${
+                                item.loopAccuracy === "Exactly as Feared" ||
+                                item.predictionEvaluation === "Worse than expected"
+                                  ? "#fdba74"
+                                  : item.loopAccuracy === "Partially True" ||
+                                    item.predictionEvaluation === "As expected"
+                                    ? "#fde047"
+                                    : "#86efac"
+                              }`,
+                            }}
+                          >
+                            {item.loopAccuracy === "Completely False / Disproved" ||
+                            item.predictionEvaluation === "Much better than expected"
+                              ? "✅ Reality Tested (Belief Disproved)"
+                              : item.loopAccuracy === "Partially True" ||
+                                item.predictionEvaluation === "As expected"
+                                ? "⚖️ Reality Tested (Partially True)"
+                                : item.loopAccuracy === "Exactly as Feared" ||
+                                  item.predictionEvaluation === "Worse than expected"
+                                  ? "⚠️ Reality Tested (Exactly as Feared)"
+                                  : "✅ Reality Tested"}
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              backgroundColor: "#fff7ed",
+                              color: "#c2410c",
+                              padding: "0.15rem 0.65rem",
+                              borderRadius: "10px",
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                              border: "1px solid #fdba74",
+                            }}
+                          >
+                            ⏳ Open Loop
+                          </span>
+                        )
+                      )}
+                      <span
+                        style={{
+                          backgroundColor: isPositive ? "#fffbeb" : "#f0f7f4",
+                          color: isPositive ? "#b45309" : "#2b5a2b",
+                          padding: "0.15rem 0.6rem",
+                          borderRadius: "10px",
+                          fontWeight: 600,
+                          fontSize: "0.75rem",
+                          border: isPositive
+                            ? "1px solid #fde68a"
+                            : "1px solid #c2e0c6",
+                        }}
+                      >
+                        {isPositive
+                          ? "🏆 Victory Reflection"
+                          : "💭 CBT Thought Record"}
+                      </span>
+                    </div>
                   </div>
 
                   <div
@@ -2243,10 +2701,13 @@ export default function CBTJournal() {
                       <strong
                         style={{
                           display: "block",
-                          fontSize: "0.78rem",
-                          color: "#777",
+                          fontSize: "0.72rem",
+                          color: "#64748b",
                           textTransform: "uppercase",
-                          letterSpacing: "0.5px",
+                          letterSpacing: "0.8px",
+                          fontWeight: 700,
+                          fontFamily: "sans-serif",
+                          marginBottom: "0.2rem",
                         }}
                       >
                         {isPositive
@@ -2255,10 +2716,12 @@ export default function CBTJournal() {
                       </strong>
                       <p
                         style={{
-                          margin: "0.2rem 0 0 0",
-                          color: "#222",
-                          fontSize: "0.98rem",
-                          lineHeight: "1.5",
+                          margin: 0,
+                          color: "#0f172a",
+                          fontSize: "1rem",
+                          lineHeight: "1.65",
+                          fontWeight: 600,
+                          fontFamily: "sans-serif",
                         }}
                       >
                         {item.situation}
@@ -2270,20 +2733,25 @@ export default function CBTJournal() {
                         <strong
                           style={{
                             display: "block",
-                            fontSize: "0.78rem",
-                            color: "#777",
+                            fontSize: "0.72rem",
+                            color: "#64748b",
                             textTransform: "uppercase",
-                            letterSpacing: "0.5px",
+                            letterSpacing: "0.8px",
+                            fontWeight: 700,
+                            fontFamily: "sans-serif",
+                            marginBottom: "0.2rem",
                           }}
                         >
                           Automatic Thought
                         </strong>
                         <p
                           style={{
-                            margin: "0.2rem 0 0 0",
-                            color: "#222",
-                            fontSize: "0.98rem",
-                            lineHeight: "1.5",
+                            margin: 0,
+                            color: "#0f172a",
+                            fontSize: "1rem",
+                            lineHeight: "1.65",
+                            fontWeight: 600,
+                            fontFamily: "sans-serif",
                           }}
                         >
                           {item.automaticThought}
@@ -2381,10 +2849,13 @@ export default function CBTJournal() {
                       <strong
                         style={{
                           display: "block",
-                          fontSize: "0.78rem",
-                          color: "#777",
+                          fontSize: "0.72rem",
+                          color: "#64748b",
                           textTransform: "uppercase",
-                          letterSpacing: "0.5px",
+                          letterSpacing: "0.8px",
+                          fontWeight: 700,
+                          fontFamily: "sans-serif",
+                          marginBottom: "0.2rem",
                         }}
                       >
                         {isPositive
@@ -2393,7 +2864,7 @@ export default function CBTJournal() {
                       </strong>
                       <p
                         style={{
-                          margin: "0.2rem 0 0 0",
+                          margin: 0,
                           color: isPositive ? "#451a03" : "#1e3a1e",
                           backgroundColor: isPositive ? "#fffdf5" : "#f0f7f4",
                           padding: "0.75rem 1rem",
@@ -2401,9 +2872,11 @@ export default function CBTJournal() {
                           borderLeft: isPositive
                             ? "3px solid #e9c46a"
                             : "3px solid var(--sage-green)",
-                          fontSize: "0.98rem",
+                          fontSize: "1rem",
+                          fontWeight: 600,
+                          fontFamily: "sans-serif",
                           fontStyle: "italic",
-                          lineHeight: "1.5",
+                          lineHeight: "1.65",
                         }}
                       >
                         {item.reframedThought}
@@ -2496,10 +2969,10 @@ export default function CBTJournal() {
                           <div
                             style={{
                               backgroundColor: "#f8fafc",
-                              padding: "1rem",
-                              borderRadius: "8px",
+                              padding: "1rem 1.25rem",
+                              borderRadius: "10px",
                               border: "1px solid #e2e8f0",
-                              borderLeft: "4px solid var(--soft-blue)",
+                              borderLeft: "4px solid #3b82f6",
                             }}
                           >
                             <div
@@ -2507,57 +2980,79 @@ export default function CBTJournal() {
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",
-                                marginBottom: "0.4rem",
+                                marginBottom: "0.5rem",
+                                flexWrap: "wrap",
+                                gap: "0.5rem",
                               }}
                             >
                               <span
                                 style={{
                                   fontSize: "0.75rem",
                                   fontWeight: 700,
-                                  color: "var(--soft-blue-hover)",
+                                  color: "#1d4ed8",
                                   textTransform: "uppercase",
                                   letterSpacing: "0.5px",
                                 }}
                               >
-                                ⚖️ The Evidence Loop (Outcome Logged)
+                                ⚖️ The Evidence Loop (Reality Tested)
                               </span>
-                              <span
-                                style={{
-                                  fontSize: "0.7rem",
-                                  fontWeight: 700,
-                                  backgroundColor:
-                                    item.predictionEvaluation ===
-                                    "Much better than expected"
-                                      ? "#dcfce7"
-                                      : item.predictionEvaluation ===
-                                          "As expected"
-                                        ? "#fef9c3"
-                                        : "#fee2e2",
-                                  color:
-                                    item.predictionEvaluation ===
-                                    "Much better than expected"
-                                      ? "#15803d"
-                                      : item.predictionEvaluation ===
-                                          "As expected"
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                {item.reliefRating !== undefined && item.reliefRating !== null && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      padding: "0.12rem 0.5rem",
+                                      borderRadius: "10px",
+                                      backgroundColor: item.reliefRating >= 7 ? "#dcfce7" : item.reliefRating >= 4 ? "#fef9c3" : "#fee2e2",
+                                      color: item.reliefRating >= 7 ? "#15803d" : item.reliefRating >= 4 ? "#a16207" : "#b91c1c",
+                                      border: `1px solid ${item.reliefRating >= 7 ? '#86efac' : item.reliefRating >= 4 ? '#fde047' : '#fca5a5'}`,
+                                    }}
+                                  >
+                                    Relief: {item.reliefRating}/10
+                                  </span>
+                                )}
+                                <span
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    backgroundColor:
+                                      item.loopAccuracy === "Exactly as Feared" || item.predictionEvaluation === "Worse than expected"
+                                        ? "#fff7ed"
+                                        : item.loopAccuracy === "Partially True" || item.predictionEvaluation === "As expected"
+                                        ? "#fefce8"
+                                        : "#dcfce7",
+                                    color:
+                                      item.loopAccuracy === "Exactly as Feared" || item.predictionEvaluation === "Worse than expected"
+                                        ? "#c2410c"
+                                        : item.loopAccuracy === "Partially True" || item.predictionEvaluation === "As expected"
                                         ? "#a16207"
-                                        : "#b91c1c",
-                                  padding: "0.15rem 0.5rem",
-                                  borderRadius: "12px",
-                                }}
-                              >
-                                {item.predictionEvaluation}
-                              </span>
+                                        : "#15803d",
+                                    padding: "0.15rem 0.5rem",
+                                    borderRadius: "12px",
+                                    border: `1px solid ${
+                                      item.loopAccuracy === "Exactly as Feared" || item.predictionEvaluation === "Worse than expected"
+                                        ? "#fdba74"
+                                        : item.loopAccuracy === "Partially True" || item.predictionEvaluation === "As expected"
+                                        ? "#fde047"
+                                        : "#86efac"
+                                    }`,
+                                  }}
+                                >
+                                  {item.loopAccuracy || item.predictionEvaluation}
+                                </span>
+                              </div>
                             </div>
                             <p
                               style={{
                                 margin: 0,
                                 fontSize: "0.92rem",
-                                color: "var(--foreground)",
-                                lineHeight: 1.4,
+                                color: "#1e293b",
+                                lineHeight: 1.5,
                                 fontWeight: 500,
                               }}
                             >
-                              <strong>What happened:</strong> {item.outcomeText}
+                              <strong>What actually happened:</strong> {item.outcomeText}
                             </p>
                             {item.lessonsLearned && (
                               <p
@@ -2572,226 +3067,85 @@ export default function CBTJournal() {
                                 <strong>Takeaway:</strong> {item.lessonsLearned}
                               </p>
                             )}
+                            <div style={{ marginTop: "0.75rem", display: "flex", justifyContent: "flex-end" }}>
+                              <button
+                                type="button"
+                                onClick={() => setCloseLoopModalEntryId(item.id)}
+                                style={{
+                                  padding: "0.3rem 0.75rem",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  color: "#475569",
+                                  backgroundColor: "#fff",
+                                  border: "1px solid #cbd5e1",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                ✏️ Re-evaluate Reality Check
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           // If outcome not logged
-                          <div>
-                            {editingId === item.id ? (
-                              <div
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              backgroundColor: "#fffbeb",
+                              padding: "0.9rem 1.25rem",
+                              borderRadius: "10px",
+                              border: "1.5px dashed #fde68a",
+                              gap: "1rem",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: "200px" }}>
+                              <span
                                 style={{
-                                  backgroundColor: "#fcfaf6",
-                                  padding: "1.25rem",
-                                  borderRadius: "8px",
-                                  border: "1px solid #f5efe6",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: "0.75rem",
-                                  animation: "fadeIn 0.3s ease",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  color: "#b45309",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.7px",
+                                  display: "block",
+                                  marginBottom: "0.2rem",
                                 }}
                               >
-                                <span
-                                  style={{
-                                    fontSize: "0.85rem",
-                                    fontWeight: 700,
-                                    color: "var(--accent-gold-text)",
-                                  }}
-                                >
-                                  📝 Log Real-World Outcome
-                                </span>
-                                <div>
-                                  <label
-                                    style={{
-                                      display: "block",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      color: "#666",
-                                      marginBottom: "0.2rem",
-                                    }}
-                                  >
-                                    How did this situation actually turn out?
-                                    (Outcome)
-                                  </label>
-                                  <textarea
-                                    value={tempOutcomeText}
-                                    onChange={(e) =>
-                                      setTempOutcomeText(e.target.value)
-                                    }
-                                    placeholder="Write down the concrete, objective details of what occurred..."
-                                    rows={2}
-                                    style={{
-                                      width: "100%",
-                                      padding: "0.5rem 0.75rem",
-                                      borderRadius: "6px",
-                                      border: "1px solid #ccc",
-                                      fontSize: "0.9rem",
-                                      fontFamily: "inherit",
-                                      resize: "vertical",
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <label
-                                    style={{
-                                      display: "block",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      color: "#666",
-                                      marginBottom: "0.2rem",
-                                    }}
-                                  >
-                                    Prediction Evaluation
-                                  </label>
-                                  <select
-                                    value={tempEvaluation}
-                                    onChange={(e) =>
-                                      setTempEvaluation(e.target.value)
-                                    }
-                                    style={{
-                                      width: "100%",
-                                      padding: "0.5rem",
-                                      borderRadius: "6px",
-                                      border: "1px solid #ccc",
-                                      fontSize: "0.9rem",
-                                      backgroundColor: "#fff",
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <option value="Much better than expected">
-                                      Much better than expected
-                                    </option>
-                                    <option value="As expected">
-                                      As expected
-                                    </option>
-                                    <option value="Worse than expected">
-                                      Worse than expected
-                                    </option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label
-                                    style={{
-                                      display: "block",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      color: "#666",
-                                      marginBottom: "0.2rem",
-                                    }}
-                                  >
-                                    Lessons / Key Takeaways (Optional)
-                                  </label>
-                                  <textarea
-                                    value={tempLessonsLearned}
-                                    onChange={(e) =>
-                                      setTempLessonsLearned(e.target.value)
-                                    }
-                                    placeholder="Any patterns noticed, should statements debunked, etc."
-                                    rows={2}
-                                    style={{
-                                      width: "100%",
-                                      padding: "0.5rem 0.75rem",
-                                      borderRadius: "6px",
-                                      border: "1px solid #ccc",
-                                      fontSize: "0.9rem",
-                                      fontFamily: "inherit",
-                                      resize: "vertical",
-                                    }}
-                                  />
-                                </div>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    gap: "0.5rem",
-                                    marginTop: "0.25rem",
-                                  }}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingId(null);
-                                      setTempOutcomeText("");
-                                      setTempLessonsLearned("");
-                                      setTempEvaluation(
-                                        "Much better than expected",
-                                      );
-                                    }}
-                                    style={{
-                                      flex: 1,
-                                      padding: "0.4rem 0.8rem",
-                                      fontSize: "0.85rem",
-                                      backgroundColor: "transparent",
-                                      color: "#666",
-                                      border: "1px solid #ccc",
-                                      borderRadius: "6px",
-                                    }}
-                                    className="btn-secondary"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveOutcome(item.id)}
-                                    disabled={
-                                      savingOutcomeId === item.id ||
-                                      !tempOutcomeText.trim()
-                                    }
-                                    style={{
-                                      flex: 2,
-                                      padding: "0.4rem 0.8rem",
-                                      fontSize: "0.85rem",
-                                      borderRadius: "6px",
-                                    }}
-                                    className="btn-primary"
-                                  >
-                                    {savingOutcomeId === item.id
-                                      ? "Saving..."
-                                      : "Save Outcome"}
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div
+                                ⏳ Open Loop — Prediction Untested
+                              </span>
+                              <span
                                 style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  backgroundColor: "#f8fafc",
-                                  padding: "0.75rem 1rem",
-                                  borderRadius: "8px",
-                                  border: "1px dashed #cbd5e1",
+                                  fontSize: "0.88rem",
+                                  color: "#78350f",
+                                  fontWeight: 500,
+                                  lineHeight: 1.4,
+                                  display: "block",
                                 }}
                               >
-                                <span
-                                  style={{
-                                    fontSize: "0.85rem",
-                                    color: "#475569",
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  How did this situation actually turn out? Add
-                                  an outcome to update your evidence engine.
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingId(item.id);
-                                    setTempOutcomeText("");
-                                    setTempLessonsLearned("");
-                                    setTempEvaluation(
-                                      "Much better than expected",
-                                    );
-                                  }}
-                                  style={{
-                                    padding: "0.4rem 0.8rem",
-                                    fontSize: "0.8rem",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                  }}
-                                  className="btn-secondary"
-                                >
-                                  Close the Loop
-                                </button>
-                              </div>
-                            )}
+                                How did this situation actually turn out in reality? Compare what happened against your automatic thought to earn +40 Resilience Points.
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setCloseLoopModalEntryId(item.id)}
+                              style={{
+                                padding: "0.5rem 1.1rem",
+                                fontSize: "0.85rem",
+                                fontWeight: 700,
+                                borderRadius: "8px",
+                                backgroundColor: "#f59e0b",
+                                color: "#fff",
+                                border: "none",
+                                cursor: "pointer",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                                whiteSpace: "nowrap",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              🔬 Close the Loop (+40 pts)
+                            </button>
                           </div>
                         )}
                       </div>
@@ -2803,6 +3157,22 @@ export default function CBTJournal() {
           </div>
         )}
       </div>
+
+      {/* Slide-over Close the Loop Modal */}
+      {closeLoopModalEntryId !== null && (() => {
+        const activeEntry = history.find((e) => e.id === closeLoopModalEntryId);
+        if (!activeEntry) return null;
+        return (
+          <CloseLoopModal
+            entryId={activeEntry.id}
+            situation={activeEntry.situation}
+            automaticThought={activeEntry.automaticThought}
+            isOpen={true}
+            onClose={() => setCloseLoopModalEntryId(null)}
+            onComplete={handleCompleteCloseLoop}
+          />
+        );
+      })()}
 
       <style
         dangerouslySetInnerHTML={{

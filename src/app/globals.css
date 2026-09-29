@@ -1,10 +1,15 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-display: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
 :root {
   /* Typography Variables (Hydrated by next/font/google) */
-  --font-serif:
-    var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Calming HSL Color Palette */
   --background-hsl: 34, 30%, 98%;
@@ -56,45 +61,44 @@
     10px 0 30px rgba(92, 127, 102, 0.04), 1px 0 3px rgba(92, 127, 102, 0.01);
 }
 
-/* Base Document Styling */
-html,
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--background);
-  /* Organic gentle gradient to add depth */
-  background-image:
-    radial-gradient(at 0% 0%, hsl(134, 25%, 96%) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsl(200, 25%, 96%) 0px, transparent 50%);
-  background-attachment: fixed;
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* Base Document Styling and Typography */
+@layer base {
+  body {
+    @apply font-sans text-slate-900 bg-slate-50 antialiased leading-relaxed;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    margin: 0;
+    padding: 0;
+  }
 
-* {
-  box-sizing: border-box;
-  outline-color: var(--sage-green);
-}
+  * {
+    box-sizing: border-box;
+    outline-color: var(--sage-green);
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-  transition: color 0.25s ease;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.25s ease;
+  }
 
-/* Typography Headings */
-h1,
-h2,
-h3,
-h4,
-.serif-heading {
-  font-family: var(--font-serif);
-  font-weight: 600;
-  color: hsl(140, 15%, 15%);
-  letter-spacing: -0.3px;
+  /* Restrict serif strictly to top-level h1 page titles */
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: hsl(140, 15%, 15%);
+    letter-spacing: -0.025em;
+  }
+
+  /* All card headers, subheaders, and UI headings strictly use font-sans */
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
 }
 
 /* Premium Layout Container */
@@ -150,39 +154,41 @@ h4,
 }
 
 /* Form Controls */
-.form-input,
-input[type="text"],
-input[type="tel"],
-input[type="email"],
-input[type="password"],
-input[type="datetime-local"],
-input[type="number"],
-textarea,
-select {
-  width: 100%;
-  padding: 0.85rem 1.2rem;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  background-color: rgba(255, 255, 255, 0.8);
-  color: var(--foreground);
-  font-family: inherit;
-  font-size: 0.95rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
+@layer base {
+  .form-input,
+  input[type="text"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="password"],
+  input[type="datetime-local"],
+  input[type="number"],
+  textarea,
+  select {
+    width: 100%;
+    padding: 0.85rem 1.2rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background-color: rgba(255, 255, 255, 0.8);
+    color: var(--foreground);
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 
-.form-input:focus,
-input[type="text"]:focus,
-input[type="tel"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="datetime-local"]:focus,
-input[type="number"]:focus,
-textarea:focus,
-select:focus {
-  background-color: #ffffff;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 4px hsl(134, 25%, 90%);
-  outline: none;
+  .form-input:focus,
+  input[type="text"]:focus,
+  input[type="tel"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="datetime-local"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+    background-color: #ffffff;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 4px hsl(134, 25%, 90%);
+    outline: none;
+  }
 }
 
 /* Calming Buttons Style Layer */
@@ -470,3 +476,34 @@ select:focus {
     transform: rotate(360deg);
   }
 }
+
+/* ============================================================
+   PRINT STYLES FOR THERAPY SUMMARY / PDF EXPORT
+   ============================================================ */
+@media print {
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  .bottom-nav,
+  nav,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  @page {
+    margin: 0.5in;
+    size: auto;
+  }
+}
+

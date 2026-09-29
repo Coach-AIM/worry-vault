@@ -252,7 +252,6 @@ export default function EndOfDayReflection() {
               {expiredDecisions.length}
             </span>
             <h2
-              className="serif-heading"
               style={{
                 color: "var(--sage-green)",
                 fontSize: "1.6rem",
@@ -393,7 +392,6 @@ export default function EndOfDayReflection() {
         >
           <div>
             <h2
-              className="serif-heading"
               style={{
                 color: "var(--sage-green)",
                 fontSize: "1.6rem",
@@ -524,7 +522,6 @@ export default function EndOfDayReflection() {
         >
           <div>
             <h2
-              className="serif-heading"
               style={{
                 color: "var(--sage-green)",
                 fontSize: "1.6rem",
@@ -648,7 +645,6 @@ export default function EndOfDayReflection() {
         >
           <div style={{ fontSize: "4rem", marginBottom: "1.5rem" }}>✨</div>
           <h2
-            className="serif-heading"
             style={{
               color: "var(--sage-green)",
               fontSize: "1.8rem",

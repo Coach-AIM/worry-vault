@@ -91,8 +91,8 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xl bg-white/95 backdrop-blur-md border border-slate-150 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] h-[68px] flex items-center justify-center">
-      <ul className="flex flex-row w-full max-w-2xl mx-auto justify-around items-center list-none m-0 p-0 px-4 h-full">
+    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xl bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] h-[68px] flex items-center justify-center font-sans">
+      <ul className="flex flex-row w-full max-w-2xl mx-auto justify-around items-center list-none m-0 p-0 px-3 h-full">
         {tabs.map((tab) => {
           const isActive = tab.href === "/"
             ? pathname === "/"
@@ -101,12 +101,14 @@ export default function Navigation() {
             <li key={tab.href} className="flex-1 flex justify-center items-center">
               <Link
                 href={tab.href}
-                className={`flex flex-col items-center justify-center text-slate-400 hover:text-emerald-600 p-2 rounded-xl transition-all duration-300 w-full ${
-                  isActive ? "active text-emerald-600 bg-emerald-50/50 font-semibold" : ""
+                className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 w-full ${
+                  isActive
+                    ? "active text-emerald-700 bg-emerald-50 font-bold"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
                 }`}
               >
-                <div className="mb-0.5 transition-transform duration-300">{tab.icon}</div>
-                <span className="text-[11px] sm:text-xs font-medium tracking-tight whitespace-nowrap">{tab.name}</span>
+                <div className="mb-0.5 transition-transform duration-200">{tab.icon}</div>
+                <span className="text-[11px] sm:text-xs tracking-tight whitespace-nowrap">{tab.name}</span>
               </Link>
             </li>
           );
@@ -114,7 +116,7 @@ export default function Navigation() {
         <li className="flex-1 flex justify-center items-center hidden md:flex">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex flex-col items-center justify-center text-slate-400 hover:text-red-600 p-2 rounded-xl transition-all duration-300 w-full"
+            className="flex flex-col items-center justify-center text-slate-500 hover:text-rose-700 hover:bg-rose-50/60 p-2 rounded-xl transition-all duration-200 w-full font-medium"
             style={{
               background: "none",
               border: "none",
@@ -140,7 +142,7 @@ export default function Navigation() {
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
             </div>
-            <span className="text-[11px] sm:text-xs font-medium tracking-tight whitespace-nowrap">Sign Out</span>
+            <span className="text-[11px] sm:text-xs tracking-tight whitespace-nowrap">Sign Out</span>
           </button>
         </li>
       </ul>

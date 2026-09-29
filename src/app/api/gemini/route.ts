@@ -1,15 +1,15 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { NextResponse } from "next/server";
 
-const apiKey = process.env.GEMINI_API_KEY;
-
 export async function POST(req: Request) {
   try {
-    if (!apiKey || apiKey === "MISSING_API_KEY") {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY_MISSING" },
-        { status: 400 },
-      );
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MISSING_API_KEY" || apiKey.trim() === "") {
+      return NextResponse.json({
+        ok: false,
+        fallback: true,
+        error: "GEMINI_API_KEY_MISSING",
+      });
     }
     const ai = new GoogleGenAI({ apiKey });
     const body = await req.json();
@@ -145,7 +145,7 @@ User Input: ${prompt}`;
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         systemInstruction,
@@ -156,12 +156,13 @@ User Input: ${prompt}`;
 
     if (!response.text) throw new Error("No text returned from Gemini");
 
-    return NextResponse.json({ result: JSON.parse(response.text) });
-  } catch (error) {
+    return NextResponse.json({ ok: true, result: JSON.parse(response.text) });
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate content" },
-      { status: 500 },
-    );
+    return NextResponse.json({
+      ok: false,
+      fallback: true,
+      error: error?.message || "Failed to generate content",
+    });
   }
 }
