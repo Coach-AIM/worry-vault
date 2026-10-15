@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   ReferenceLine,
   ReferenceArea,
+  ReferenceDot,
   PieChart,
   Pie,
   Cell,
@@ -26,6 +27,8 @@ interface TimelinePoint {
   day: string;
   mood: number;
   status: string;
+  iso?: string;       // YYYY-MM-DD local date of this point
+  monthly?: boolean;  // true when the point represents a whole month (6-month view)
 }
 
 interface TrapSlice {
@@ -39,15 +42,20 @@ interface TrapSlice {
 interface ActionMarker {
   type: 'action';
   title: string;
-  moodRating?: number;       // 0 | 5 | 10
-  completedAt: string;       // ISO timestamp
+  moodRating?: number;         // 0–10 rating from focus actions
+  actualRelief?: number;       // 0–10 from momentum_actual_reliefs
+  predictedDifficulty?: number;// from momentum_task_meta
+  completedAt: string;         // ISO timestamp
 }
 
 interface JournalMarker {
   type: 'journal';
   situation: string;
-  reframe: string;           // reframedThought
-  createdAt: string;         // ISO timestamp
+  reframe: string;             // reframedThought
+  createdAt: string;           // ISO timestamp
+  loopAccuracy?: string;       // 'Completely False' | 'Partially True' | 'Exactly as Feared'
+  outcomeText?: string;        // actual outcome from Close the Loop
+  loopClosedAt?: string;       // ISO timestamp of reality check
 }
 
 type CorrelationMarker = ActionMarker | JournalMarker;
@@ -194,16 +202,17 @@ function generate7d(today: Date, offset: number): TimelinePoint[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = addDays(start, i);
     const mood = moodForDate(d);
-    return { day: fmtWeekday(d), mood, status: getValenceDetails(mood).label };
+    return { day: fmtWeekday(d), mood, status: getValenceDetails(mood).label, iso: toInputValue(d) };
   });
 }
 
+// Real day-by-day points across the whole 30-day window (no weekly averaging)
 function generate30d(today: Date, offset: number): TimelinePoint[] {
-  const start = addDays(today, offset * 30 - 27);
-  return Array.from({ length: 4 }, (_, i) => {
-    const d = addDays(start, i * 9);
+  const start = addDays(today, offset * 30 - 29);
+  return Array.from({ length: 30 }, (_, i) => {
+    const d = addDays(start, i);
     const mood = moodForDate(d);
-    return { day: `Wk ${i + 1}`, mood, status: getValenceDetails(mood).label };
+    return { day: fmtShort(d), mood, status: getValenceDetails(mood).label, iso: toInputValue(d) };
   });
 }
 
@@ -211,7 +220,7 @@ function generate6m(today: Date, offset: number): TimelinePoint[] {
   return Array.from({ length: 6 }, (_, i) => {
     const d = addMonths(today, -(5 - i) + offset * 6);
     const mood = moodForDate(d);
-    return { day: fmtMonth(d), mood, status: getValenceDetails(mood).label };
+    return { day: fmtMonth(d), mood, status: getValenceDetails(mood).label, iso: toInputValue(d), monthly: true };
   });
 }
 
@@ -227,7 +236,7 @@ function generateCustom(startStr: string, endStr: string): TimelinePoint[] {
   return Array.from({ length: steps }, (_, i) => {
     const d    = addDays(start, Math.round(i * interval));
     const mood = moodForDate(d);
-    return { day: fmtShort(d), mood, status: getValenceDetails(mood).label };
+    return { day: fmtShort(d), mood, status: getValenceDetails(mood).label, iso: toInputValue(d) };
   });
 }
 
@@ -326,55 +335,69 @@ interface MarkerTooltipState {
 function MarkerTooltipPopover({ state }: { state: MarkerTooltipState }) {
   const { marker, x } = state;
   const isAction = marker.type === 'action';
-  const ratingLabel =
-    isAction
-      ? marker.moodRating === 10 ? '😊 +10 Positive'
-        : marker.moodRating === 5  ? '😐 5 Neutral'
-        : marker.moodRating === 0  ? '😔 0 Negative'
-        : null
-      : null;
 
   // Clamp so tooltip stays within bounds
   const clampedX = Math.min(Math.max(x, 8), 88);
 
+  if (isAction) {
+    const relief = marker.actualRelief ?? marker.moodRating;
+    const delta = (marker.actualRelief !== undefined && marker.predictedDifficulty !== undefined)
+      ? marker.actualRelief - marker.predictedDifficulty
+      : null;
+    return (
+      <div
+        className="absolute bottom-full mb-2 z-20 bg-white border border-slate-200 rounded-xl shadow-xl px-3 py-2.5 text-left w-56 pointer-events-none"
+        style={{ left: `${clampedX}%`, transform: 'translateX(-50%)' }}
+      >
+        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">
+          ✅ Action Completed
+        </p>
+        <p className="text-sm font-bold text-slate-900 leading-snug">{marker.title}</p>
+        {relief !== undefined && (
+          <p className="text-xs text-slate-600 mt-1 font-medium">
+            {marker.predictedDifficulty !== undefined
+              ? <>Predicted: <strong>{marker.predictedDifficulty}/10</strong> → Relief: <strong className="text-emerald-700">{relief}/10</strong></>
+              : <>Relief: <strong className="text-emerald-700">{relief}/10</strong></>
+            }
+          </p>
+        )}
+        {delta !== null && delta >= 0 && (
+          <p className="text-[10px] font-black text-emerald-600 mt-0.5">🎉 Overcame Dread (+{delta})</p>
+        )}
+        <p className="text-[10px] text-slate-400 mt-1">
+          {new Date(marker.completedAt).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+          })}
+        </p>
+      </div>
+    );
+  }
+
+  // Journal marker
+  const dateStr = (marker.loopClosedAt ?? marker.createdAt);
+  const outcomeSnippet = marker.outcomeText
+    ? `"${marker.outcomeText.slice(0, 70)}${marker.outcomeText.length > 70 ? '…' : ''}"`
+    : null;
   return (
     <div
-      className="absolute bottom-full mb-2 z-20 bg-white border border-slate-200 rounded-xl shadow-xl px-3 py-2.5 text-left w-52 pointer-events-none"
+      className="absolute bottom-full mb-2 z-20 bg-white border border-slate-200 rounded-xl shadow-xl px-3 py-2.5 text-left w-56 pointer-events-none"
       style={{ left: `${clampedX}%`, transform: 'translateX(-50%)' }}
     >
-      {isAction ? (
-        <>
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">
-            ✅ Habit Completed
-          </p>
-          <p className="text-sm font-bold text-slate-900 leading-snug">{marker.title}</p>
-          {ratingLabel && (
-            <p className="text-xs text-slate-500 mt-1 font-medium">Mood: {ratingLabel}</p>
-          )}
-          <p className="text-[10px] text-slate-400 mt-1">
-            {new Date(marker.completedAt).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-            })}
-          </p>
-        </>
+      <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-0.5">
+        🧠 Reality Check
+      </p>
+      <p className="text-xs font-bold text-slate-900 leading-snug line-clamp-2">{marker.situation}</p>
+      {outcomeSnippet ? (
+        <p className="text-xs text-slate-500 mt-1 leading-snug italic line-clamp-2">{outcomeSnippet}</p>
       ) : (
-        <>
-          <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-0.5">
-            🧠 Reality Tested
-          </p>
-          <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
-            {marker.situation}
-          </p>
-          <p className="text-xs text-slate-500 mt-1 leading-snug italic line-clamp-2">
-            "{marker.reframe}"
-          </p>
-          <p className="text-[10px] text-slate-400 mt-1">
-            {new Date(marker.createdAt).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric',
-            })}
-          </p>
-        </>
+        <p className="text-xs text-slate-500 mt-1 leading-snug italic line-clamp-2">"{marker.reframe}"</p>
       )}
+      {marker.loopAccuracy && (
+        <p className="text-[10px] font-bold text-purple-700 mt-0.5">Accuracy: {marker.loopAccuracy}</p>
+      )}
+      <p className="text-[10px] text-slate-400 mt-1">
+        {new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      </p>
     </div>
   );
 }
@@ -393,35 +416,90 @@ function CorrelationStrip({ markers, windowStart, windowEnd }: CorrelationStripP
 
   if (markers.length === 0) return null;
 
-  return (
-    <div className="relative mt-2 h-8 w-full" aria-label="Behavioral correlation markers">
-      {markers.map((marker, i) => {
-        const ts = marker.type === 'action' ? marker.completedAt : marker.createdAt;
-        const pos = positionInWindow(ts, windowStart, windowEnd);
-        if (pos === null) return null;
+  // Bucket markers by calendar date — same date → same cluster
+  const buckets = new Map<string, { markers: CorrelationMarker[]; pos: number }>();
+  for (const marker of markers) {
+    const ts = marker.type === 'action' ? marker.completedAt : (marker.loopClosedAt ?? marker.createdAt);
+    const pos = positionInWindow(ts, windowStart, windowEnd);
+    if (pos === null) continue;
+    const dateKey = ts.slice(0, 10); // YYYY-MM-DD
+    if (!buckets.has(dateKey)) {
+      buckets.set(dateKey, { markers: [], pos });
+    }
+    buckets.get(dateKey)!.markers.push(marker);
+  }
 
+  const clusters = Array.from(buckets.values());
+
+  return (
+    <div className="relative mt-2 h-9 w-full" aria-label="Behavioral correlation markers">
+      {clusters.map(({ markers: clusterMarkers, pos }, ci) => {
         const leftPct = pos * 100;
-        const isAction = marker.type === 'action';
+        const actionCount  = clusterMarkers.filter((m) => m.type === 'action').length;
+        const journalCount = clusterMarkers.filter((m) => m.type === 'journal').length;
+        // Use the first marker for the tooltip (single), or pick first on hover
+        const primaryMarker = clusterMarkers[0];
+        const isMulti = clusterMarkers.length > 1;
+        const isSingleAction  = !isMulti && actionCount === 1;
 
         return (
           <div
-            key={i}
+            key={ci}
             className="absolute top-0 -translate-x-1/2 flex flex-col items-center cursor-pointer group"
             style={{ left: `${leftPct}%` }}
-            onMouseEnter={() => setHovered({ marker, x: leftPct })}
+            onMouseEnter={() => setHovered({ marker: primaryMarker, x: leftPct })}
             onMouseLeave={() => setHovered(null)}
           >
-            {/* Stem line */}
+            {/* Stem */}
             <div
-              className="w-px h-3"
-              style={{ backgroundColor: isAction ? '#10b981' : '#a855f7' }}
+              className="w-px h-2"
+              style={{ backgroundColor: actionCount > 0 ? '#10b981' : '#a855f7' }}
             />
-            {/* Dot marker */}
-            <div
-              className="w-3 h-3 rounded-full border-2 border-white shadow-sm transition-transform group-hover:scale-125"
-              style={{ backgroundColor: isAction ? '#10b981' : '#a855f7' }}
-              title={isAction ? marker.title : marker.situation}
-            />
+            {/* Badge — SVG shapes: green circle = action, purple diamond = closed loop */}
+            {isMulti ? (
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full px-1.5 py-0.5 shadow-sm text-[10px] font-bold leading-none transition-transform group-hover:scale-110 whitespace-nowrap">
+                {actionCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-emerald-600">
+                    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                      <title>{clusterMarkers.filter((m) => m.type === 'action').map((m) => (m as ActionMarker).title).join(', ')}</title>
+                      <circle cx="5" cy="5" r="4.5" fill="#10b981" />
+                    </svg>
+                    {actionCount}
+                  </span>
+                )}
+                {journalCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-purple-600">
+                    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                      <title>{clusterMarkers.filter((m) => m.type === 'journal').map((m) => `Reality check: ${(m as JournalMarker).situation}`).join(', ')}</title>
+                      <polygon points="5,0 10,5 5,10 0,5" fill="#a855f7" />
+                    </svg>
+                    {journalCount}
+                  </span>
+                )}
+              </div>
+            ) : isSingleAction ? (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                className="transition-transform group-hover:scale-125 drop-shadow-sm"
+                role="img"
+              >
+                <title>{`${(primaryMarker as ActionMarker).title} — completed`}</title>
+                <circle cx="7" cy="7" r="5.5" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
+              </svg>
+            ) : (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                className="transition-transform group-hover:scale-125 drop-shadow-sm"
+                role="img"
+              >
+                <title>{`Reality check: ${(primaryMarker as JournalMarker).outcomeText || (primaryMarker as JournalMarker).situation}`}</title>
+                <polygon points="7,0.5 13.5,7 7,13.5 0.5,7" fill="#a855f7" stroke="#ffffff" strokeWidth="1.5" />
+              </svg>
+            )}
           </div>
         );
       })}
@@ -451,11 +529,14 @@ export default function WellnessGraphs() {
 
   useEffect(() => {
     setMounted(true);
-    // 1) Completed habits from momentum_today_focus_actions (has moodRating + completedAt)
-    const focusActions = safeReadJson<any[]>('momentum_today_focus_actions', []);
-    const moodLogs     = safeReadJson<any[]>('momentum_habit_mood_logs', []);
 
-    // Build a moodRating lookup from logs (by actionId + timestamp proximity)
+    // ── 1) ACTION MARKERS ────────────────────────────────────────
+    const focusActions   = safeReadJson<any[]>('momentum_today_focus_actions', []);
+    const moodLogs       = safeReadJson<any[]>('momentum_habit_mood_logs', []);
+    const actualReliefs  = safeReadJson<Record<string, number>>('momentum_actual_reliefs', {});
+    const taskMeta       = safeReadJson<Record<string, { predictedDifficulty?: number; actionType?: string }>>('momentum_task_meta', {});
+
+    // moodRating lookup by actionId
     const logsByActionId: Record<string, number | undefined> = {};
     for (const log of moodLogs) {
       if (log.actionId != null && log.moodRating != null) {
@@ -465,7 +546,7 @@ export default function WellnessGraphs() {
 
     const actionMks: ActionMarker[] = [];
 
-    // From focus actions (have completedAt)
+    // From focus actions (have completedAt + optional moodRating)
     for (const a of focusActions) {
       if (a.completed && a.completedAt) {
         actionMks.push({
@@ -477,47 +558,72 @@ export default function WellnessGraphs() {
       }
     }
 
-    // From full momentum_actions cache (completed tasks)
+    // From full momentum_actions cache — enrich with actualRelief + predictedDifficulty
     const allActions = safeReadJson<any[]>('momentum_actions', []);
     for (const t of allActions) {
-      if (t.completed && t.dueDate) {
+      const doneAt = t.completedAt || t.dueDate;
+      if ((t.isCompleted === true || !!t.completed) && doneAt) {
+        const idStr = String(t.id);
+        const relief = actualReliefs[idStr];
+        const meta   = taskMeta[idStr];
         actionMks.push({
           type: 'action',
           title: t.title || 'Action',
           moodRating: undefined,
-          completedAt: t.dueDate,
+          actualRelief: relief,
+          predictedDifficulty: meta?.predictedDifficulty,
+          completedAt: doneAt,
         });
       }
     }
 
-    // De-duplicate by completedAt + title
+    // De-duplicate by date + title
     const seen = new Set<string>();
     const deduped = actionMks.filter((m) => {
-      const key = `${m.title}|${m.completedAt}`;
+      const key = `${m.title}|${m.completedAt.slice(0, 10)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-
     setActionMarkers(deduped);
 
-    // 2) Journal closed loops from /api/journal (server-side, fetch with safe guard)
+    // ── 2) JOURNAL MARKERS ───────────────────────────────────────
+    // Primary source: localStorage momentum_journal_entries (includes closed loops)
+    const localEntries = safeReadJson<any[]>('momentum_journal_entries', []);
+    const isClosed = (e: any) =>
+      e && (e.isClosedLoop === true || !!e.actualOutcome || !!e.outcomeText || !!e.loopClosedAt);
+    const toJournalMarker = (e: any): JournalMarker => ({
+      type: 'journal' as const,
+      situation: e.situation || 'Thought record',
+      reframe: e.reframedThought || '',
+      createdAt: e.createdAt,
+      loopAccuracy: e.loopAccuracy ?? e.predictionAccuracy ?? undefined,
+      outcomeText: e.outcomeText ?? e.actualOutcome ?? undefined,
+      loopClosedAt: e.loopClosedAt ?? e.outcomeDate ?? e.createdAt,
+    });
+
+    const localJmks: JournalMarker[] = localEntries
+      .filter((e: any) => e && e.createdAt && isClosed(e))
+      .map(toJournalMarker);
+
+    // Secondary: API fetch — merge, no duplicates
     if (typeof fetch === 'function') {
       Promise.resolve(fetch('/api/journal'))
         .then((res) => (res && 'json' in res ? res.json() : { entries: [] }))
         .then((data) => {
-          if (!data || !Array.isArray(data.entries)) return;
-          const jmks: JournalMarker[] = data.entries
-            .filter((e: any) => e.reframedThought && e.createdAt)
-            .map((e: any) => ({
-              type: 'journal' as const,
-              situation: e.situation || 'Thought record',
-              reframe: e.reframedThought || '',
-              createdAt: e.createdAt,
-            }));
-          setJournalMarkers(jmks);
+          if (!data || !Array.isArray(data.entries)) {
+            setJournalMarkers(localJmks);
+            return;
+          }
+          const apiIds = new Set(localEntries.map((e: any) => e.id));
+          const apiJmks: JournalMarker[] = data.entries
+            .filter((e: any) => e && e.createdAt && !apiIds.has(e.id) && isClosed(e))
+            .map(toJournalMarker);
+          setJournalMarkers([...localJmks, ...apiJmks]);
         })
-        .catch(() => {});
+        .catch(() => { setJournalMarkers(localJmks); });
+    } else {
+      setJournalMarkers(localJmks);
     }
   }, []);
 
@@ -571,6 +677,55 @@ export default function WellnessGraphs() {
   const rangeLabel   = buildRangeLabel(preset, offset, customStart, customEnd, today);
   const canGoFwd     = offset < 0;
   const hasMarkers   = visibleMarkers.length > 0;
+
+  // Match completed actions / closed loops to chart X positions
+  const pins = useMemo(() => {
+    type Pin = { key: string; x: string; y: number; kind: 'action' | 'loop'; title: string };
+    const out: Pin[] = [];
+    const snip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
+    for (const p of chartData) {
+      if (!p.iso) continue;
+      const len = p.monthly ? 7 : 10;
+      const pKey = p.iso.slice(0, len);
+      const keyOf = (ts: string) => {
+        const d = new Date(ts);
+        return isNaN(d.getTime()) ? '' : toInputValue(d).slice(0, len);
+      };
+
+      const acts = actionMarkers.filter((m) => keyOf(m.completedAt) === pKey);
+      if (acts.length > 0) {
+        out.push({
+          key: `a-${p.iso}`,
+          x: p.day,
+          y: 6,
+          kind: 'action',
+          title: acts
+            .map((m) => {
+              const relief = m.actualRelief ?? m.moodRating;
+              return `${m.title} • Relief: ${relief !== undefined ? relief : 'N/A'}/10`;
+            })
+            .join('\n'),
+        });
+      }
+
+      const loops = journalMarkers.filter((m) => keyOf(m.loopClosedAt ?? m.createdAt) === pKey);
+      if (loops.length > 0) {
+        out.push({
+          key: `l-${p.iso}`,
+          x: p.day,
+          y: 16,
+          kind: 'loop',
+          title: loops
+            .map(
+              (m) =>
+                `Reality Checked: ${snip(m.outcomeText || m.situation, 70)} • ${m.loopAccuracy ?? 'Accuracy: N/A'}`,
+            )
+            .join('\n'),
+        });
+      }
+    }
+    return out;
+  }, [chartData, actionMarkers, journalMarkers]);
 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-6">
@@ -807,7 +962,7 @@ export default function WellnessGraphs() {
               />
 
               <Area
-                type="monotone"
+                type="linear"
                 dataKey="mood"
                 stroke="url(#valenceStroke)"
                 strokeWidth={4}
@@ -824,7 +979,7 @@ export default function WellnessGraphs() {
                       key={`dot-${props.cx}-${props.cy}`}
                       cx={props.cx}
                       cy={props.cy}
-                      r={5}
+                      r={chartData.length > 14 ? 3 : 5}
                       fill="#ffffff"
                       stroke={hex}
                       strokeWidth={3}
@@ -851,6 +1006,34 @@ export default function WellnessGraphs() {
                   );
                 }}
               />
+
+              {pins.map((pin) => (
+                <ReferenceDot
+                  key={pin.key}
+                  x={pin.x}
+                  y={pin.y}
+                  ifOverflow="visible"
+                  shape={(p: { cx?: number; cy?: number }) => {
+                    if (p.cx == null || p.cy == null) return <g />;
+                    return pin.kind === 'action' ? (
+                      <g style={{ cursor: 'pointer' }}>
+                        <title>{pin.title}</title>
+                        <circle cx={p.cx} cy={p.cy} r={6} fill="#10b981" stroke="#ffffff" strokeWidth={2} />
+                      </g>
+                    ) : (
+                      <g style={{ cursor: 'pointer' }}>
+                        <title>{pin.title}</title>
+                        <polygon
+                          points={`${p.cx},${p.cy - 8} ${p.cx + 8},${p.cy} ${p.cx},${p.cy + 8} ${p.cx - 8},${p.cy}`}
+                          fill="#a855f7"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                        />
+                      </g>
+                    );
+                  }}
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
           ) : (
@@ -860,14 +1043,7 @@ export default function WellnessGraphs() {
           )}
         </div>
 
-        {/* ── Correlation Timeline Strip ── */}
-        {hasMarkers && (
-          <CorrelationStrip
-            markers={visibleMarkers}
-            windowStart={windowStart}
-            windowEnd={windowEnd}
-          />
-        )}
+        {/* Action & reality-check pins are rendered directly on the chart above */}
 
         {/* ── Legend: Valence bands + Correlation marker types ── */}
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 mt-4 pt-3 border-t border-slate-100/80">
@@ -908,6 +1084,38 @@ export default function WellnessGraphs() {
             </>
           )}
         </div>
+
+        {/* ── Behavioral Activation Insight Pill ── */}
+        {mounted && (() => {
+          const windowActions  = visibleMarkers.filter((m) => m.type === 'action') as ActionMarker[];
+          const windowJournal  = visibleMarkers.filter((m) => m.type === 'journal') as JournalMarker[];
+          const closedLoops    = windowJournal.filter((m) => m.loopClosedAt || m.loopAccuracy);
+          const reliefValues   = windowActions
+            .map((m) => m.actualRelief ?? m.moodRating)
+            .filter((v): v is number => v !== undefined);
+          const avgRelief = reliefValues.length > 0
+            ? (reliefValues.reduce((a, b) => a + b, 0) / reliefValues.length).toFixed(1)
+            : null;
+
+          if (windowActions.length === 0 && closedLoops.length === 0) return null;
+          return (
+            <div className="mt-3 flex items-center justify-center">
+              <div className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-1.5 text-[11px] font-semibold text-slate-600">
+                <span>⚡ Behavioral Activation</span>
+                <span className="text-slate-300">·</span>
+                <span>Actions Logged: <strong className="text-emerald-700">{windowActions.length}</strong></span>
+                <span className="text-slate-300">·</span>
+                <span>Reality Loops Closed: <strong className="text-purple-700">{closedLoops.length}</strong></span>
+                {avgRelief !== null && (
+                  <>
+                    <span className="text-slate-300">·</span>
+                    <span>Avg Relief on Active Days: <strong className="text-slate-800">{avgRelief}/10</strong></span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       </div>
 

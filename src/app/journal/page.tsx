@@ -104,6 +104,13 @@ export default function CBTJournal() {
   const [showReframeLaterPicker, setShowReframeLaterPicker] = useState(false);
   const [pendingReframeBanner, setPendingReframeBanner] = useState<{ situation: string; thought: string; ago: string } | null>(null);
 
+  // ── Draft Auto-Save & Recovery ────────────────────────────────
+  const [draftRecoveryBanner, setDraftRecoveryBanner] = useState<{
+    situation: string;
+    timeStr: string;
+    data: any;
+  } | null>(null);
+
   // ── Post-save completion insight ─────────────────────────────
   type TriangleCorner = 'thoughts' | 'feelings' | 'behaviors';
   const [showCompletion, setShowCompletion] = useState(false);
@@ -128,76 +135,149 @@ export default function CBTJournal() {
     const suggestions: string[] = [];
 
     if (entryType === "positive") {
-      suggestions.push(
+      return [
         "Proud",
         "Grateful",
         "Calm",
         "Hopeful",
-        "Happy",
         "Content",
+        "Relieved",
         "Energized",
         "Inspired",
-      );
-      return suggestions;
+      ];
     }
 
+    // Creative & Feedback
     if (
-      text.includes("work") ||
+      text.includes("feedback") ||
+      text.includes("project") ||
+      text.includes("creative") ||
+      text.includes("critique") ||
+      text.includes("draft") ||
+      text.includes("art") ||
+      text.includes("video") ||
+      text.includes("writing") ||
+      text.includes("review") ||
+      text.includes("ignored")
+    ) {
+      suggestions.push("Disappointed", "Vulnerable", "Discouraged", "Insecure");
+    }
+
+    // Social Disconnect & Communication
+    if (
+      text.includes("text") ||
+      text.includes("call") ||
+      text.includes("replied") ||
+      text.includes("ghost") ||
+      text.includes("read") ||
+      text.includes("nap") ||
+      text.includes("friend") ||
+      text.includes("hit me up") ||
+      text.includes("reach out")
+    ) {
+      suggestions.push("Hurt", "Misunderstood", "Annoyed", "Dismissed");
+    }
+
+    // Incompetence & Imposter Thoughts
+    if (
+      text.includes("dumb") ||
+      text.includes("stupid") ||
+      text.includes("incompetent") ||
+      text.includes("behind") ||
+      text.includes("fail") ||
+      text.includes("broken") ||
+      text.includes("lazy") ||
+      text.includes("imposter")
+    ) {
+      suggestions.push("Embarrassed", "Worthless", "Inadequate", "Self-Doubt");
+    }
+
+    // Work, Pressure & Deadlines
+    if (
       text.includes("boss") ||
       text.includes("deadline") ||
-      text.includes("test") ||
-      text.includes("exam") ||
-      text.includes("fail") ||
-      text.includes("worry") ||
-      text.includes("future") ||
       text.includes("presentation") ||
       text.includes("meeting") ||
+      text.includes("exam") ||
+      text.includes("test") ||
       text.includes("job") ||
-      text.includes("interview")
+      text.includes("interview") ||
+      text.includes("task")
     ) {
-      suggestions.push("Worried", "Overwhelmed", "Stressed", "Nervous");
+      suggestions.push("Overwhelmed", "Stressed", "Worried", "Apprehensive");
     }
+
+    // Interpersonal Conflict & Injustice
     if (
-      text.includes("sad") ||
+      text.includes("argue") ||
+      text.includes("fight") ||
+      text.includes("unfair") ||
+      text.includes("rude") ||
+      text.includes("yelled") ||
+      text.includes("blame") ||
+      text.includes("accus") ||
+      text.includes("mad") ||
+      text.includes("angry")
+    ) {
+      suggestions.push("Frustrated", "Irritated", "Resentful", "Outraged");
+    }
+
+    // Loss, Grief & Isolation
+    if (
       text.includes("lonely") ||
-      text.includes("lose") ||
+      text.includes("alone") ||
+      text.includes("miss") ||
       text.includes("lost") ||
       text.includes("cry") ||
-      text.includes("hurt") ||
       text.includes("breakup") ||
-      text.includes("miss") ||
-      text.includes("alone")
+      text.includes("left") ||
+      text.includes("death") ||
+      text.includes("goodbye")
     ) {
-      suggestions.push("Lonely", "Hurt", "Disappointed", "Isolated");
+      suggestions.push("Lonely", "Isolated", "Grieving", "Sorrowful");
     }
+
+    // Guilt, Mistake & Self-Blame
     if (
-      text.includes("angry") ||
-      text.includes("mad") ||
-      text.includes("hate") ||
-      text.includes("fight") ||
-      text.includes("argue") ||
-      text.includes("annoy") ||
-      text.includes("rude") ||
-      text.includes("unfair") ||
-      text.includes("argument")
-    ) {
-      suggestions.push("Frustrated", "Irritated", "Annoyed", "Mad");
-    }
-    if (
-      text.includes("shame") ||
-      text.includes("guilt") ||
       text.includes("sorry") ||
       text.includes("mistake") ||
       text.includes("wrong") ||
-      text.includes("blame") ||
-      text.includes("stupid") ||
-      text.includes("fault")
+      text.includes("guilt") ||
+      text.includes("shame") ||
+      text.includes("fault") ||
+      text.includes("regret")
     ) {
-      suggestions.push("Embarrassed", "Remorseful", "Regretful", "Worthless");
+      suggestions.push("Remorseful", "Regretful", "Apologetic", "Burdened");
+    }
+
+    // Uncertainty & Paralysis
+    if (
+      text.includes("unsure") ||
+      text.includes("stuck") ||
+      text.includes("should i") ||
+      text.includes("decision") ||
+      text.includes("choice") ||
+      text.includes("what if") ||
+      text.includes("confused")
+    ) {
+      suggestions.push("Confused", "Hesitant", "Conflicted", "Perplexed");
+    }
+
+    // Burnout & Physical Drain
+    if (
+      text.includes("tired") ||
+      text.includes("exhaust") ||
+      text.includes("drained") ||
+      text.includes("headache") ||
+      text.includes("burnout") ||
+      text.includes("sleep") ||
+      text.includes("energy")
+    ) {
+      suggestions.push("Drained", "Lethargic", "Overstimulated", "Empty");
     }
 
     if (suggestions.length === 0) {
-      suggestions.push("Stressed", "Overwhelmed", "Worried", "Frustrated");
+      suggestions.push("Stressed", "Overwhelmed", "Frustrated", "Vulnerable");
     }
 
     return [...new Set(suggestions)];
@@ -227,8 +307,31 @@ export default function CBTJournal() {
     return "I can take a deep breath and look at the facts of this situation objectively, rather than letting my automatic thoughts dictate my reality.";
   };
 
+  // Deterministic offline reframe prompt keyed to the selected distortion
+  const getDistortionPrompt = () => {
+    const hasMindReading = selectedDistortions.includes("mind-reading");
+    const hasCatastrophizing = selectedDistortions.includes("catastrophizing");
+
+    if (hasMindReading && hasCatastrophizing) {
+      return "I am assuming the absolute worst without concrete evidence. Their delay is likely due to ordinary reasons like sleeping or being busy.";
+    }
+    if (hasMindReading) {
+      return "I cannot read minds. People have their own schedules, distractions, and fatigue that have nothing to do with me.";
+    }
+    if (hasCatastrophizing) {
+      return "Jumping to the worst-case scenario is an anxiety reaction, not a guaranteed reality. The most probable outcome is manageable.";
+    }
+    if (selectedDistortions.includes("all-or-nothing")) {
+      return "Situations are rarely 100% black and white. There is workable middle ground here.";
+    }
+    if (selectedDistortions.includes("should-statements")) {
+      return "Preferences are not absolute rules. Things don't have to happen on my timeline for things to be okay.";
+    }
+    return "My thoughts are hypotheses, not proven facts. I can wait for concrete evidence before deciding what this means.";
+  };
+
   const getExerciseSample = (exerciseType = selectedExercise) => {
-    if (!insightsData) return "Analyzing your thought context...";
+    if (!insightsData) return getDistortionPrompt();
     if (exerciseType === "friend") {
       return (
         insightsData.friend_test_reframe ||
@@ -252,9 +355,6 @@ export default function CBTJournal() {
 
   const [loading, setLoading] = useState(false);
   const [loadingEmotions, setLoadingEmotions] = useState(false);
-  const [apiSuggestedEmotions, setApiSuggestedEmotions] = useState<string[]>(
-    [],
-  );
   const [fetching, setFetching] = useState(true);
   const [crisis, setCrisis] = useState(false);
   // Inline API error — shown below the Analyze button instead of alert()
@@ -346,7 +446,59 @@ export default function CBTJournal() {
         }
       }
     } catch { /* ignore corrupt data */ }
+
+    // Check for auto-saved draft within last 24h
+    try {
+      const rawDraft = safeGetItem('momentum_journal_draft');
+      if (rawDraft) {
+        const parsedDraft = JSON.parse(rawDraft);
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (
+          parsedDraft &&
+          parsedDraft.updatedAt &&
+          Date.now() - parsedDraft.updatedAt < twentyFourHours &&
+          (parsedDraft.situation?.trim() || parsedDraft.thought?.trim())
+        ) {
+          const draftDate = new Date(parsedDraft.updatedAt);
+          const timeStr = draftDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          setDraftRecoveryBanner({
+            situation: parsedDraft.situation || '',
+            timeStr,
+            data: parsedDraft,
+          });
+        }
+      }
+    } catch { /* ignore draft parse error */ }
   }, []);
+
+  // ── Auto-save draft on step transition or input change ──────────
+  useEffect(() => {
+    // Only save draft if user has entered content and is not viewing completion
+    if (showCompletion) return;
+    const hasContent =
+      Boolean(situation.trim()) ||
+      selectedEmotions.length > 0 ||
+      Boolean(thought.trim()) ||
+      selectedDistortions.length > 0 ||
+      Boolean(alternativeThought.trim());
+
+    if (!hasContent) return;
+
+    try {
+      const draftPayload = {
+        step,
+        entryType,
+        situation,
+        selectedEmotions,
+        thought,
+        selectedDistortions,
+        alternativeThought,
+        selectedExercise,
+        updatedAt: Date.now(),
+      };
+      localStorage.setItem('momentum_journal_draft', JSON.stringify(draftPayload));
+    } catch { /* best-effort */ }
+  }, [step, entryType, situation, selectedEmotions, thought, selectedDistortions, alternativeThought, selectedExercise, showCompletion]);
 
   // Dynamic Counter-Evidence Hook
   useEffect(() => {
@@ -429,7 +581,7 @@ export default function CBTJournal() {
     setShowReframeLaterPicker(false);
     setLoading(true);
     try {
-      await fetch('/api/journal', {
+      const res = await fetch('/api/journal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -441,6 +593,21 @@ export default function CBTJournal() {
           reframedThought: '[Pending Reframe]',
         }),
       });
+      const resData = await res.json().catch(() => ({}));
+      try {
+        const existing = JSON.parse(localStorage.getItem('momentum_journal_entries') || '[]');
+        const pendingEntry = {
+          id: resData?.data?.[0]?.id ?? Date.now(),
+          createdAt: new Date().toISOString(),
+          entryType,
+          situation,
+          emotionsJson: JSON.stringify(selectedEmotions),
+          automaticThought: entryType === 'negative' ? thought : null,
+          distortionsJson: entryType === 'negative' ? JSON.stringify(selectedDistortions) : null,
+          reframedThought: '[Pending Reframe]',
+        };
+        localStorage.setItem('momentum_journal_entries', JSON.stringify([pendingEntry, ...existing].slice(0, 100)));
+      } catch { /* best-effort */ }
     } catch { /* best-effort */ } finally {
       setLoading(false);
     }
@@ -451,10 +618,16 @@ export default function CBTJournal() {
         thought,
       }));
     }
+    // Clear auto-saved draft
+    try {
+      localStorage.removeItem('momentum_journal_draft');
+    } catch { /* best-effort */ }
+    setDraftRecoveryBanner(null);
+
     // Reset wizard and go home
     setStep(1); setSituation(''); setSelectedEmotions([]);
     setThought(''); setSelectedDistortions([]); setSuggestedTraps([]);
-    setAlternativeThought(''); setInsightsData(null); setApiSuggestedEmotions([]);
+    setAlternativeThought(''); setInsightsData(null);
     setSelectedExercise(null);
     router.push('/');
   }
@@ -656,8 +829,13 @@ export default function CBTJournal() {
       setShowCompletion(true);
       fetchHistory();
 
-      // Reset wizard state
-      setStep(1);
+      // Clear draft auto-save
+      try {
+        localStorage.removeItem('momentum_journal_draft');
+      } catch { /* best-effort */ }
+      setDraftRecoveryBanner(null);
+
+      // Reset wizard fields (do NOT setStep(1) simultaneously while showCompletion is active)
       setSituation("");
       setSelectedEmotions([]);
       setThought("");
@@ -665,7 +843,6 @@ export default function CBTJournal() {
       setSuggestedTraps([]);
       setAlternativeThought("");
       setInsightsData(null);
-      setApiSuggestedEmotions([]);
       setSelectedExercise(null);
       setShowAiOverride(false);
       setAiError(null);
@@ -756,7 +933,7 @@ export default function CBTJournal() {
     .join(", ");
 
   return (
-    <div style={{ padding: "2rem 0", paddingBottom: "10rem", maxWidth: "800px", margin: "0 auto" }}>
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6" style={{ paddingTop: "2rem", paddingBottom: "10rem" }}>
       <header style={{ marginBottom: "2.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
           <div>
@@ -831,8 +1008,7 @@ export default function CBTJournal() {
           We noticed you might be in distress. Momentum is a self-help tool.
           Please contact professional help immediately. <br />
           <br />
-          <strong>Call or text 988</strong> to reach the Suicide & Crisis
-          Lifeline.
+          <strong>Call or text 988, or text HOME to 741741 for free, 24/7 crisis support.</strong>
         </div>
       )}
 
@@ -864,38 +1040,39 @@ export default function CBTJournal() {
       )}
 
       {/* Progress Bar */}
-
-      <div style={{ display: "flex", gap: "5px", marginBottom: "2rem" }}>
-        {entryType === "negative"
-          ? [1, 2, 3, 4, 5].map((s) => (
-              <div
-                key={s}
-                style={{
-                  height: "6px",
-                  flex: 1,
-                  backgroundColor: s <= step ? "var(--sage-green)" : "#e5e7eb",
-                  borderRadius: "10px",
-                  transition: "background-color 0.3s ease",
-                }}
-              />
-            ))
-          : [1, 2, 3].map((s) => {
-              const mappedStep = s === 1 ? 1 : s === 2 ? 2 : 5;
-              return (
+      {!showCompletion && (
+        <div style={{ display: "flex", gap: "5px", marginBottom: "2rem" }}>
+          {entryType === "negative"
+            ? [1, 2, 3, 4, 5].map((s) => (
                 <div
                   key={s}
                   style={{
                     height: "6px",
                     flex: 1,
-                    backgroundColor:
-                      mappedStep <= step ? "var(--sage-green)" : "#e5e7eb",
+                    backgroundColor: s <= step ? "var(--sage-green)" : "#e5e7eb",
                     borderRadius: "10px",
                     transition: "background-color 0.3s ease",
                   }}
                 />
-              );
-            })}
-      </div>
+              ))
+            : [1, 2, 3].map((s) => {
+                const mappedStep = s === 1 ? 1 : s === 2 ? 2 : 5;
+                return (
+                  <div
+                    key={s}
+                    style={{
+                      height: "6px",
+                      flex: 1,
+                      backgroundColor:
+                        mappedStep <= step ? "var(--sage-green)" : "#e5e7eb",
+                      borderRadius: "10px",
+                      transition: "background-color 0.3s ease",
+                    }}
+                  />
+                );
+              })}
+        </div>
+      )}
 
       <div
         style={{
@@ -907,8 +1084,89 @@ export default function CBTJournal() {
           marginBottom: "3rem",
         }}
       >
-        {step === 1 && (
+        {!showCompletion ? (
+          <>
+            {step === 1 && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
+            {/* ── Draft Auto-Save Recovery Banner ── */}
+            {draftRecoveryBanner && (
+              <div
+                style={{
+                  padding: "0.9rem 1.15rem",
+                  backgroundColor: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  borderLeft: "4px solid #f59e0b",
+                  borderRadius: "8px",
+                  marginBottom: "1.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "1rem",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: "220px" }}>
+                  <strong style={{ color: "#92400e", fontSize: "0.88rem", display: "block", marginBottom: "0.2rem" }}>
+                    📝 Unfinished Reflection from {draftRecoveryBanner.timeStr}
+                  </strong>
+                  <span style={{ color: "#78350f", fontSize: "0.82rem" }}>
+                    "{draftRecoveryBanner.situation.slice(0, 40)}{draftRecoveryBanner.situation.length > 40 ? '…' : ''}"
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = draftRecoveryBanner.data;
+                      if (d) {
+                        if (d.entryType) setEntryType(d.entryType);
+                        if (d.situation !== undefined) setSituation(d.situation);
+                        if (Array.isArray(d.selectedEmotions)) setSelectedEmotions(d.selectedEmotions);
+                        if (d.thought !== undefined) setThought(d.thought);
+                        if (Array.isArray(d.selectedDistortions)) setSelectedDistortions(d.selectedDistortions);
+                        if (d.alternativeThought !== undefined) setAlternativeThought(d.alternativeThought);
+                        if (d.selectedExercise !== undefined) setSelectedExercise(d.selectedExercise);
+                        if (d.step) setStep(d.step);
+                      }
+                      setDraftRecoveryBanner(null);
+                    }}
+                    style={{
+                      padding: "0.4rem 0.85rem",
+                      fontSize: "0.82rem",
+                      backgroundColor: "#f59e0b",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Resume Draft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem('momentum_journal_draft');
+                      } catch { /* best-effort */ }
+                      setDraftRecoveryBanner(null);
+                    }}
+                    style={{
+                      padding: "0.4rem 0.85rem",
+                      fontSize: "0.82rem",
+                      background: "transparent",
+                      color: "#92400e",
+                      border: "1px solid #fcd34d",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Discard Draft
+                  </button>
+                </div>
+              </div>
+            )}
+
             <h3
               style={{
                 fontSize: "1.4rem",
@@ -986,17 +1244,42 @@ export default function CBTJournal() {
               </button>
             </div>
 
-            <h4
+            <div
               style={{
-                fontSize: "1.1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 marginBottom: "0.5rem",
-                color: "var(--foreground)",
+                flexWrap: "wrap",
+                gap: "0.5rem",
               }}
             >
-              {entryType === "positive"
-                ? "What went well today?"
-                : "What happened?"}
-            </h4>
+              <h4
+                style={{
+                  fontSize: "1.1rem",
+                  margin: 0,
+                  color: "var(--foreground)",
+                }}
+              >
+                {entryType === "positive"
+                  ? "What went well today?"
+                  : "What happened?"}
+              </h4>
+              {entryType === "negative" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSituation(
+                      "I led a major project review meeting at work today, and my director asked two critical questions about our timeline that I couldn't answer immediately. I felt my chest tighten and thought everyone lost confidence in me."
+                    );
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  title="Load realistic scenario for demo / recruiter testing"
+                >
+                  ✨ Load Sample Scenario
+                </button>
+              )}
+            </div>
             <p
               style={{
                 fontSize: "0.95rem",
@@ -1066,13 +1349,7 @@ export default function CBTJournal() {
             </p>
 
             {/* Suggested Emotions Section */}
-            {(() => {
-              const suggestedList =
-                apiSuggestedEmotions.length > 0
-                  ? apiSuggestedEmotions
-                  : suggestedEmotions;
-              return (
-                suggestedList.length > 0 && (
+            {suggestedEmotions.length > 0 && (
                   <div
                     style={{
                       marginBottom: "1.5rem",
@@ -1100,7 +1377,7 @@ export default function CBTJournal() {
                         gap: "0.5rem",
                       }}
                     >
-                      {suggestedList.map((emotion) => {
+                      {suggestedEmotions.map((emotion) => {
                         const isSelected = selectedEmotions.some(
                           (e) => e.name === emotion,
                         );
@@ -1132,9 +1409,7 @@ export default function CBTJournal() {
                       })}
                     </div>
                   </div>
-                )
-              );
-            })()}
+                )}
 
             {/* Primary Categories */}
             <div
@@ -1259,70 +1534,67 @@ export default function CBTJournal() {
                         gap: "0.4rem",
                       }}
                     >
-                      {/* Slider row */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                        <span
-                          style={{
-                            width: "120px",
-                            fontWeight: 500,
-                            fontSize: "0.95rem",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {emotion.name}
-                        </span>
-                        <input
-                          type="range"
-                          min="10"
-                          max="100"
-                          value={emotion.weight}
-                          onChange={(e) =>
-                            updateEmotionWeight(
-                              emotion.name,
-                              parseInt(e.target.value),
-                            )
-                          }
-                          style={{ flex: 1, accentColor: "var(--soft-blue)" }}
-                        />
-                        <span
-                          style={{
-                            width: "45px",
-                            textAlign: "right",
-                            fontWeight: 600,
-                            fontSize: "0.9rem",
-                            color: "#666",
-                          }}
-                        >
-                          {emotion.weight}%
-                        </span>
-                      </div>
-                      {/* Quick-tap preset buttons */}
-                      <div style={{ display: "flex", gap: "0.35rem", marginLeft: "128px" }}>
-                        {[25, 50, 75, 100].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => updateEmotionWeight(emotion.name, preset)}
-                            style={{
-                              padding: "0.18rem 0.55rem",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              borderRadius: "12px",
-                              border:
-                                emotion.weight === preset
-                                  ? "2px solid var(--soft-blue)"
-                                  : "1px solid #d1d5db",
-                              backgroundColor:
-                                emotion.weight === preset ? "#e6f0ff" : "#f8fafc",
-                              color:
-                                emotion.weight === preset ? "#004fe6" : "#6b7280",
-                              cursor: "pointer",
-                              transition: "all 0.15s",
-                            }}
-                          >
-                            {preset}%
-                          </button>
-                        ))}
+                      {/* Responsive layout: mobile (<640px) stacked, desktop (>=640px) single horizontal row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
+                        {/* Row 1 on mobile: Label + percentage readout */}
+                        <div className="flex items-center justify-between sm:w-[130px] shrink-0">
+                          <span className="font-medium text-[0.95rem] text-slate-800">
+                            {emotion.name}
+                          </span>
+                          <span className="sm:hidden font-semibold text-[0.9rem] text-slate-600">
+                            {emotion.weight}%
+                          </span>
+                        </div>
+
+                        {/* Row 2 on mobile: Slider track (+ percentage readout on desktop) */}
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <input
+                            type="range"
+                            min="10"
+                            max="100"
+                            value={emotion.weight}
+                            onChange={(e) =>
+                              updateEmotionWeight(
+                                emotion.name,
+                                parseInt(e.target.value),
+                              )
+                            }
+                            className="w-full accent-[#2563eb]"
+                            style={{ flex: 1 }}
+                          />
+                          <span className="hidden sm:inline-block w-[45px] text-right font-semibold text-[0.9rem] text-slate-600">
+                            {emotion.weight}%
+                          </span>
+                        </div>
+
+                        {/* Row 3 on mobile: Centered preset buttons; right-aligned on desktop */}
+                        <div className="flex items-center justify-center sm:justify-end gap-1.5 shrink-0">
+                          {[25, 50, 75, 100].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => updateEmotionWeight(emotion.name, preset)}
+                              style={{
+                                padding: "0.2rem 0.6rem",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                borderRadius: "12px",
+                                border:
+                                  emotion.weight === preset
+                                    ? "2px solid var(--soft-blue)"
+                                    : "1px solid #d1d5db",
+                                backgroundColor:
+                                  emotion.weight === preset ? "#e6f0ff" : "#f8fafc",
+                                color:
+                                  emotion.weight === preset ? "#004fe6" : "#6b7280",
+                                cursor: "pointer",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              {preset}%
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1980,21 +2252,26 @@ export default function CBTJournal() {
                     <button
                       type="button"
                       onClick={() => {
-                        const sample = getExerciseSample(selectedExercise);
+                        const rawSample = getExerciseSample(selectedExercise);
+                        // Clean up quotes, questions, or recursive prompt text
+                        const cleanSample = rawSample
+                          .replace(/^["'\s]+|["'\s]+$/g, "")
+                          .replace(/\.+$/g, "");
+
                         if (selectedExercise === "friend") {
                           setAlternativeThought(
-                            `If a close friend came to me and said: "${thought}", I would tell them: "${sample}"`,
+                            `If a close friend came to me and said "${thought}", I would remind them that: ${cleanSample}.`,
                           );
                         } else if (selectedExercise === "fact") {
                           setAlternativeThought(
-                            `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- "${sample}"`,
+                            `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- ${cleanSample}.`,
                           );
                         } else if (selectedExercise === "reset") {
                           setAlternativeThought(
-                            `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: "${sample}"`,
+                            `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan to handle it: I will step back, verify the facts calmly, and remember that ${cleanSample.charAt(0).toLowerCase() + cleanSample.slice(1)}.`,
                           );
                         } else {
-                          setAlternativeThought(sample);
+                          setAlternativeThought(cleanSample.endsWith(".") ? cleanSample : `${cleanSample}.`);
                         }
                       }}
                       style={{
@@ -2057,9 +2334,7 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise("friend");
-                        const currentSampleThought =
-                          getExerciseSample("friend");
-                        const fullText = `If a close friend came to me and said: "${thought}", I would tell them: "${currentSampleThought}"`;
+                        const fullText = `If a close friend came to me and said "${thought}", I would remind them that: `;
                         setAlternativeThought(fullText);
                       }}
                       style={{
@@ -2086,8 +2361,7 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise("fact");
-                        const currentSampleThought = getExerciseSample("fact");
-                        const fullText = `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- "${currentSampleThought}"`;
+                        const fullText = `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- `;
                         setAlternativeThought(fullText);
                       }}
                       style={{
@@ -2114,8 +2388,11 @@ export default function CBTJournal() {
                       type="button"
                       onClick={() => {
                         setSelectedExercise("reset");
-                        const currentSampleThought = getExerciseSample("reset");
-                        const fullText = `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan is: "${currentSampleThought}"`;
+                        const rawSample = getExerciseSample("reset");
+                        const cleanSample = rawSample
+                          .replace(/^["'\s]+|["'\s]+$/g, "")
+                          .replace(/\.+$/g, "");
+                        const fullText = `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan to handle it: I will step back, verify the facts calmly, and remember that ${cleanSample.charAt(0).toLowerCase() + cleanSample.slice(1)}.`;
                         setAlternativeThought(fullText);
                       }}
                       style={{
@@ -2427,10 +2704,10 @@ export default function CBTJournal() {
             )}
           </form>
         )}
-
-        {/* ── Completion Insight Card ── */}
-        {showCompletion && (
-          <div style={{ animation: "fadeIn 0.5s ease" }}>
+      </>
+    ) : (
+      /* ── Completion Insight Card ── */
+      <div style={{ animation: "fadeIn 0.5s ease" }}>
             <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
               <span style={{ fontSize: "2.5rem" }}>✅</span>
               <h3 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1e293b", margin: "0.5rem 0 0.25rem" }}>
@@ -2505,7 +2782,7 @@ export default function CBTJournal() {
 
                   {/* Navigation */}
                   <div style={{ display: "flex", gap: "0.75rem", width: "100%", flexWrap: "wrap" }}>
-                    <button type="button" onClick={() => { setShowCompletion(false); router.push('/'); router.refresh(); }} style={{ flex: 2 }}>
+                    <button type="button" onClick={() => { setShowCompletion(false); setStep(1); router.push('/'); router.refresh(); }} style={{ flex: 2 }}>
                       Go to Dashboard
                     </button>
                     <Link href="/toolkit" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0.65rem 1rem", borderRadius: "var(--radius)", border: "1px solid #e2e8f0", color: "#2563eb", textDecoration: "none", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>

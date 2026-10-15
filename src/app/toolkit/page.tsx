@@ -5,9 +5,9 @@ import WellnessGraphs from '@/components/WellnessGraphs';
 import CbtTriangleSandbox from '@/components/CbtTriangleSandbox';
 import CbtGlossary from '@/components/CbtGlossary';
 import DecisionAssistantModal from '@/components/DecisionAssistantModal';
-import SupportContactModal, { SupportContact } from '@/components/SupportContactModal';
 import TherapyExportModal from '@/components/TherapyExportModal';
-import { safeGetJSON, safeGetAllItems } from '@/utils/storage';
+import SupportContactsCard from '@/components/SupportContactsCard';
+import { safeGetAllItems } from '@/utils/storage';
 
 // ============================================================
 // TOOLKIT PAGE
@@ -20,33 +20,13 @@ import { safeGetJSON, safeGetAllItems } from '@/utils/storage';
 export default function Toolkit() {
   // Modal states
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Support contact state & SSR-mount guard
-  const [isMounted, setIsMounted] = useState(false);
-  const [contact, setContact] = useState<SupportContact | null>(null);
 
   // Backup Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
 
-  // Load support contact strictly on mount
-  useEffect(() => {
-    setIsMounted(true);
-    const savedContact = safeGetJSON<SupportContact | null>('momentum_support_contact', null);
-    setContact(savedContact);
-  }, []);
-
-  // Handler for Support Contact quick dial
-  function handleDialContact() {
-    if (!contact?.phone) {
-      setIsContactModalOpen(true);
-      return;
-    }
-    const cleanPhone = contact.phone.replace(/[^0-9+]/g, '');
-    window.location.href = `tel:${cleanPhone}`;
-  }
 
   // Handler for Secure Vault Backup
   async function handleCreateBackup() {
@@ -101,7 +81,7 @@ export default function Toolkit() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto px-4 pt-10 pb-48 flex flex-col items-center relative">
+    <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto overflow-x-hidden px-4 sm:px-6 pt-10 pb-48 flex flex-col items-center relative">
 
       {/* Floating Success Toast Notification */}
       {toastMessage && (
@@ -128,7 +108,7 @@ export default function Toolkit() {
       <WellnessGraphs />
 
       {/* ── 🧠 Two-column utility shortcuts grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl my-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto my-8">
 
         {/* 1. Decision Assistant Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center justify-between">
@@ -147,54 +127,8 @@ export default function Toolkit() {
           </button>
         </div>
 
-        {/* 2. Support Contact Quick-Dialer Card */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center justify-between">
-          <div>
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <h4 className="text-xl font-extrabold text-slate-900">📞 My Support Contact</h4>
-            </div>
-            {isMounted && contact ? (
-              <p className="text-sm sm:text-base text-slate-700 font-normal mb-4">
-                Saved: <strong className="font-semibold text-emerald-800">{contact.name}</strong> ({contact.role || 'Support'})
-              </p>
-            ) : (
-              <p className="text-sm sm:text-base text-slate-700 font-normal mb-4">
-                Reach out to your pre-configured emergency contact or therapist in one tap.
-              </p>
-            )}
-          </div>
-
-          {isMounted && contact ? (
-            <div className="w-full flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleDialContact}
-                className="flex-1 min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl py-2.5 px-3 shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate"
-                title={`Call ${contact.name} at ${contact.phone}`}
-              >
-                <span>📞</span>
-                <span className="truncate">Call {contact.name.split(' ')[0]}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsContactModalOpen(true)}
-                className="min-w-[44px] min-h-[44px] p-2.5 border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl text-sm transition-colors cursor-pointer flex items-center justify-center"
-                aria-label="Edit Support Contact"
-                title="Edit Support Contact"
-              >
-                ⚙️
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsContactModalOpen(true)}
-              className="w-full min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl py-2.5 px-4 shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>+ Add Support Contact</span>
-            </button>
-          )}
-        </div>
+        {/* 2. Multi-Contact Support Card (988 banner + channel toggles) */}
+        <SupportContactsCard />
 
         {/* 3. Therapy Integration Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center justify-between">
@@ -245,12 +179,6 @@ export default function Toolkit() {
         onClose={() => setIsDecisionOpen(false)}
       />
 
-      <SupportContactModal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-        initialContact={contact}
-        onSave={(newContact) => setContact(newContact)}
-      />
 
       <TherapyExportModal
         isOpen={isExportModalOpen}

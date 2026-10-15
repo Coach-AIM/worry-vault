@@ -247,6 +247,15 @@
     color: #ffffff;
     box-shadow: 0 4px 10px rgba(114, 140, 150, 0.15);
   }
+
+  /* Navigation buttons must not inherit default primary button green styles */
+  nav button,
+  nav button:hover,
+  nav button:active {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
 }
 
 /* Floating Glassmorphic Nav System */

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getRandomQuote, QuoteItem } from "@/utils/perspectiveQuotes";
 import { awardPoints, POINT_VALUES, useResiliencePoints } from "@/lib/points";
+import MasteryRoadmapModal from "@/components/MasteryRoadmapModal";
 
 interface FocusAction {
   id: string;
@@ -12,42 +13,6 @@ interface FocusAction {
   moodRating?: number;
   completedAt?: string;
 }
-
-interface MilestoneTier {
-  id: string;
-  name: string;
-  pointsRequired: number;
-  badge: string;
-  description: string;
-  clinicalInsight: string;
-}
-
-const MILESTONE_TIERS: MilestoneTier[] = [
-  {
-    id: "anchor",
-    name: "Awareness Anchor",
-    pointsRequired: 100,
-    badge: "🌱",
-    description: "Building initial mindfulness and establishing daily grounding habits.",
-    clinicalInsight: "Consistently noticing your automatic states creates the cognitive gap needed to choose constructive responses instead of automatic reactions.",
-  },
-  {
-    id: "challenger",
-    name: "Cognitive Challenger",
-    pointsRequired: 250,
-    badge: "⚡",
-    description: "Actively identifying thinking traps and reframing distorted beliefs.",
-    clinicalInsight: "Empirical reality testing weakens catastrophic assumptions. Your nervous system learns through experience that discomfort does not equal danger.",
-  },
-  {
-    id: "master",
-    name: "Resilience Master",
-    pointsRequired: 500,
-    badge: "🏆",
-    description: "Sustained behavioral momentum with verified closed-loop reality checks.",
-    clinicalInsight: "By consistently closing loops between negative predictions and real outcomes, you rewire threat circuits and build deep, enduring psychological flexibility.",
-  },
-];
 
 const DEFAULT_FOCUS_ACTIONS: FocusAction[] = [
   { id: "meditate", title: "Meditate", completed: false },
@@ -75,13 +40,27 @@ export default function Home() {
   const [closedLoopsCount, setClosedLoopsCount] = useState(0);
   const [distortionsChallenged, setDistortionsChallenged] = useState(0);
   const [disprovedPredictionsPct, setDisprovedPredictionsPct] = useState(0);
-  const [selectedMilestoneModal, setSelectedMilestoneModal] = useState<MilestoneTier | null>(null);
+  const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
+  const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
 
+    try {
+      const accepted = localStorage.getItem("momentum_disclaimer_accepted");
+      if (!accepted) {
+        setShowDisclaimerModal(true);
+      }
+    } catch (_) {}
+
     const hour = new Date().getHours();
-    const evening = hour >= 17; // 5:00 PM Logic
+    // ?simNight=true forces the Evening Reflection card regardless of clock time
+    let simNight = false;
+    try {
+      simNight = new URLSearchParams(window.location.search).get("simNight") === "true";
+    } catch (_) {}
+    const evening = simNight || hour >= 17; // 5:00 PM Logic
     setIsEvening(evening);
     setQuote(getRandomQuote(evening));
 
@@ -136,9 +115,10 @@ export default function Home() {
 
         // Count closed loops
         const closed = allEntries.filter(
-          (e) => Boolean(e.loopOutcome || e.loopAccuracy || e.predictionEvaluation || e.loopCompletedAt)
+          (e) => Boolean((e.outcomeText && String(e.outcomeText).trim()) || e.loopOutcome || e.loopAccuracy || e.predictionEvaluation || e.loopCompletedAt)
         );
-        setClosedLoopsCount(closed.length);
+        const totalClosedLoops = closed.length;
+        setClosedLoopsCount(totalClosedLoops);
 
         // Count cognitive distortions challenged
         let distCount = 0;
@@ -157,14 +137,14 @@ export default function Home() {
         setDistortionsChallenged(distCount);
 
         // Percentage of negative predictions disproved
-        if (closed.length > 0) {
-          const disproved = closed.filter(
-            (e) =>
-              e.loopAccuracy === "Completely False / Disproved" ||
-              e.predictionEvaluation === "Much better than expected" ||
-              e.predictionEvaluation === "Better than expected"
-          );
-          const pct = Math.round((disproved.length / closed.length) * 100);
+        if (totalClosedLoops > 0) {
+          const disprovedCount = closed.filter((entry) => {
+            const isDisproved =
+              entry.predictionEvaluation !== "Worse than expected" &&
+              entry.loopAccuracy !== "Exactly as Feared";
+            return isDisproved;
+          }).length;
+          const pct = Math.round((disprovedCount / totalClosedLoops) * 100);
           setDisprovedPredictionsPct(pct);
         } else {
           setDisprovedPredictionsPct(0);
@@ -196,9 +176,10 @@ export default function Home() {
           if (data && Array.isArray(data.entries)) {
             const apiEntries: any[] = data.entries;
             const closed = apiEntries.filter(
-              (e) => Boolean(e.loopOutcome || e.loopAccuracy || e.predictionEvaluation || e.loopCompletedAt)
+              (e) => Boolean((e.outcomeText && String(e.outcomeText).trim()) || e.loopOutcome || e.loopAccuracy || e.predictionEvaluation || e.loopCompletedAt)
             );
-            setClosedLoopsCount((prev) => Math.max(prev, closed.length));
+            const totalClosedLoops = closed.length;
+            setClosedLoopsCount((prev) => Math.max(prev, totalClosedLoops));
 
             let distCount = 0;
             apiEntries.forEach((e) => {
@@ -212,15 +193,17 @@ export default function Home() {
             });
             setDistortionsChallenged((prev) => Math.max(prev, distCount));
 
-            if (closed.length > 0) {
-              const disproved = closed.filter(
-                (e) =>
-                  e.loopAccuracy === "Completely False / Disproved" ||
-                  e.predictionEvaluation === "Much better than expected" ||
-                  e.predictionEvaluation === "Better than expected"
-              );
-              const pct = Math.round((disproved.length / closed.length) * 100);
+            if (totalClosedLoops > 0) {
+              const disprovedCount = closed.filter((entry) => {
+                const isDisproved =
+                  entry.predictionEvaluation !== "Worse than expected" &&
+                  entry.loopAccuracy !== "Exactly as Feared";
+                return isDisproved;
+              }).length;
+              const pct = Math.round((disprovedCount / totalClosedLoops) * 100);
               setDisprovedPredictionsPct(pct);
+            } else {
+              setDisprovedPredictionsPct(0);
             }
           }
         })
@@ -360,30 +343,8 @@ export default function Home() {
   const currentPoints = isMounted ? resiliencePoints : 0;
   const currentClosedLoops = isMounted ? closedLoopsCount : 0;
 
-  // Next milestone calculation
-  const nextMilestone =
-    MILESTONE_TIERS.find((tier) => currentPoints < tier.pointsRequired) ||
-    MILESTONE_TIERS[MILESTONE_TIERS.length - 1];
-
-  const highestUnlockedMilestone =
-    [...MILESTONE_TIERS]
-      .reverse()
-      .find((tier) => currentPoints >= tier.pointsRequired) || null;
-
-  // Calculate progress percentage to next milestone
-  let progressPct = 0;
-  if (currentPoints >= 500) {
-    progressPct = 100;
-  } else if (currentPoints >= 250) {
-    progressPct = Math.round(((currentPoints - 250) / 250) * 100);
-  } else if (currentPoints >= 100) {
-    progressPct = Math.round(((currentPoints - 100) / 150) * 100);
-  } else {
-    progressPct = Math.round((currentPoints / 100) * 100);
-  }
-
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto px-4 pt-8 pb-48 flex flex-col items-center">
+    <div className="w-full min-h-screen bg-slate-50/50 overflow-y-auto overflow-x-hidden px-4 sm:px-6 pt-8 pb-48 flex flex-col items-center">
       
       {/* Symmetrically Spaced Centered Feed Header */}
       <div className="text-center mb-8 sm:mb-12">
@@ -392,7 +353,7 @@ export default function Home() {
       </div>
 
       {/* Vertically Distributed Cards Stack */}
-      <div className="w-full max-w-2xl flex flex-col gap-8 sm:gap-10 items-center justify-center my-auto">
+      <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto flex flex-col gap-8 sm:gap-10 items-center justify-center my-auto">
         
         {/* Evening Reflection Card (Only rendered if isEvening is true) */}
         {isEvening && (
@@ -420,23 +381,21 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🛡️</span>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                  Resilience Momentum
+                  Mental Fortitude
                 </h2>
               </div>
               <p className="text-sm sm:text-base text-slate-600 font-medium mt-1">
-                Empirical mental fortitude and verified reality checks.
+                Empirical cognitive training and verified reality checks.
               </p>
             </div>
-            {highestUnlockedMilestone && (
-              <button
-                type="button"
-                onClick={() => setSelectedMilestoneModal(highestUnlockedMilestone)}
-                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>✨</span>
-                <span>Insight Summary</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setIsRoadmapOpen(true)}
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>🏰</span>
+              <span>Mastery Roadmap</span>
+            </button>
           </div>
 
           {/* Key Metrics Grid */}
@@ -446,7 +405,7 @@ export default function Home() {
                 {currentPoints}
               </span>
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                Resilience Pts
+                Fortitude Pts
               </span>
             </div>
             <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-center">
@@ -459,76 +418,12 @@ export default function Home() {
             </div>
             <div className="col-span-2 sm:col-span-1 bg-slate-50 border border-slate-100 p-4 rounded-xl text-center">
               <span className="block text-2xl sm:text-3xl font-black text-violet-700">
-                {isMounted && currentClosedLoops > 0 ? `${disprovedPredictionsPct}%` : isMounted && distortionsChallenged > 0 ? "100%" : "—"}
+                {isMounted ? `${disprovedPredictionsPct}%` : "0%"}
               </span>
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
                 Fears Disproved
               </span>
             </div>
-          </div>
-
-          {/* Progress Bar toward next milestone */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-              <span>Next Milestone: {nextMilestone.name}</span>
-              <span className="text-slate-500">
-                {currentPoints >= 500 ? "All Tiers Achieved!" : `${currentPoints} / ${nextMilestone.pointsRequired} pts`}
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200">
-              <div
-                className="bg-slate-900 h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(4, Math.min(100, progressPct))}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Milestone Tiers Display */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            {MILESTONE_TIERS.map((tier) => {
-              const isUnlocked = currentPoints >= tier.pointsRequired;
-              return (
-                <div
-                  key={tier.id}
-                  className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between text-left ${
-                    isUnlocked
-                      ? "bg-slate-50/80 border-slate-300 shadow-2xs"
-                      : "bg-slate-50/30 border-slate-200 opacity-60"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xl">{tier.badge}</span>
-                      <span
-                        className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                          isUnlocked
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-100 text-slate-500 border-slate-200"
-                        }`}
-                      >
-                        {isUnlocked ? "✓ Unlocked" : `${tier.pointsRequired} pts`}
-                      </span>
-                    </div>
-                    <h3 className="font-extrabold text-sm text-slate-900 mb-1">
-                      {tier.name}
-                    </h3>
-                    <p className="text-xs text-slate-600 leading-snug">
-                      {tier.description}
-                    </p>
-                  </div>
-
-                  {isUnlocked && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMilestoneModal(tier)}
-                      className="mt-3 text-xs font-bold text-slate-900 hover:text-blue-700 flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <span>View Insights →</span>
-                    </button>
-                  )}
-                </div>
-              );
-            })}
           </div>
         </div>
 
@@ -676,7 +571,7 @@ export default function Home() {
             </div>
           ) : (
             /* Interactive Checkbox Elements */
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-base sm:text-lg font-bold text-slate-800 mb-6">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 items-start justify-items-center gap-3 sm:gap-x-6 sm:gap-y-4 text-base sm:text-lg font-bold text-slate-800 mb-6">
               {focusActions.length > 0 ? (
                 focusActions.map((action) => (
                   <div key={action.id} className="flex flex-col items-center gap-1">
@@ -726,44 +621,64 @@ export default function Home() {
 
           {/* Micro-popover / Inline prompt for 0-10 Mood Rating */}
           {activeRatingAction && (
-            <div className="w-full max-w-md bg-white border border-slate-200 text-slate-900 rounded-2xl p-5 mb-6 shadow-lg animate-fadeIn flex flex-col items-center">
-              <span className="text-xs font-semibold text-slate-500 mb-1">
+            <div className="w-full max-w-full mx-auto mt-3 p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center mb-6 overflow-hidden">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                 {ratingMode === 're-edit' ? 'Update rating for:' : 'Completed:'}{' '}
-                <strong className="text-slate-900 font-bold">{activeRatingAction.title}</strong>
-              </span>
-              <p className="text-sm sm:text-base font-bold text-slate-900 mb-4">
+                <span className="text-slate-800">{activeRatingAction.title}</span>
+              </p>
+              <p className="text-sm font-bold text-slate-900 mb-3">
                 {ratingMode === 're-edit'
                   ? 'How would you rate this outcome?'
                   : 'How do you feel about completing this task?'}
               </p>
 
-              {/* 11 circular pips: 0 through 10 */}
-              <div className="flex items-center justify-between gap-1 sm:gap-1.5 w-full my-1">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
-                  const isSelected = activeRatingAction.moodRating === num;
-                  return (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => handleSelectMoodRating(num)}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-slate-900 text-white shadow-sm ring-2 ring-slate-900 border-slate-900"
-                          : "bg-white hover:bg-slate-100 text-slate-700 border-slate-200"
-                      }`}
-                      title={`Rate ${num}/10`}
-                    >
-                      {num}
-                    </button>
-                  );
-                })}
+              {/* Clean 2-Row Pip Grid (0-5 top, 6-10 bottom) */}
+              <div className="flex flex-col gap-2 max-w-[280px] mx-auto mb-3">
+                <div className="flex justify-between gap-1">
+                  {[0, 1, 2, 3, 4, 5].map((num) => {
+                    const isSelected = activeRatingAction.moodRating === num;
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => handleSelectMoodRating(num)}
+                        className={`w-8 h-8 p-0 rounded-full border text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-slate-900'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-center gap-1.5">
+                  {[6, 7, 8, 9, 10].map((num) => {
+                    const isSelected = activeRatingAction.moodRating === num;
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => handleSelectMoodRating(num)}
+                        className={`w-8 h-8 p-0 rounded-full border text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-slate-900'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Anchor text below the pips */}
-              <div className="flex items-center justify-between w-full text-[11px] font-medium text-slate-500 mt-2 px-1">
-                <span className="text-left text-slate-500 font-semibold">0: Drained / Hard</span>
-                <span className="text-center text-slate-500 font-semibold">5: Neutral</span>
-                <span className="text-right text-slate-500 font-semibold">10: Relieved / Accomplished</span>
+              {/* Labels */}
+              <div className="flex justify-between text-[11px] font-medium text-slate-400 px-1">
+                <span>0: Drained / Hard</span>
+                <span>5: Neutral</span>
+                <span>10: Relieved / Accomplished</span>
               </div>
 
               {ratingMode === 're-edit' && (
@@ -794,98 +709,74 @@ export default function Home() {
 
       </div>
 
-      {/* Insight Summary Modal for Unlocked Milestones */}
-      {selectedMilestoneModal && (
+      <MasteryRoadmapModal isOpen={isRoadmapOpen} onClose={() => setIsRoadmapOpen(false)} points={currentPoints} />
+
+      {/* First-Launch Disclaimer Gate Modal */}
+      {showDisclaimerModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedMilestoneModal(null);
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-fadeIn"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="milestone-modal-title"
+          aria-labelledby="disclaimer-title"
         >
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-lg overflow-hidden flex flex-col animate-scaleUp">
-            
-            {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{selectedMilestoneModal.badge}</span>
-                <div>
-                  <h3 id="milestone-modal-title" className="text-lg font-extrabold text-slate-900">
-                    {selectedMilestoneModal.name}
-                  </h3>
-                  <span className="text-xs font-bold text-emerald-700">
-                    Milestone Unlocked ({selectedMilestoneModal.pointsRequired}+ Pts)
-                  </span>
-                </div>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-lg overflow-hidden flex flex-col p-6 sm:p-8 space-y-5 animate-scaleUp">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🛡️</span>
+              <div>
+                <h3 id="disclaimer-title" className="text-2xl font-black text-slate-900 tracking-tight">
+                  Welcome to Momentum
+                </h3>
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                  Self-Guided Cognitive Training
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedMilestoneModal(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors text-lg font-bold cursor-pointer"
-                aria-label="Close modal"
-              >
-                ✕
-              </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-5">
-              <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                {selectedMilestoneModal.description}
-              </p>
-
-              {/* Empirical Stats Box */}
-              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4.5 space-y-3">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                  Your Empirical Cognitive Proof
+            <div className="space-y-3.5 text-sm leading-relaxed">
+              <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                  ⚕️ Clinical Boundary
                 </span>
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                    <span className="text-2xl font-black text-slate-900 block">
-                      {isMounted ? distortionsChallenged : 0}
-                    </span>
-                    <span className="text-xs font-bold text-slate-600">
-                      Distortions Challenged
-                    </span>
-                  </div>
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                    <span className="text-2xl font-black text-emerald-700 block">
-                      {isMounted && currentClosedLoops > 0 ? `${disprovedPredictionsPct}%` : isMounted && distortionsChallenged > 0 ? "100%" : "—"}
-                    </span>
-                    <span className="text-xs font-bold text-slate-600">
-                      Predictions Disproved
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-2 text-xs text-slate-600 flex items-center justify-between border-t border-slate-200">
-                  <span>Total Closed Loops: <strong>{currentClosedLoops}</strong></span>
-                  <span>Resilience Total: <strong>{currentPoints} pts</strong></span>
-                </div>
-              </div>
-
-              {/* Clinical Insight Callout */}
-              <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4">
-                <span className="text-xs font-black uppercase tracking-wider text-amber-900 block mb-1">
-                  🧠 CBT Clinical Takeaway
-                </span>
-                <p className="text-xs sm:text-sm text-amber-950 leading-relaxed font-medium">
-                  {selectedMilestoneModal.clinicalInsight}
+                <p className="text-slate-700 font-medium text-xs sm:text-sm">
+                  Momentum is a self-guided educational and journaling tool based on Cognitive Behavioral Therapy (CBT) principles. It is not intended to diagnose, treat, or replace professional mental health care or medical advice.
                 </p>
               </div>
+
+              <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-900 block">
+                  🔒 Privacy Guarantee
+                </span>
+                <p className="text-emerald-950 font-medium text-xs sm:text-sm">
+                  100% of your thoughts, reflections, and habit logs remain encrypted in your device&apos;s local storage. Your reflections are never transmitted to external servers or used to train public AI models.
+                </p>
+              </div>
+
+              <label className="flex items-start gap-3 p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={disclaimerAccepted}
+                  onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-emerald-600 h-5 w-5 accent-emerald-600 cursor-pointer shrink-0"
+                />
+                <span className="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">
+                  I understand that Momentum is a self-help tool and not a substitute for clinical medical care.
+                </span>
+              </label>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-end bg-slate-50/50">
-              <button
-                type="button"
-                onClick={() => setSelectedMilestoneModal(null)}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-              >
-                Close Summary
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={!disclaimerAccepted}
+              onClick={() => {
+                try {
+                  localStorage.setItem("momentum_disclaimer_accepted", "true");
+                } catch (_) {}
+                setShowDisclaimerModal(false);
+              }}
+              className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-md cursor-pointer"
+            >
+              Accept &amp; Enter Momentum
+            </button>
           </div>
         </div>
       )}

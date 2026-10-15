@@ -297,7 +297,7 @@ export default function DecisionAssistantModal({ isOpen, onClose }: DecisionAssi
       aria-modal="true"
       aria-labelledby="decision-modal-title"
     >
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-2xl md:max-w-5xl max-h-[85vh] overflow-y-auto flex flex-col">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
@@ -467,8 +467,8 @@ export default function DecisionAssistantModal({ isOpen, onClose }: DecisionAssi
               </div>
 
               {/* Active Option Form Card */}
-              <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-5">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-5 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-5 md:items-start">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 md:col-span-2">
                   <h3 className="text-base font-bold text-slate-900">
                     Evaluating: <span className="text-blue-700">{getOptionLabel(currentOption, currentOptionIndex)}</span>
                   </h3>
@@ -540,7 +540,7 @@ export default function DecisionAssistantModal({ isOpen, onClose }: DecisionAssi
                 </div>
 
                 {/* 3. Weighted Pros & Cons (Quick 1-Click Input & Inline Pencil Editor) */}
-                <div className="pt-3 border-t border-slate-100 space-y-3">
+                <div className="pt-3 border-t border-slate-100 space-y-3 md:col-start-2 md:row-start-2 md:row-span-2 md:border-t-0 md:border-l md:pl-6 md:pt-0">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
                       3. Weighted Pros &amp; Cons for {getOptionLabel(currentOption, currentOptionIndex)}
@@ -612,7 +612,7 @@ export default function DecisionAssistantModal({ isOpen, onClose }: DecisionAssi
                   </div>
 
                   {/* List of factors for current option with Inline ✏️ Pencil Weight Editor */}
-                  <div className="space-y-2 mt-2 max-h-56 overflow-y-auto pr-1">
+                  <div className="space-y-2 mt-2 max-h-56 md:max-h-80 overflow-y-auto pr-1">
                     {currentOption.prosCons.length === 0 ? (
                       <p className="text-xs text-slate-400 italic text-center py-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                         No pros or cons added yet for this option. Add one above.

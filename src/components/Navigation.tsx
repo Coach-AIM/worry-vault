@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import SettingsDrawer from "./SettingsDrawer";
 
 export default function Navigation() {
   const pathname = usePathname();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const tabs = [
     {
@@ -113,39 +115,53 @@ export default function Navigation() {
             </li>
           );
         })}
-        <li className="flex-1 flex justify-center items-center hidden md:flex">
+        <li className="flex-1 flex justify-center items-center">
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex flex-col items-center justify-center text-slate-500 hover:text-rose-700 hover:bg-rose-50/60 p-2 rounded-xl transition-all duration-200 w-full font-medium"
+            type="button"
+            onClick={() => setIsSettingsOpen((prev) => !prev)}
+            className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 w-full cursor-pointer ${
+              isSettingsOpen
+                ? "active text-emerald-700 bg-emerald-50 font-bold"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
+            }`}
             style={{
-              background: "none",
+              backgroundColor: isSettingsOpen ? "#ecfdf5" : "transparent",
               border: "none",
-              cursor: "pointer",
               boxShadow: "none",
               transform: "none",
+              cursor: "pointer",
             }}
+            aria-label="Settings"
           >
-            <div className="mb-0.5">
+            <div className="mb-0.5 transition-transform duration-200">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
+                stroke={isSettingsOpen ? "#047857" : "#64748b"}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
             </div>
-            <span className="text-[11px] sm:text-xs tracking-tight whitespace-nowrap">Sign Out</span>
+            <span
+              className="tracking-tight whitespace-nowrap"
+              style={{
+                fontSize: "0.75rem",
+                color: isSettingsOpen ? "#047857" : "#64748b",
+              }}
+            >
+              Settings
+            </span>
           </button>
         </li>
       </ul>
+      <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </nav>
   );
 }

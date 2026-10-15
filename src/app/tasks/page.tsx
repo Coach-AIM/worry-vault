@@ -26,6 +26,15 @@ type TaskMeta = {
 type ViewMode = "all" | "today" | "week";
 type TaskTypeFilter = "all" | "habit" | "oneoff";
 
+// { [taskId]: { [localDateStr]: { count, ratings } } } — historical logs are never deleted
+type DailyCompletions = Record<string, Record<string, { count: number; ratings: number[] }>>;
+
+function localDateStr(d: Date = new Date()) {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 function parseTimeStr(timeStr: string) {
   if (!timeStr) return { value: "15", unit: "mins" };
   const num = parseInt(timeStr, 10);
@@ -53,6 +62,67 @@ export default function TasksTab() {
   // Actual relief ratings keyed by task id string
   const [actualReliefs, setActualReliefs] = useState<Record<string, number>>({});
 
+  // Sub-day lifecycle for recurring tasks: { [taskId]: { [localDateStr]: { count, ratings } } }
+  const [dailyCompletions, setDailyCompletions] = useState<DailyCompletions>({});
+  // Local calendar date key (set client-side only to avoid hydration mismatch)
+  const [todayKey, setTodayKey] = useState<string>("");
+  // True when the rating popover was opened from a badge to edit the latest rating
+  const [ratingEditMode, setRatingEditMode] = useState(false);
+  // Weekly Agenda: 0 = current 7-day window, +1 = next 7 days, etc.
+  const [agendaWeekOffset, setAgendaWeekOffset] = useState<number>(0);
+
+  function isRecurringTask(t?: Task | null) {
+    return !!t && (t.recurrence === "daily" || t.recurrence === "twice-daily");
+  }
+  function targetCount(t?: Task | null) {
+    return t?.recurrence === "twice-daily" ? 2 : 1;
+  }
+  function todayEntry(taskId: number) {
+    return (todayKey && dailyCompletions[String(taskId)]?.[todayKey]) || { count: 0, ratings: [] as number[] };
+  }
+  // Effective completion state: recurring tasks reset each local day
+  function effDone(t: Task) {
+    if (isRecurringTask(t)) return todayEntry(t.id).count >= targetCount(t);
+    return !!t.completed;
+  }
+  function avgRating(ratings: number[]) {
+    if (!ratings.length) return 0;
+    return Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10;
+  }
+  function renderRecurringBadge(t: Task) {
+    if (!isRecurringTask(t)) return null;
+    const entry = todayEntry(t.id);
+    if (entry.count === 0) return null;
+    const target = targetCount(t);
+    const done = entry.count >= target;
+    return (
+      <button
+        type="button"
+        onClick={() => { setRatingEditMode(true); setRatingPopoverId(t.id); }}
+        style={{
+          marginTop: "0.4rem",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.35rem",
+          fontSize: "0.75rem",
+          fontWeight: 700,
+          backgroundColor: done ? "#f0fdf4" : "#fffbeb",
+          border: done ? "1px solid #bbf7d0" : "1px solid #fde68a",
+          borderRadius: "20px",
+          padding: "0.2rem 0.7rem",
+          color: done ? "#15803d" : "#b45309",
+          cursor: "pointer",
+          width: "fit-content",
+        }}
+      >
+        {done
+          ? `Completed ${entry.count}/${target} (Avg Rating: ${avgRating(entry.ratings)}/10)`
+          : `Logged ${entry.count}/${target} Today (Rating: ${entry.ratings[entry.ratings.length - 1]}/10)`}{" "}
+        ✏️
+      </button>
+    );
+  }
+
   // Add top-level task form state
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -62,7 +132,7 @@ export default function TasksTab() {
   const [intensity, setIntensity] = useState("Low");
   const [dueDate, setDueDate] = useState("");
   const [recurrence, setRecurrence] = useState("none");
-  const [actionType, setActionType] = useState<'habit' | 'oneoff'>("habit");
+  const [actionType, setActionType] = useState<'habit' | 'oneoff'>("oneoff");
   const [predictedDifficulty, setPredictedDifficulty] = useState<string>("");
 
   // Inline edit state
@@ -142,6 +212,24 @@ export default function TasksTab() {
       }
     } catch (_) {}
 
+    // Load sub-day completion logs + current local date (client-only)
+    setTodayKey(localDateStr());
+    try {
+      const storedDaily = localStorage.getItem('momentum_daily_completions');
+      if (storedDaily) {
+        const parsed = JSON.parse(storedDaily);
+        if (parsed && typeof parsed === 'object') setDailyCompletions(parsed);
+      }
+    } catch (_) {}
+
+    // Midnight rollover: re-evaluate local calendar date every 30s
+    const dayTimer = setInterval(() => {
+      setTodayKey((prev) => {
+        const next = localDateStr();
+        return prev === next ? prev : next;
+      });
+    }, 30000);
+
     fetchTasks();
 
     try {
@@ -153,6 +241,7 @@ export default function TasksTab() {
         }
       }
     } catch (_) {}
+    return () => clearInterval(dayTimer);
   }, []);
 
   function toggleTodayFocus(t: Task) {
@@ -203,7 +292,7 @@ export default function TasksTab() {
       estimatedTime: `${timeValue} ${timeUnit}`,
       emotionalIntensity: intensity,
       dueDate: finalDueDate,
-      recurrence,
+      recurrence: actionType === "habit" ? (recurrence === "none" ? "daily" : recurrence) : "none",
       parentId: null,
     };
 
@@ -254,7 +343,10 @@ export default function TasksTab() {
       if (data.tasks && Array.isArray(data.tasks)) {
         setTasks(data.tasks);
         // Find the newly created task (last-inserted should be at top after fetchTasks ordering)
-        const newTask = data.tasks.find((t: Task) => t.title === title.trim() && !t.parentId);
+        const matches = data.tasks.filter((t: Task) => t.title === title.trim() && !t.parentId);
+        const newTask = matches.length
+          ? matches.reduce((a: Task, b: Task) => (b.id > a.id ? b : a))
+          : undefined;
         if (newTask && String(newTask.id) !== String(tempId)) {
           const rekeyed = { ...nextMeta };
           rekeyed[String(newTask.id)] = newMeta;
@@ -276,7 +368,7 @@ export default function TasksTab() {
     setIntensity("Low");
     setDueDate("");
     setRecurrence("none");
-    setActionType("habit");
+    setActionType("oneoff");
     setPredictedDifficulty("");
     setIsFormOpen(false);
   }
@@ -313,7 +405,34 @@ export default function TasksTab() {
     fetchTasks();
   }
 
+  function persistDaily(next: DailyCompletions) {
+    setDailyCompletions(next);
+    try {
+      localStorage.setItem('momentum_daily_completions', JSON.stringify(next));
+    } catch (_) {}
+  }
+
   async function toggleComplete(id: number, currentStatus: number) {
+    const task = tasks.find((t) => t.id === id);
+    if (isRecurringTask(task)) {
+      setRatingEditMode(false);
+      if (task && effDone(task)) {
+        // Un-check today: drop the latest log for today only (history for other days is untouched)
+        const key = String(id);
+        const entry = todayEntry(id);
+        const nextEntry = { count: Math.max(0, entry.count - 1), ratings: entry.ratings.slice(0, -1) };
+        persistDaily({ ...dailyCompletions, [key]: { ...(dailyCompletions[key] || {}), [todayKey]: nextEntry } });
+        await fetch(`/api/tasks/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: 0 }),
+        });
+        fetchTasks();
+      } else {
+        setRatingPopoverId(id);
+      }
+      return;
+    }
     const nextCompleted = !currentStatus;
     if (nextCompleted) {
       // Open rating popover instead of immediately completing
@@ -339,9 +458,41 @@ export default function TasksTab() {
       localStorage.setItem('momentum_actual_reliefs', JSON.stringify(nextReliefs));
     } catch (_) {}
 
-    // Award points
     const task = tasks.find((t) => t.id === taskId);
     const meta = taskMeta[String(taskId)];
+
+    // ── Recurring sub-day lifecycle ──
+    if (task && isRecurringTask(task)) {
+      const key = String(taskId);
+      const target = targetCount(task);
+      const entry = todayEntry(taskId);
+      const editing = ratingEditMode && entry.count > 0;
+      setRatingEditMode(false);
+
+      const nextEntry = editing
+        ? { count: entry.count, ratings: [...entry.ratings.slice(0, -1), rating] }
+        : { count: entry.count + 1, ratings: [...entry.ratings, rating] };
+      persistDaily({ ...dailyCompletions, [key]: { ...(dailyCompletions[key] || {}), [todayKey]: nextEntry } });
+
+      if (!editing) {
+        if (nextEntry.count >= target) {
+          // Full completion: partial points already granted for earlier logs + full habit points
+          awardPoints(target > 1 ? 10 + POINT_VALUES.DAILY_HABIT : POINT_VALUES.DAILY_HABIT);
+        } else {
+          awardPoints(10); // partial Resilience Points
+        }
+      }
+
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: nextEntry.count >= target ? 1 : 0 }),
+      });
+      fetchTasks();
+      return;
+    }
+
+    // Award points
     const isHabit = meta?.actionType === 'habit' || (task?.recurrence && task.recurrence !== 'none');
     if (isHabit) {
       awardPoints(POINT_VALUES.DAILY_HABIT);
@@ -358,6 +509,7 @@ export default function TasksTab() {
     });
     fetchTasks();
   }
+
 
 
   async function startEdit(task: Task) {
@@ -742,7 +894,7 @@ export default function TasksTab() {
   // Generate next 7 days list
   const next7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() + i);
+    d.setDate(d.getDate() + agendaWeekOffset * 7 + i);
     return d;
   });
 
@@ -750,18 +902,22 @@ export default function TasksTab() {
   const parentTasks = tasks.filter((t) => !t.parentId);
   const subTasks = tasks.filter((t) => t.parentId);
 
+  // Resolve a task's kind: the user's explicit selection wins; recurrence is only a fallback
+  function getTaskKind(t: Task): 'habit' | 'oneoff' {
+    const meta = taskMeta[String(t.id)];
+    if (meta?.actionType === "oneoff") return "oneoff";
+    if (meta?.actionType === "habit") return "habit";
+    return t.recurrence === "daily" ||
+      t.recurrence === "twice-daily" ||
+      t.recurrence === "weekly"
+      ? "habit"
+      : "oneoff";
+  }
+
   // Helper: does a task match the current taskTypeFilter?
   function matchesTypeFilter(t: Task): boolean {
     if (taskTypeFilter === "all") return true;
-    const meta = taskMeta[String(t.id)];
-    const isHabit =
-      t.recurrence === "daily" ||
-      t.recurrence === "twice-daily" ||
-      t.recurrence === "weekly" ||
-      meta?.actionType === "habit";
-    if (taskTypeFilter === "habit") return isHabit;
-    if (taskTypeFilter === "oneoff") return !isHabit || meta?.actionType === "oneoff";
-    return true;
+    return getTaskKind(t) === taskTypeFilter;
   }
 
   const filteredParentTasks = parentTasks.filter(matchesTypeFilter);
@@ -779,7 +935,7 @@ export default function TasksTab() {
   const filteredTodayTasks = todayTasks.filter(matchesTypeFilter);
 
   return (
-    <div style={{ padding: "2rem 1rem", maxWidth: "850px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6" style={{ paddingTop: "2rem", paddingBottom: "2rem", boxSizing: "border-box" }}>
       <header
         style={{
           marginBottom: "2rem",
@@ -914,7 +1070,14 @@ export default function TasksTab() {
 
         <button
           type="button"
-          onClick={() => setIsFormOpen(!isFormOpen)}
+          onClick={() => {
+            if (!isFormOpen) {
+              // Always open the drawer defaulting to One-Off
+              setActionType("oneoff");
+              setRecurrence("none");
+            }
+            setIsFormOpen(!isFormOpen);
+          }}
           style={{
             padding: "0.55rem 1.1rem",
             fontSize: "0.9rem",
@@ -1171,7 +1334,7 @@ export default function TasksTab() {
               }}
             />
           </div>
-          <div style={{ width: "110px" }}>
+          {actionType === "habit" && (<div style={{ width: "130px" }}>
             <label
               style={{
                 display: "block",
@@ -1193,12 +1356,12 @@ export default function TasksTab() {
                 backgroundColor: "white",
               }}
             >
-              <option value="none">Once</option>
+
               <option value="daily">Daily</option>
               <option value="twice-daily">Twice Daily</option>
               <option value="weekly">Weekly</option>
             </select>
-          </div>
+          </div>)}
           {/* Action Type selector */}
           <div style={{ width: "auto" }}>
             <label
@@ -1217,7 +1380,10 @@ export default function TasksTab() {
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setActionType(t)}
+                  onClick={() => {
+                    setActionType(t);
+                    setRecurrence(t === "habit" ? "daily" : "none");
+                  }}
                   style={{
                     padding: "0.75rem 0.9rem",
                     fontSize: "0.8rem",
@@ -1356,7 +1522,7 @@ export default function TasksTab() {
                           borderRadius: "var(--radius)",
                           border: "1px solid var(--border)",
                           boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-                          opacity: pt.completed ? 0.6 : 1,
+                          opacity: effDone(pt) ? 0.6 : 1,
                           transition: "opacity 0.2s",
                         }}
                       >
@@ -1414,7 +1580,7 @@ export default function TasksTab() {
 
                         <input
                           type="checkbox"
-                          checked={!!pt.completed}
+                          checked={effDone(pt)}
                           onChange={() => toggleComplete(pt.id, pt.completed)}
                           style={{
                             width: "1.4rem",
@@ -1643,10 +1809,10 @@ export default function TasksTab() {
                                   fontWeight: 600,
                                   display: "block",
                                   marginBottom: "0.2rem",
-                                  textDecoration: pt.completed
+                                  textDecoration: effDone(pt)
                                     ? "line-through"
                                     : "none",
-                                  color: pt.completed
+                                  color: effDone(pt)
                                     ? "#888"
                                     : "var(--foreground)",
                                 }}
@@ -1730,8 +1896,30 @@ export default function TasksTab() {
                                 )}
                               </div>
 
+                              {/* Action type pill — All Actions view */}
+                              {(() => {
+                                const kind = getTaskKind(pt);
+                                return (
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      marginTop: "0.4rem",
+                                      fontSize: "0.72rem",
+                                      backgroundColor: kind === 'habit' ? "#ecfdf5" : "#f0f9ff",
+                                      padding: "0.15rem 0.5rem",
+                                      borderRadius: "8px",
+                                      color: kind === 'habit' ? "#065f46" : "#0369a1",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {kind === 'habit' ? '🔁 Habit' : '📌 One-Off'}
+                                  </span>
+                                );
+                              })()}
+
                               {/* Completion rating badge — All Actions view */}
-                              {!!pt.completed && (() => {
+                              {renderRecurringBadge(pt)}
+                              {!isRecurringTask(pt) && !!pt.completed && (() => {
                                 const meta = taskMeta[String(pt.id)];
                                 const actualRelief = actualReliefs[String(pt.id)];
                                 const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
@@ -1826,7 +2014,7 @@ export default function TasksTab() {
                             </div>
 
                             {/* Parent Actions */}
-                            {!pt.completed && (
+                            {!effDone(pt) && (
                               <div
                                 style={{
                                   display: "flex",
@@ -1933,7 +2121,7 @@ export default function TasksTab() {
                                   backgroundColor: "#fff",
                                   borderRadius: "var(--radius)",
                                   border: "1px solid var(--border)",
-                                  opacity: st.completed ? 0.6 : 1,
+                                  opacity: effDone(st) ? 0.6 : 1,
                                 }}
                               >
                                 {/* Reordering subtask column */}
@@ -1995,7 +2183,7 @@ export default function TasksTab() {
 
                                 <input
                                   type="checkbox"
-                                  checked={!!st.completed}
+                                  checked={effDone(st)}
                                   onChange={() =>
                                     toggleComplete(st.id, st.completed)
                                   }
@@ -2242,10 +2430,10 @@ export default function TasksTab() {
                                           fontWeight: 500,
                                           display: "block",
                                           marginBottom: "0.2rem",
-                                          textDecoration: st.completed
+                                          textDecoration: effDone(st)
                                             ? "line-through"
                                             : "none",
-                                          color: st.completed
+                                          color: effDone(st)
                                             ? "#888"
                                             : "var(--foreground)",
                                         }}
@@ -2329,7 +2517,7 @@ export default function TasksTab() {
                                       </div>
                                     </div>
 
-                                    {!st.completed && (
+                                    {!effDone(st) && (
                                       <div
                                         style={{
                                           display: "flex",
@@ -2711,12 +2899,12 @@ export default function TasksTab() {
                         backgroundColor: "#fff",
                         borderRadius: "var(--radius)",
                         border: "1px solid var(--border)",
-                        opacity: t.completed ? 0.6 : 1,
+                        opacity: effDone(t) ? 0.6 : 1,
                       }}
                     >
                       <input
                         type="checkbox"
-                        checked={!!t.completed}
+                        checked={effDone(t)}
                         onChange={() => toggleComplete(t.id, t.completed)}
                         style={{
                           width: "1.4rem",
@@ -2733,10 +2921,10 @@ export default function TasksTab() {
                             fontWeight: 600,
                             display: "block",
                             marginBottom: "0.3rem",
-                            textDecoration: t.completed
+                            textDecoration: effDone(t)
                               ? "line-through"
                               : "none",
-                            color: t.completed ? "#888" : "var(--foreground)",
+                            color: effDone(t) ? "#888" : "var(--foreground)",
                           }}
                         >
                           {parentTask ? `${parentTask.title} ➜ ` : ""}
@@ -2784,25 +2972,25 @@ export default function TasksTab() {
                           )}
                           {/* Action type pill */}
                           {(() => {
-                            const meta = taskMeta[String(t.id)];
-                            if (!meta?.actionType) return null;
+                            const kind = getTaskKind(t);
                             return (
                               <span
                                 style={{
-                                  backgroundColor: meta.actionType === 'habit' ? "#ecfdf5" : "#f0f9ff",
+                                  backgroundColor: kind === 'habit' ? "#ecfdf5" : "#f0f9ff",
                                   padding: "0.15rem 0.5rem",
                                   borderRadius: "8px",
-                                  color: meta.actionType === 'habit' ? "#065f46" : "#0369a1",
+                                  color: kind === 'habit' ? "#065f46" : "#0369a1",
                                   fontWeight: 600,
                                 }}
                               >
-                                {meta.actionType === 'habit' ? '🔁 Habit' : '📌 One-Off'}
+                                {kind === 'habit' ? '🔁 Habit' : '📌 One-Off'}
                               </span>
                             );
                           })()}
                         </div>
                         {/* Completion rating badge — Today's View */}
-                        {!!t.completed && (() => {
+                        {renderRecurringBadge(t)}
+                        {!isRecurringTask(t) && !!t.completed && (() => {
                           const meta = taskMeta[String(t.id)];
                           const actualRelief = actualReliefs[String(t.id)];
                           const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
@@ -2896,7 +3084,7 @@ export default function TasksTab() {
                         })()}
                       </div>
 
-                      {!t.completed && (
+                      {!effDone(t) && (
                         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                           <button
                             type="button"
@@ -2952,8 +3140,48 @@ export default function TasksTab() {
                 animation: "fadeIn 0.3s ease",
               }}
             >
+              {/* Week switcher */}
+              {(() => {
+                const first = next7Days[0];
+                const last = next7Days[6];
+                const fmt = (d: Date, withYear = false) =>
+                  d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(withYear ? { year: "numeric" } : {}) });
+                const pill = (active: boolean, disabled = false): React.CSSProperties => ({
+                  padding: "0.5rem 0.9rem",
+                  fontSize: "0.85rem",
+                  fontWeight: active ? 700 : 500,
+                  borderRadius: "999px",
+                  border: active ? "2px solid #0f172a" : "1px solid #cbd5e1",
+                  backgroundColor: active ? "#0f172a" : "#fff",
+                  color: active ? "#fff" : "#334155",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  opacity: disabled ? 0.45 : 1,
+                });
+                return (
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                      <button type="button" disabled={agendaWeekOffset === 0} onClick={() => setAgendaWeekOffset((o) => Math.max(0, o - 1))} style={pill(false, agendaWeekOffset === 0)}>
+                        &lt; Prev Week
+                      </button>
+                      <button type="button" onClick={() => setAgendaWeekOffset(0)} style={pill(agendaWeekOffset === 0)}>
+                        Current Week
+                      </button>
+                      <button type="button" onClick={() => setAgendaWeekOffset((o) => o + 1)} style={pill(false)}>
+                        Next Week &gt;
+                      </button>
+                    </div>
+                    <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#475569" }}>
+                      {fmt(first)} – {fmt(last, true)}
+                    </span>
+                  </div>
+                );
+              })()}
+
               {next7Days.map((day, idx) => {
                 const dayTasks = getTasksForDay(day);
+                const targetDateStr = localDateStr(day);
+                const todayStr = todayKey || localDateStr();
+                const isFutureDay = targetDateStr > todayStr;
 
                 return (
                   <div
@@ -3002,6 +3230,11 @@ export default function TasksTab() {
                           const parentTask = t.parentId
                             ? tasks.find((pt) => pt.id === t.parentId)
                             : null;
+                          // Completion is evaluated strictly per rendered calendar date
+                          const recurring = isRecurringTask(t);
+                          const isDayDone = recurring
+                            ? !isFutureDay && Boolean((dailyCompletions[String(t.id)]?.[targetDateStr]?.count ?? 0) >= targetCount(t))
+                            : !!t.completed;
 
                           return (
                             <div
@@ -3014,12 +3247,13 @@ export default function TasksTab() {
                                 backgroundColor: "#fafafa",
                                 borderRadius: "8px",
                                 border: "1px solid #f0f0f0",
-                                opacity: t.completed ? 0.6 : 1,
+                                opacity: isDayDone ? 0.6 : 1,
                               }}
                             >
                               <input
                                 type="checkbox"
-                                checked={!!t.completed}
+                                checked={isDayDone}
+                                disabled={recurring && isFutureDay}
                                 onChange={() =>
                                   toggleComplete(t.id, t.completed)
                                 }
@@ -3038,10 +3272,10 @@ export default function TasksTab() {
                                     fontWeight: 600,
                                     display: "block",
                                     marginBottom: "0.2rem",
-                                    textDecoration: t.completed
+                                    textDecoration: isDayDone
                                       ? "line-through"
                                       : "none",
-                                    color: t.completed
+                                    color: isDayDone
                                       ? "#888"
                                       : "var(--foreground)",
                                   }}
@@ -3072,7 +3306,7 @@ export default function TasksTab() {
                                 </div>
                               </div>
 
-                              {!t.completed && (
+                              {!isDayDone && (
                                 <button
                                   type="button"
                                   onClick={() => toggleTodayFocus(t)}

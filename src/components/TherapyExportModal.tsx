@@ -10,7 +10,23 @@ export interface ExportEntry {
   automaticThought?: string | null;
   distortionsJson?: string | null;
   reframedThought?: string;
+  // Closed-loop reality test fields (optional)
+  outcomeText?: string | null;
+  loopOutcome?: string | null;
+  predictionEvaluation?: string | null;
+  loopAccuracy?: string | null;
+  reliefRating?: number | null;
+  loopClosedAt?: string | null;
+  loopCompletedAt?: string | null;
 }
+
+type RangeOption = 7 | 14 | 30 | 0; // 0 = All Time
+const RANGE_LABELS: { value: RangeOption; label: string }[] = [
+  { value: 7, label: 'Last 7 Days' },
+  { value: 14, label: 'Last 14 Days' },
+  { value: 30, label: 'Last 30 Days' },
+  { value: 0, label: 'All Time' },
+];
 
 export interface ExportTask {
   id: string | number;
@@ -30,6 +46,7 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<ExportEntry[]>([]);
   const [tasks, setTasks] = useState<ExportTask[]>([]);
+  const [range, setRange] = useState<RangeOption>(7);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,22 +76,22 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
         console.warn('API fetch fallback to localStorage:', err);
       }
 
-      // 2. Filter for past 7 days
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      // 2. Merge locally stored journal entries (client-side only, safe fallback)
+      try {
+        const raw = localStorage.getItem('momentum_journal_entries');
+        const local = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(local)) {
+          local.forEach((le: ExportEntry) => {
+            if (!apiEntries.some(ae => String(ae.id) === String(le.id))) apiEntries.push(le);
+          });
+        }
+      } catch {
+        /* ignore */
+      }
 
-      const filteredEntries = apiEntries.filter(e => {
-        if (!e.createdAt) return true;
-        return new Date(e.createdAt) >= oneWeekAgo;
-      });
-
-      const filteredTasks = apiTasks.filter(t => {
-        if (!t.createdAt) return Boolean(t.completed);
-        return new Date(t.createdAt) >= oneWeekAgo && Boolean(t.completed);
-      });
-
-      setEntries(filteredEntries);
-      setTasks(filteredTasks);
+      // Keep raw data; date-range filtering happens at render time
+      setEntries(apiEntries);
+      setTasks(apiTasks.filter(t => Boolean(t.completed)));
       setLoading(false);
     }
 
@@ -106,14 +123,38 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
   if (!isOpen) return null;
 
   function handlePrint() {
+    try {
+      localStorage.setItem('momentum_therapy_export_used', 'true');
+    } catch {
+      /* ignore */
+    }
     window.print();
   }
 
-  const startDateStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
+  // Apply the selected date range
+  const rangeStart = range === 0 ? null : new Date(Date.now() - range * 24 * 60 * 60 * 1000);
+  const inRange = (iso?: string) => {
+    if (!rangeStart || !iso) return true;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? true : d >= rangeStart;
+  };
+  const filteredEntries = entries.filter(e => inRange(e.createdAt));
+  const filteredTasks = tasks.filter(t => inRange(t.createdAt));
+  const closedLoops = entries.filter(e => {
+    const hasCompletedTest = Boolean(
+      (e.loopAccuracy && e.loopAccuracy.trim()) ||
+      (e.outcomeText && e.outcomeText.trim()) ||
+      (e.loopOutcome && e.loopOutcome.trim()) ||
+      (e.predictionEvaluation && e.predictionEvaluation.trim())
+    );
+    if (!hasCompletedTest) return false;
+    return inRange(e.loopClosedAt || e.loopCompletedAt || e.createdAt);
   });
+  const rangeLabel = RANGE_LABELS.find(r => r.value === range)?.label ?? 'Last 7 Days';
+
+  const startDateStr = rangeStart
+    ? rangeStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Beginning';
   const endDateStr = new Date().toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -122,7 +163,7 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
+      className="therapy-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -130,7 +171,19 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
       aria-modal="true"
       aria-labelledby="export-modal-title"
     >
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
+      <div className="therapy-panel bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
+        <style>{`
+          @media print {
+            @page { margin: 14mm; }
+            body { overflow: visible !important; }
+            .therapy-overlay { position: static !important; display: block !important; padding: 0 !important; background: #fff !important; backdrop-filter: none !important; }
+            .therapy-panel { max-height: none !important; max-width: 100% !important; overflow: visible !important; box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+            .no-print, button { display: none !important; }
+            .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+            .page-break-before { break-before: page; page-break-before: always; }
+            h3 { break-after: avoid; page-break-after: avoid; }
+          }
+        `}</style>
         
         {/* Modal Header (Hidden during print) */}
         <div className="print:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
@@ -141,7 +194,7 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
                 Therapy Integration Summary
               </h2>
               <p className="text-xs font-semibold text-slate-500">
-                Week Range: {startDateStr} – {endDateStr}
+                {rangeLabel}: {startDateStr} – {endDateStr}
               </p>
             </div>
           </div>
@@ -161,6 +214,24 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
               ✕
             </button>
           </div>
+        </div>
+
+        {/* Date Range Selector (Hidden during print) */}
+        <div className="print:hidden no-print px-6 pt-4 flex flex-wrap gap-2" role="group" aria-label="Date range">
+          {RANGE_LABELS.map(r => (
+            <button
+              key={r.value}
+              type="button"
+              onClick={() => setRange(r.value)}
+              className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs sm:text-sm cursor-pointer transition-all ${
+                range === r.value
+                  ? 'bg-slate-900 text-white font-bold ring-2 ring-slate-900'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
         </div>
 
         {/* Printable Content Container */}
@@ -192,16 +263,16 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
               <div className="space-y-3">
                 <h3 className="text-base font-extrabold uppercase tracking-wide text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-1">
                   <span>✅</span>
-                  <span>Completed Grounding Steps ({tasks.length})</span>
+                  <span>Completed Grounding Steps ({filteredTasks.length})</span>
                 </h3>
                 
-                {tasks.length === 0 ? (
+                {filteredTasks.length === 0 ? (
                   <p className="text-xs sm:text-sm text-slate-500 italic py-1">
-                    No completed tasks recorded in the past 7 days.
+                    No completed tasks recorded for this period ({rangeLabel}).
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
-                    {tasks.map((t, idx) => (
+                    {filteredTasks.map((t, idx) => (
                       <div key={t.id || idx} className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
                         <span className="font-semibold text-slate-800">• {t.title}</span>
                         {t.emotionalIntensity && (
@@ -219,16 +290,16 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
               <div className="space-y-4 pt-2">
                 <h3 className="text-base font-extrabold uppercase tracking-wide text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-1">
                   <span>💭</span>
-                  <span>CBT Thought Records &amp; Reframing Log ({entries.length})</span>
+                  <span>CBT Thought Records &amp; Reframing Log ({filteredEntries.length})</span>
                 </h3>
 
-                {entries.length === 0 ? (
+                {filteredEntries.length === 0 ? (
                   <p className="text-xs sm:text-sm text-slate-500 italic py-1">
-                    No journal reflections recorded in the past 7 days.
+                    No journal reflections recorded for this period ({rangeLabel}).
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {entries.map((entry, idx) => {
+                    {filteredEntries.map((entry, idx) => {
                       let distortions: string[] = [];
                       if (entry.distortionsJson) {
                         try {
@@ -302,8 +373,81 @@ export default function TherapyExportModal({ isOpen, onClose }: TherapyExportMod
                   </div>
                 )}
               </div>
+
+              {/* Section 3: Closed Loop Reality Tests */}
+              <div className="space-y-4 pt-2">
+                <h3 className="text-base font-extrabold uppercase tracking-wide text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-1">
+                  <span>🔄</span>
+                  <span>Closed Loop Reality Tests ({closedLoops.length})</span>
+                </h3>
+                {closedLoops.length === 0 ? (
+                  <p className="text-xs sm:text-sm text-slate-500 italic py-1">
+                    No closed reality tests recorded for this period ({rangeLabel}).
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {closedLoops.map((e, idx) => {
+                      const outcome = e.outcomeText || e.loopOutcome || '—';
+                      const fearedThought = e.automaticThought ? `"${e.automaticThought}"` : '—';
+                      const accuracy = e.loopAccuracy || e.predictionEvaluation || 'Disproved';
+                      const dateStr = (e.loopClosedAt || e.loopCompletedAt || e.createdAt)
+                        ? new Date(e.loopClosedAt || e.loopCompletedAt || e.createdAt!).toLocaleDateString(undefined, { dateStyle: 'medium' })
+                        : 'Recent';
+
+                      const isDisproved = accuracy.includes('False') || accuracy.includes('Disproved') || accuracy.includes('better');
+                      const isPartial = accuracy.includes('Partially');
+
+                      return (
+                        <div key={e.id || idx} className="avoid-break p-4 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm space-y-2">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                            <span className="font-bold text-slate-700">Reality Test #{idx + 1} • {dateStr}</span>
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${
+                              isDisproved
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : isPartial
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-slate-100 text-slate-800 border-slate-200'
+                            }`}>
+                              {accuracy}
+                            </span>
+                          </div>
+                          <div>
+                            <strong className="text-slate-600 uppercase text-[11px] tracking-wider block">Situation:</strong>
+                            <p className="text-slate-800 font-medium">{e.situation}</p>
+                          </div>
+                          <div>
+                            <strong className="text-slate-600 uppercase text-[11px] tracking-wider block">Feared Thought:</strong>
+                            <p className="text-slate-800 italic">{fearedThought}</p>
+                          </div>
+                          <div>
+                            <strong className="text-slate-600 uppercase text-[11px] tracking-wider block">Outcome:</strong>
+                            <p className="text-slate-800 font-medium">{outcome}</p>
+                          </div>
+                          {typeof e.reliefRating === 'number' && (
+                            <div className="text-xs text-slate-500 pt-0.5">
+                              Relief Rating: <strong className="text-slate-700">{e.reliefRating}/10</strong>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </>
           )}
+
+          {/* Clinician Notes & Homework Interventions (printable, lined) */}
+          <div className="avoid-break page-break-before pt-4 space-y-3">
+            <h3 className="text-base font-extrabold uppercase tracking-wide text-slate-900 border-b-2 border-slate-900 pb-1">
+              Clinician Notes &amp; Homework Interventions
+            </h3>
+            <div aria-hidden="true">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <div key={i} className="h-8 border-b border-slate-400" />
+              ))}
+            </div>
+          </div>
 
           {/* Report Footer */}
           <div className="pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
