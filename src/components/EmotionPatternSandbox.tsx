@@ -461,7 +461,7 @@ export default function EmotionPatternSandbox() {
   const patternNote     = CLUSTER_PATTERN_NOTES[dominantCluster];
 
   return (
-    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-sm border border-slate-200/60 p-6 sm:p-8 flex flex-col gap-6">
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200/60 p-6 sm:p-8 flex flex-col gap-6">
 
       {/* ── Header ── */}
       <div className="text-center">

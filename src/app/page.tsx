@@ -353,7 +353,7 @@ export default function Home() {
       </div>
 
       {/* Vertically Distributed Cards Stack */}
-      <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto flex flex-col gap-8 sm:gap-10 items-center justify-center my-auto">
+      <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto flex flex-col gap-8 sm:gap-10 items-center justify-center my-auto">
         
         {/* Evening Reflection Card (Only rendered if isEvening is true) */}
         {isEvening && (

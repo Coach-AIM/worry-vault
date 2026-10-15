@@ -935,7 +935,7 @@ export default function TasksTab() {
   const filteredTodayTasks = todayTasks.filter(matchesTypeFilter);
 
   return (
-    <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6" style={{ paddingTop: "2rem", paddingBottom: "2rem", boxSizing: "border-box" }}>
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6" style={{ paddingTop: "2rem", paddingBottom: "2rem", boxSizing: "border-box" }}>
       <header
         style={{
           marginBottom: "2rem",

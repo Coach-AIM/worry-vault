@@ -21,12 +21,12 @@ describe('Toolkit Page & 4 Utility Actions Audit', () => {
     render(<Toolkit />);
 
     expect(screen.getByText('🧠 Decision Assistant')).toBeInTheDocument();
-    expect(screen.getByText('📞 My Support Contact')).toBeInTheDocument();
+    expect(screen.getByText('📞 My Support Contacts')).toBeInTheDocument();
     expect(screen.getByText('📄 Therapy Integration')).toBeInTheDocument();
     expect(screen.getByText('🔒 Secure Vault Backup')).toBeInTheDocument();
 
     expect(screen.getByRole('button', { name: /Open Assistant/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /\+ Add Support Contact/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /\+ Add Contact/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Export Week to PDF/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Create Encrypted Backup/i })).toBeInTheDocument();
   });
@@ -124,60 +124,65 @@ describe('Toolkit Page & 4 Utility Actions Audit', () => {
     it('saves a support contact, updates dynamic card state to Call [Name] + Edit button', async () => {
       render(<Toolkit />);
 
-      // Click + Add Support Contact
-      const addBtn = screen.getByRole('button', { name: /\+ Add Support Contact/i });
+      // Click + Add Contact
+      const addBtn = screen.getByRole('button', { name: /\+ Add Contact/i });
       fireEvent.click(addBtn);
 
-      // Fill in contact modal
-      expect(screen.getByText('Add Support Contact')).toBeInTheDocument();
-      const nameInput = screen.getByPlaceholderText(/Dr. Sarah Jenkins or Crisis Helpline/i);
-      const phoneInput = screen.getByPlaceholderText(/988 or \(555\) 234-5678/i);
+      // Fill in contact form
+      const nameInput = screen.getByPlaceholderText(/^Name$/i);
+      const phoneInput = screen.getByPlaceholderText(/Primary phone/i);
 
       fireEvent.change(nameInput, { target: { value: 'Dr. Sarah Jenkins' } });
       fireEvent.change(phoneInput, { target: { value: '(555) 987-6543' } });
 
-      const submitBtn = screen.getByRole('button', { name: /Save Support Contact/i });
+      // Check Call checkbox
+      const callCheck = screen.getAllByLabelText(/Call/i)[0];
+      fireEvent.click(callCheck);
+
+      const submitBtn = screen.getByRole('button', { name: /Save Contact/i });
       fireEvent.click(submitBtn);
 
       // Card updates dynamically
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Call Dr./i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Edit Support Contact/i })).toBeInTheDocument();
+        expect(screen.getByText('Dr. Sarah Jenkins')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /^📞 Call$/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Edit contact/i })).toBeInTheDocument();
       });
 
       // Verify persisted in localStorage
-      const saved = storage.safeGetJSON<any>('momentum_support_contact', null);
-      expect(saved?.name).toBe('Dr. Sarah Jenkins');
-      expect(saved?.phone).toBe('(555) 987-6543');
+      const saved = storage.safeGetJSON<any[]>('momentum_support_contacts', []);
+      expect(saved[0]?.name).toBe('Dr. Sarah Jenkins');
+      expect(saved[0]?.phone1).toBe('(555) 987-6543');
     });
 
     it('allows editing and removing an existing support contact', async () => {
-      storage.safeSetJSON('momentum_support_contact', {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      window.localStorage.setItem('momentum_support_contacts', JSON.stringify([{
+        id: 'c_test_1',
         name: 'Alex Friend',
         role: 'Trusted Friend',
-        phone: '555-111-2222'
-      });
+        phone1: '555-111-2222',
+        canCall: true,
+      }]));
 
       render(<Toolkit />);
 
-      expect(screen.getByRole('button', { name: /Call Alex/i })).toBeInTheDocument();
+      expect(await screen.findByText('Alex Friend')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^📞 Call$/i })).toBeInTheDocument();
 
-      // Click edit
-      const editBtn = screen.getByRole('button', { name: /Edit Support Contact/i });
-      fireEvent.click(editBtn);
+      // Click delete contact directly from card
+      const deleteBtn = screen.getByRole('button', { name: /Delete contact/i });
+      fireEvent.click(deleteBtn);
 
-      expect(screen.getByText('Edit Support Contact')).toBeInTheDocument();
-
-      // Click remove contact
-      const removeBtn = screen.getByRole('button', { name: /Remove Contact/i });
-      fireEvent.click(removeBtn);
-
-      // Card resets to + Add Support Contact
+      // Card resets
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /\+ Add Support Contact/i })).toBeInTheDocument();
+        expect(screen.queryByText('Alex Friend')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /\+ Add Contact/i })).toBeInTheDocument();
       });
 
-      expect(storage.safeGetJSON('momentum_support_contact', null)).toBeNull();
+      const saved = JSON.parse(window.localStorage.getItem('momentum_support_contacts') || '[]');
+      expect(saved.length).toBe(0);
     });
   });
 

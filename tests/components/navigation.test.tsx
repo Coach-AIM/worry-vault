@@ -18,7 +18,7 @@ describe("Navigation Component", () => {
     expect(screen.getByText("Journal")).toBeInTheDocument();
     expect(screen.getByText("Action Planner")).toBeInTheDocument();
     expect(screen.getByText("Toolkit")).toBeInTheDocument();
-    expect(screen.getByText("Sign Out")).toBeInTheDocument();
+    expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
   it("should highlight the active tab matching the current pathname", () => {
@@ -34,15 +34,15 @@ describe("Navigation Component", () => {
     expect(homeLink).not.toHaveClass("active");
   });
 
-  it("should call signOut when the Sign Out button is clicked", () => {
+  it("should toggle the Settings drawer when Settings button is clicked", () => {
     vi.mocked(usePathname).mockReturnValue("/");
 
     render(<Navigation />);
 
-    const signOutBtn = screen.getByText("Sign Out").closest("button");
-    expect(signOutBtn).toBeInTheDocument();
+    const settingsBtn = screen.getByRole("button", { name: "Settings" });
+    expect(settingsBtn).toBeInTheDocument();
 
-    fireEvent.click(signOutBtn!);
-    expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/login" });
+    fireEvent.click(settingsBtn);
+    expect(screen.getByText(/Settings & Privacy/i)).toBeInTheDocument();
   });
 });

@@ -288,7 +288,7 @@ export default function DecisionsPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 pb-28">
       {/* Back Button and Header */}
-      <div className="max-w-3xl mx-auto mb-8 animate-fade-in">
+      <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto mb-8 animate-fade-in">
         <button
           onClick={() => router.push("/")}
           className="text-sm font-medium text-slate-500 hover:text-slate-700 transition mb-6 flex items-center gap-2"
@@ -311,7 +311,7 @@ export default function DecisionsPage() {
 
       {/* STEP 1: SETUP */}
       {step === 1 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-10 animate-fade-in">
+        <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-10 animate-fade-in">
           {/* Question 1 */}
           <div className="space-y-3">
             <label className="block text-2xl font-bold text-slate-900">
@@ -413,7 +413,7 @@ export default function DecisionsPage() {
       {/* STEP 2: CONTEXT CHECK */}
       {step === 2 && (
         <div className="space-y-8 animate-fade-in">
-          <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8">
+          <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8">
             <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
               Context Check:{" "}
               {options[currentOptionIndex].label.trim() ||
@@ -509,7 +509,7 @@ export default function DecisionsPage() {
           </div>
 
           {/* Context Footer */}
-          <div className="flex justify-between pt-6 max-w-3xl mx-auto border-t border-slate-200">
+          <div className="flex justify-between pt-6 w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto border-t border-slate-200">
             <button
               onClick={handlePrevOption}
               className="bg-slate-100 text-slate-700 font-bold py-3.5 px-10 rounded-2xl hover:bg-slate-200 transition-colors"
@@ -534,7 +534,7 @@ export default function DecisionsPage() {
           {options.map((opt, i) => (
             <div
               key={i}
-              className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-6"
+              className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-6"
             >
               <h3 className="text-xl font-bold text-blue-600 border-b border-slate-100 pb-3">
                 Pros & Cons:{" "}
@@ -653,7 +653,7 @@ export default function DecisionsPage() {
           ))}
 
           {/* Pros/Cons Footer */}
-          <div className="flex justify-between pt-6 max-w-3xl mx-auto border-t border-slate-200">
+          <div className="flex justify-between pt-6 w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto border-t border-slate-200">
             <button
               onClick={() => {
                 // Initialize context states for the last option before going back
@@ -683,7 +683,7 @@ export default function DecisionsPage() {
 
       {/* STEP 4: SUMMARY & SCORE OUTPUT */}
       {step === 4 && (
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8 animate-fade-in">
+        <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200/60 p-8 md:p-10 space-y-8 animate-fade-in">
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-slate-800 border-b border-slate-100 pb-3">
               Decision Analysis: "{title}"

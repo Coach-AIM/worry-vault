@@ -85,7 +85,7 @@ export default function CbtTriangle() {
   }
 
   return (
-    <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mt-8">
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mt-8">
 
       {/* Header */}
       <span className="bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-3">

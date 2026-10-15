@@ -108,7 +108,7 @@ export default function Toolkit() {
       <WellnessGraphs />
 
       {/* ── 🧠 Two-column utility shortcuts grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto my-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto my-8">
 
         {/* 1. Decision Assistant Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col items-center text-center justify-between">

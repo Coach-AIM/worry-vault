@@ -87,36 +87,26 @@ describe('Home 0-10 Rating Scale & Resilience Milestones', () => {
 
     render(<Home />);
 
-    // 1. Verify Resilience Momentum Card is rendered
-    expect(screen.getByText('Resilience Momentum')).toBeInTheDocument();
+    // 1. Verify Mental Fortitude Card is rendered
+    expect(screen.getByText('Mental Fortitude')).toBeInTheDocument();
     expect(screen.getByText('125')).toBeInTheDocument(); // 125 pts
     expect(screen.getByText('2')).toBeInTheDocument(); // 2 closed loops
     expect(screen.getByText('100%')).toBeInTheDocument(); // 100% fears disproved
 
-    // 2. Verify milestone tiers
-    expect(screen.getByText('Awareness Anchor')).toBeInTheDocument();
-    expect(screen.getByText('Cognitive Challenger')).toBeInTheDocument();
-    expect(screen.getByText('Resilience Master')).toBeInTheDocument();
-
-    // 3. Since 125 >= 100 pts, Awareness Anchor is unlocked
-    expect(screen.getByText('✓ Unlocked')).toBeInTheDocument();
-
-    // 4. Open Insight Summary
-    const insightBtn = screen.getByRole('button', { name: /Insight Summary/i });
-    fireEvent.click(insightBtn);
+    // 2. Open Mastery Roadmap
+    const roadmapBtn = screen.getByRole('button', { name: /Mastery Roadmap/i });
+    fireEvent.click(roadmapBtn);
 
     // Verify modal is displayed
-    expect(screen.getByText(/Milestone Unlocked \(100\+ Pts\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Your Empirical Cognitive Proof/i)).toBeInTheDocument();
-    expect(screen.getByText(/3/)).toBeInTheDocument(); // 3 distortions challenged total
-    expect(screen.getByText(/CBT Clinical Takeaway/i)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Mastery Roadmap/i })).toBeInTheDocument();
+    expect(screen.getByText(/The 8 Fortification Stages/i)).toBeInTheDocument();
 
-    // 5. Close modal
-    const closeBtn = screen.getByRole('button', { name: /Close Summary/i });
+    // 3. Close modal
+    const closeBtn = screen.getByRole('button', { name: /Close/i });
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Milestone Unlocked \(100\+ Pts\)/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: /Mastery Roadmap/i })).not.toBeInTheDocument();
     });
   });
 });

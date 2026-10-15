@@ -1,6 +1,7 @@
 export default function Footer() {
   return (
     <footer
+      className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto"
       style={{
         textAlign: "center",
         padding: "2rem 1rem",

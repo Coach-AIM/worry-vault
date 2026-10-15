@@ -93,8 +93,8 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xl bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] h-[68px] flex items-center justify-center font-sans">
-      <ul className="flex flex-row w-full max-w-2xl mx-auto justify-around items-center list-none m-0 p-0 px-3 h-full">
+    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] h-[68px] flex items-center justify-center font-sans transition-all duration-200">
+      <ul className="flex flex-row w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto justify-around items-center list-none m-0 p-0 px-3 h-full">
         {tabs.map((tab) => {
           const isActive = tab.href === "/"
             ? pathname === "/"

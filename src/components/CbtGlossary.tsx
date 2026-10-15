@@ -546,7 +546,7 @@ export default function CbtGlossary() {
   }
 
   return (
-    <div className="w-full max-w-2xl bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-10">
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/60 flex flex-col items-center mb-10">
 
       {/* Header */}
       <div className="text-center mb-6">

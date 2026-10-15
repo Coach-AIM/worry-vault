@@ -453,7 +453,7 @@ export default function CbtTriangleSandbox() {
   const bottomLineHighlight = activeStep === 3 || activeStep === 4 || activeStep === 5;
 
   return (
-    <div id="cbt-triangle-container" className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200/80 shadow-sm p-3 sm:p-6 flex flex-col gap-5 sm:gap-6">
+    <div id="cbt-triangle-container" className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/80 shadow-sm p-3 sm:p-6 flex flex-col gap-5 sm:gap-6">
 
       {/* ── Header ── */}
       <div className="text-center">

@@ -345,6 +345,6 @@ describe('End-to-End CBT Flow, Hydration & API Resilience', () => {
     // Render Toolkit - support contact card should render cleanly after mount
     render(<Toolkit />);
     expect(await screen.findByText(/Dr\. Sarah/i)).toBeInTheDocument();
-    expect(screen.getByText(/Saved:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Therapist/i)).toBeInTheDocument();
   });
 });

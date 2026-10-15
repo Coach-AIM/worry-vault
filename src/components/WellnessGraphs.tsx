@@ -728,7 +728,7 @@ export default function WellnessGraphs() {
   }, [chartData, actionMarkers, journalMarkers]);
 
   return (
-    <div className="w-full max-w-2xl flex flex-col gap-6">
+    <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto flex flex-col gap-6">
 
       {/* ════════════════════════════════════════
           CARD 1 — Header + Area Chart

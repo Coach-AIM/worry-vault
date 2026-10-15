@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakartaSans.variable} ${lora.variable}`}>
       <body className="app-body">
-        <main className="app-main">{children}</main>
+        <main className="app-main w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6">{children}</main>
         <Footer />
         <Navigation />
       </body>
