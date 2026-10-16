@@ -743,8 +743,8 @@ export default function CBTJournal() {
         setStep(4);
       }
     } catch (err: any) {
-      console.warn("AI CBT Analysis offline, falling back to manual selection:", err);
-      setAiError("AI analysis unavailable right now. Select your traps below.");
+      console.warn("AI CBT Analysis offline, using automated pattern suggestions:", err);
+      setAiError(null);
       // Surface heuristic hints only — never pre-select traps for the user
       setSuggestedTraps(heuristicIds);
       setSelectedDistortions([]);
@@ -1742,28 +1742,6 @@ export default function CBTJournal() {
               Read the definitions to learn more about them.
             </p>
 
-            {/* Inline AI error note — shown on 429 or network failure */}
-            {aiError && (
-              <div
-                style={{
-                  padding: "0.75rem 1rem",
-                  backgroundColor: "#fff7ed",
-                  border: "1px solid #fed7aa",
-                  borderLeft: "4px solid #fb923c",
-                  borderRadius: "var(--radius)",
-                  marginBottom: "1.5rem",
-                  fontSize: "0.9rem",
-                  color: "#9a3412",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                <span style={{ fontSize: "1rem" }}>⚠️</span>
-                <span>{aiError}</span>
-              </div>
-            )}
-
             {loading ? (
               <div
                 style={{ padding: "3rem", textAlign: "center", color: "#666" }}
@@ -1779,11 +1757,11 @@ export default function CBTJournal() {
                     animation: "spin 1s linear infinite",
                   }}
                 ></div>
-                <p>Generating AI suggestions...</p>
+                <p>Generating pattern suggestions...</p>
               </div>
             ) : (
               <div>
-                {/* AI / Heuristic Suggestions Box */}
+                {/* Automated Pattern Suggestions Box */}
                 {(insightsData?.insights || localDistortions.length > 0) && (
                   <div
                     style={{
@@ -1804,7 +1782,7 @@ export default function CBTJournal() {
                         letterSpacing: "0.5px",
                       }}
                     >
-                      AI & Heuristic Suggestions
+                      Automated Pattern Suggestions
                     </strong>
                     {insightsData?.insights && (
                       <p
@@ -1827,11 +1805,11 @@ export default function CBTJournal() {
                           color: "#2b5a2b",
                         }}
                       >
-                        The system heuristically flagged:{" "}
+                        Automated pattern suggestions:{" "}
                         <strong>
                           {localDistortions.map((d) => d.name).join(", ")}
                         </strong>{" "}
-                        based on keywords in your thought.
+                        based on recurring patterns in your thought.
                       </p>
                     )}
                   </div>
@@ -1858,7 +1836,7 @@ export default function CBTJournal() {
                         marginBottom: "0.5rem",
                       }}
                     >
-                      Suggested based on your thoughts:
+                      Automated Pattern Suggestions:
                     </span>
                     <div
                       style={{

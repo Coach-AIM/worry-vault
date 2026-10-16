@@ -74,15 +74,21 @@ export async function GET() {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
+    const url = new URL(req.url);
+    const purgeAll = url.searchParams.get("all") === "true";
+    if (purgeAll) {
+      await db.delete(tasks);
+      return NextResponse.json({ success: true, message: "All tasks purged from database" });
+    }
     const { eq } = await import("drizzle-orm");
     await db.delete(tasks).where(eq(tasks.completed, 1));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DB Tasks Clear Completed Error", error);
+    console.error("DB Tasks Delete Error", error);
     return NextResponse.json(
-      { error: "Failed to clear completed tasks" },
+      { error: "Failed to delete tasks" },
       { status: 500 },
     );
   }

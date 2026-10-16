@@ -146,17 +146,21 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
     setShowSecondaryWipeModal(true);
   }
 
-  function purgeAllData() {
+  async function purgeAllData() {
+    try {
+      await fetch('/api/tasks?all=true', { method: 'DELETE' }).catch(() => {});
+    } catch (_) {}
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('momentum_') || key.startsWith('momentum'))) {
+        if (key && (key.startsWith('momentum_') || key.startsWith('momentum') || key === 'pinLockEnabled')) {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
       localStorage.clear();
+      sessionStorage.clear();
     } catch (_) {}
     window.location.href = '/';
   }
@@ -302,7 +306,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 pb-28">
 
             {/* Privacy & Security + Account / Session */}
             <div className="space-y-3">
@@ -600,7 +604,7 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-slate-100 flex justify-end bg-slate-50/60 sticky bottom-0">
+          <div className="px-6 py-4 border-t border-slate-100 flex justify-end bg-slate-50/90 backdrop-blur-xs sticky bottom-0 z-10">
             <button
               type="button"
               onClick={onClose}

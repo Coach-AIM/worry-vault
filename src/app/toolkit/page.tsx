@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import WellnessGraphs from '@/components/WellnessGraphs';
 import CbtTriangleSandbox from '@/components/CbtTriangleSandbox';
 import CbtGlossary from '@/components/CbtGlossary';
@@ -22,6 +23,39 @@ export default function Toolkit() {
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
+  // Thought records state check
+  const [hasThoughtRecords, setHasThoughtRecords] = useState(false);
+  const [isRecordsChecked, setIsRecordsChecked] = useState(false);
+
+  useEffect(() => {
+    async function checkRecords() {
+      try {
+        const localRaw = localStorage.getItem('momentum_journal_entries');
+        let count = 0;
+        if (localRaw) {
+          const parsed = JSON.parse(localRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            count = parsed.length;
+          }
+        }
+        if (count === 0 && typeof fetch === 'function') {
+          const res = await fetch('/api/journal').catch(() => null);
+          if (res && res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data?.entries && Array.isArray(data.entries) && data.entries.length > 0) {
+              count = data.entries.length;
+            }
+          }
+        }
+        setHasThoughtRecords(count > 0);
+      } catch (_) {
+        setHasThoughtRecords(false);
+      } finally {
+        setIsRecordsChecked(true);
+      }
+    }
+    checkRecords();
+  }, []);
 
   // Backup Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -104,8 +138,31 @@ export default function Toolkit() {
         </p>
       </div>
 
-      {/* ── 📊 Wellness trends & analytics ── */}
-      <WellnessGraphs />
+      {/* ── 📊 Wellness trends & analytics or Empty State ── */}
+      {isRecordsChecked && (
+        hasThoughtRecords ? (
+          <WellnessGraphs />
+        ) : (
+          <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-slate-200/80 text-center flex flex-col items-center justify-center my-2 animate-fadeIn">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-3xl mb-4 text-emerald-800 shadow-2xs">
+              📊
+            </div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-2">
+              No trend data yet
+            </h3>
+            <p className="text-sm sm:text-base text-slate-600 max-w-md mx-auto mb-6 font-medium leading-relaxed">
+              No trend data yet. Complete your first CBT thought record to unlock your mood stability trend and distortion analysis.
+            </p>
+            <Link
+              href="/journal"
+              className="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm rounded-xl transition-all shadow-sm flex items-center gap-2 no-underline cursor-pointer"
+            >
+              <span>Complete Thought Record</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )
+      )}
 
       {/* ── 🧠 Two-column utility shortcuts grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto my-8">

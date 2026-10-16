@@ -646,6 +646,26 @@ export default function WellnessGraphs() {
   }, [preset, customStart, customEnd]);
 
   const periodStats = useMemo<PeriodStats>(() => {
+    const localEntries = safeReadJson<any[]>('momentum_journal_entries', []);
+    if (localEntries.length > 0) {
+      const records = localEntries.length;
+      let totalDistortions = 0;
+      for (const e of localEntries) {
+        if (Array.isArray(e.distortions)) totalDistortions += e.distortions.length;
+        else if (Array.isArray(e.selectedDistortions)) totalDistortions += e.selectedDistortions.length;
+        else if (e.distortionsJson) {
+          try {
+            const parsed = JSON.parse(e.distortionsJson);
+            if (Array.isArray(parsed)) totalDistortions += parsed.length;
+          } catch (_) {
+            totalDistortions += 1;
+          }
+        } else {
+          totalDistortions += 1;
+        }
+      }
+      return { records, total: Math.max(records, totalDistortions), topLabel: 'ACTIVE' };
+    }
     if (preset === 'custom') {
       const total = generateCustomTraps(customStart, customEnd).reduce(
         (sum, s) => sum + s.count, 0,
