@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("CanDo");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid credentials. Hint: use CanDo / password123");
+        setError("Invalid username or password.");
       } else {
         router.push("/");
         router.refresh();
@@ -99,6 +99,7 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
               required
               className="form-input"
               style={{ width: "100%" }}
@@ -167,7 +168,7 @@ export default function LoginPage() {
           }}
         >
           <span style={{ color: "hsl(200, 10%, 50%)" }}>
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
           </span>
           <Link
             href="/register"
@@ -179,20 +180,6 @@ export default function LoginPage() {
           >
             Sign Up
           </Link>
-        </div>
-
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: "1.5rem",
-            fontSize: "0.8rem",
-            color: "#999",
-            borderTop: "1px solid #eee",
-            paddingTop: "1rem",
-          }}
-        >
-          Default credentials: <strong>CanDo</strong> /{" "}
-          <strong>password123</strong>
         </div>
       </div>
     </div>
