@@ -435,10 +435,14 @@ function journalEntryToStages(entry: JournalEntry): Record<StepNumber, StageInfo
   };
 }
 
+interface CbtTriangleSandboxProps {
+  initialEntryId?: number | null;
+}
+
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function CbtTriangleSandbox() {
+export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandboxProps = {}) {
   const [selectedScenario, setSelectedScenario] = useState<ScenarioKey>('overwhelm');
   const [selectedNode, setSelectedNode] = useState<NodeKey>('thoughts');
   const [activeStep, setActiveStep] = useState<StepNumber>(1);
@@ -453,7 +457,21 @@ export default function CbtTriangleSandbox() {
   const refreshJournal = useCallback(async (autoSelectLatest = false) => {
     let merged = loadJournalEntries();
     setJournalEntries(merged);
-    if (merged.length > 0) {
+
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const urlEntryId = urlParams ? urlParams.get('entryId') : null;
+    const targetId = initialEntryId ?? (urlEntryId ? Number(urlEntryId) : null);
+
+    if (targetId && !isNaN(targetId)) {
+      setSourceMode('journal');
+      setActiveStep(1);
+      const match = merged.find((e) => e.id === targetId);
+      if (match) {
+        setSelectedEntryId(match.id);
+      } else {
+        setSelectedEntryId(targetId);
+      }
+    } else if (merged.length > 0) {
       setSelectedEntryId((prev) =>
         autoSelectLatest || prev === null || !merged.some((e) => e.id === prev) ? merged[0].id : prev,
       );
@@ -473,7 +491,14 @@ export default function CbtTriangleSandbox() {
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
           setJournalEntries(merged);
-          if (merged.length > 0) {
+          if (targetId && !isNaN(targetId)) {
+            setSourceMode('journal');
+            setActiveStep(1);
+            const match = merged.find((e) => e.id === targetId);
+            if (match) {
+              setSelectedEntryId(match.id);
+            }
+          } else if (merged.length > 0) {
             setSelectedEntryId((prev) =>
               autoSelectLatest || prev === null || !merged.some((e) => e.id === prev) ? merged[0].id : prev,
             );
@@ -481,7 +506,19 @@ export default function CbtTriangleSandbox() {
         }
       }
     } catch (_) { /* offline — local entries already shown */ }
-  }, []);
+  }, [initialEntryId]);
+
+  useEffect(() => {
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const urlEntryId = urlParams ? urlParams.get('entryId') : null;
+    const targetId = initialEntryId ?? (urlEntryId ? Number(urlEntryId) : null);
+
+    if (targetId && !isNaN(targetId)) {
+      setSourceMode('journal');
+      setActiveStep(1);
+      setSelectedEntryId(targetId);
+    }
+  }, [initialEntryId]);
 
   // Load on mount (SSR-safe)
   useEffect(() => {
@@ -527,7 +564,7 @@ export default function CbtTriangleSandbox() {
     <div id="cbt-triangle-container" className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/80 shadow-sm p-3 sm:p-6 flex flex-col gap-5 sm:gap-6">
 
       {/* ── Header ── */}
-      <div className="text-center">
+      <div id="cbt-triangle-section" className="text-center scroll-mt-6">
         <span className="bg-violet-50 text-violet-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full">
           CBT Cognitive Model
         </span>
@@ -650,47 +687,65 @@ export default function CbtTriangleSandbox() {
         )}
       </div>
 
-      {/* ── Responsive SVG Triangle (viewBox 0 0 400 360, max-w-[360px]) ── */}
-      <div className="w-full max-w-[360px] mx-auto relative bg-slate-50/70 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-1.5 sm:p-3 flex items-center justify-center overflow-hidden">
+      {/* ── Responsive SVG Triangle (viewBox 0 0 400 360, scaled) ── */}
+      <div className="w-full max-w-[440px] sm:max-w-[480px] min-h-[340px] sm:min-h-[360px] mx-auto relative bg-slate-50/70 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-2 sm:p-4 flex items-center justify-center overflow-hidden">
         <svg
           viewBox="0 0 400 360"
           preserveAspectRatio="xMidYMid meet"
-          className="w-full h-auto select-none block"
+          className="w-full h-[340px] sm:h-[360px] select-none block"
         >
+          <defs>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
+            </marker>
+            <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+            </marker>
+            <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+            </marker>
+            <marker id="arrow-slate" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8" />
+            </marker>
+          </defs>
+
           {/* Connecting Lines */}
           {/* Left Edge: Thoughts (200, 55) to Feelings (75, 255) */}
           <line
-            x1="180"
-            y1="87"
-            x2="95"
-            y2="223"
+            x1="178"
+            y1="91"
+            x2="97"
+            y2="219"
             stroke={leftLineHighlight ? (activeStep === 5 ? '#10b981' : '#3b82f6') : '#cbd5e1'}
-            strokeWidth={leftLineHighlight ? '3.5' : '2'}
-            strokeDasharray={leftLineHighlight ? 'none' : '4 4'}
-            className="transition-all duration-300"
-          />
-
-          {/* Right Edge: Thoughts (200, 55) to Behaviors (325, 255) */}
-          <line
-            x1="220"
-            y1="87"
-            x2="305"
-            y2="223"
-            stroke={rightLineHighlight ? (activeStep === 5 ? '#10b981' : '#10b981') : '#cbd5e1'}
-            strokeWidth={rightLineHighlight ? '3.5' : '2'}
-            strokeDasharray={rightLineHighlight ? 'none' : '4 4'}
+            strokeWidth={leftLineHighlight ? '4' : '2.5'}
+            strokeDasharray={leftLineHighlight ? 'none' : '5 5'}
+            markerEnd={leftLineHighlight ? (activeStep === 5 ? 'url(#arrow-emerald)' : 'url(#arrow-blue)') : 'url(#arrow-slate)'}
             className="transition-all duration-300"
           />
 
           {/* Bottom Edge: Feelings (75, 255) to Behaviors (325, 255) */}
           <line
-            x1="113"
+            x1="117"
             y1="255"
-            x2="287"
+            x2="283"
             y2="255"
             stroke={bottomLineHighlight ? (activeStep === 5 ? '#10b981' : '#f59e0b') : '#cbd5e1'}
-            strokeWidth={bottomLineHighlight ? '3.5' : '2'}
-            strokeDasharray={bottomLineHighlight ? 'none' : '4 4'}
+            strokeWidth={bottomLineHighlight ? '4' : '2.5'}
+            strokeDasharray={bottomLineHighlight ? 'none' : '5 5'}
+            markerEnd={bottomLineHighlight ? (activeStep === 5 ? 'url(#arrow-emerald)' : 'url(#arrow-amber)') : 'url(#arrow-slate)'}
+            className="transition-all duration-300"
+          />
+
+          {/* Right Edge: Behaviors (325, 255) to Thoughts (200, 55) */}
+          <line
+            x1="303"
+            y1="219"
+            x2="222"
+            y2="91"
+            stroke={rightLineHighlight ? (activeStep === 5 ? '#10b981' : '#10b981') : '#cbd5e1'}
+            strokeWidth={rightLineHighlight ? '4' : '2.5'}
+            strokeDasharray={rightLineHighlight ? 'none' : '5 5'}
+            markerEnd={rightLineHighlight ? 'url(#arrow-emerald)' : 'url(#arrow-slate)'}
             className="transition-all duration-300"
           />
 
@@ -716,16 +771,16 @@ export default function CbtTriangleSandbox() {
             <circle
               cx="200"
               cy="55"
-              r="38"
+              r="36"
               fill={isThoughtActive ? '#3b82f6' : '#ffffff'}
               stroke={isThoughtActive ? '#2563eb' : '#cbd5e1'}
               strokeWidth={isThoughtActive ? '3.5' : '2'}
               className="transition-all duration-200 drop-shadow-sm group-hover:scale-105"
             />
-            <text x="200" y="50" textAnchor="middle" fontSize="17" fill={isThoughtActive ? '#ffffff' : '#334155'}>
+            <text x="200" y="50" textAnchor="middle" fontSize="18" fill={isThoughtActive ? '#ffffff' : '#334155'}>
               💭
             </text>
-            <text x="200" y="66" textAnchor="middle" fontSize="10.5" fontWeight="800" fill={isThoughtActive ? '#ffffff' : '#1e293b'}>
+            <text x="200" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill={isThoughtActive ? '#ffffff' : '#1e293b'}>
               Thoughts
             </text>
             <rect x="135" y="98" width="130" height="18" rx="9" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />
@@ -747,16 +802,16 @@ export default function CbtTriangleSandbox() {
             <circle
               cx="75"
               cy="255"
-              r="38"
+              r="36"
               fill={isFeelingActive ? '#f59e0b' : '#ffffff'}
               stroke={isFeelingActive ? '#d97706' : '#cbd5e1'}
               strokeWidth={isFeelingActive ? '3.5' : '2'}
               className="transition-all duration-200 drop-shadow-sm group-hover:scale-105"
             />
-            <text x="75" y="250" textAnchor="middle" fontSize="17" fill={isFeelingActive ? '#ffffff' : '#334155'}>
+            <text x="75" y="250" textAnchor="middle" fontSize="18" fill={isFeelingActive ? '#ffffff' : '#334155'}>
               ❤️
             </text>
-            <text x="75" y="266" textAnchor="middle" fontSize="10.5" fontWeight="800" fill={isFeelingActive ? '#ffffff' : '#1e293b'}>
+            <text x="75" y="266" textAnchor="middle" fontSize="11" fontWeight="800" fill={isFeelingActive ? '#ffffff' : '#1e293b'}>
               Feelings
             </text>
             <rect x="10" y="298" width="130" height="18" rx="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
@@ -778,16 +833,16 @@ export default function CbtTriangleSandbox() {
             <circle
               cx="325"
               cy="255"
-              r="38"
+              r="36"
               fill={isBehaviorActive ? '#10b981' : '#ffffff'}
               stroke={isBehaviorActive ? '#059669' : '#cbd5e1'}
               strokeWidth={isBehaviorActive ? '3.5' : '2'}
               className="transition-all duration-200 drop-shadow-sm group-hover:scale-105"
             />
-            <text x="325" y="250" textAnchor="middle" fontSize="17" fill={isBehaviorActive ? '#ffffff' : '#334155'}>
+            <text x="325" y="250" textAnchor="middle" fontSize="18" fill={isBehaviorActive ? '#ffffff' : '#334155'}>
               🏃
             </text>
-            <text x="325" y="266" textAnchor="middle" fontSize="10.5" fontWeight="800" fill={isBehaviorActive ? '#ffffff' : '#1e293b'}>
+            <text x="325" y="266" textAnchor="middle" fontSize="11" fontWeight="800" fill={isBehaviorActive ? '#ffffff' : '#1e293b'}>
               Behaviors
             </text>
             <rect x="260" y="298" width="130" height="18" rx="9" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />

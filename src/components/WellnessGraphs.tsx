@@ -17,6 +17,7 @@ import {
   Cell,
 } from 'recharts';
 import { getValenceDetails } from '@/utils/valence';
+import ThinkingTrapChart, { calculateThinkingTraps } from './ThinkingTrapChart';
 
 // ============================================================
 // TYPES
@@ -511,9 +512,11 @@ function CorrelationStrip({ markers, windowStart, windowEnd }: CorrelationStripP
 }
 
 // ============================================================
-// MAIN EXPORT
-// ============================================================
-export default function WellnessGraphs() {
+interface WellnessGraphsProps {
+  thoughtRecords?: any[];
+}
+
+export default function WellnessGraphs({ thoughtRecords }: WellnessGraphsProps = {}) {
   const today = useMemo(() => new Date(), []);
 
   const [preset,      setPreset]      = useState<Preset>('7d');
@@ -640,40 +643,38 @@ export default function WellnessGraphs() {
     return generateCustom(customStart, customEnd);
   }, [preset, offset, customStart, customEnd, today]);
 
+  const activeRecords = useMemo(() => {
+    if (Array.isArray(thoughtRecords) && thoughtRecords.length > 0) {
+      return thoughtRecords;
+    }
+    const entries1 = safeReadJson<any[]>('momentum_journal_entries', []);
+    const entries2 = safeReadJson<any[]>('cbt_thought_records', []);
+    const map = new Map<any, any>();
+    [...entries1, ...entries2].forEach((e) => {
+      if (e && e.id) map.set(e.id, e);
+    });
+    return Array.from(map.values());
+  }, [thoughtRecords, mounted]);
+
+  const realTraps = useMemo(() => {
+    return calculateThinkingTraps(activeRecords);
+  }, [activeRecords]);
+
   const trapData = useMemo<TrapSlice[]>(() => {
-    if (preset === 'custom') return generateCustomTraps(customStart, customEnd);
-    return TRAP_DATA_BY_PRESET[preset];
-  }, [preset, customStart, customEnd]);
+    if (realTraps.length > 0) return realTraps;
+    if (activeRecords.length > 0) return [];
+    return [];
+  }, [realTraps, activeRecords]);
 
   const periodStats = useMemo<PeriodStats>(() => {
-    const localEntries = safeReadJson<any[]>('momentum_journal_entries', []);
-    if (localEntries.length > 0) {
-      const records = localEntries.length;
-      let totalDistortions = 0;
-      for (const e of localEntries) {
-        if (Array.isArray(e.distortions)) totalDistortions += e.distortions.length;
-        else if (Array.isArray(e.selectedDistortions)) totalDistortions += e.selectedDistortions.length;
-        else if (e.distortionsJson) {
-          try {
-            const parsed = JSON.parse(e.distortionsJson);
-            if (Array.isArray(parsed)) totalDistortions += parsed.length;
-          } catch (_) {
-            totalDistortions += 1;
-          }
-        } else {
-          totalDistortions += 1;
-        }
-      }
-      return { records, total: Math.max(records, totalDistortions), topLabel: 'ACTIVE' };
+    if (activeRecords.length > 0) {
+      const records = activeRecords.length;
+      const total = realTraps.reduce((sum, s) => sum + s.count, 0);
+      const topLabel = realTraps[0]?.name ? realTraps[0].name.toUpperCase() : 'ACTIVE';
+      return { records, total, topLabel };
     }
-    if (preset === 'custom') {
-      const total = generateCustomTraps(customStart, customEnd).reduce(
-        (sum, s) => sum + s.count, 0,
-      );
-      return { records: Math.round(total * 0.56), total, topLabel: 'SHOULDS' };
-    }
-    return STATS_BY_PRESET[preset];
-  }, [preset, customStart, customEnd]);
+    return { records: 0, total: 0, topLabel: 'NO DATA' };
+  }, [activeRecords, realTraps]);
 
   // ── Window date bounds for marker filtering ───────────────────
   const { start: windowStart, end: windowEnd } = useMemo(
@@ -1142,100 +1143,7 @@ export default function WellnessGraphs() {
       {/* ════════════════════════════════════════
           CARD 2 — Interactive Donut Chart
           ════════════════════════════════════════ */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80">
-        <h4 className="text-lg sm:text-xl font-extrabold text-slate-900 mb-1">
-          Thinking Trap Distribution
-        </h4>
-        <p className="text-sm text-slate-500 font-medium mb-6">
-          Hover any slice or legend row to inspect your pattern.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-
-          {/* Donut + HTML center label overlay */}
-          <div className="relative w-52 h-52 shrink-0">
-            {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={trapData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
-                  paddingAngle={4}
-                  dataKey="count"
-                  onMouseEnter={(_, index) => setActiveTrapIndex(index)}
-                  onMouseLeave={()          => setActiveTrapIndex(null)}
-                  stroke="none"
-                  isAnimationActive
-                >
-                  {trapData.map((slice, index) => (
-                    <Cell
-                      key={`${slice.name}-${preset}`}
-                      fill={slice.color}
-                      opacity={
-                        activeTrapIndex === null || activeTrapIndex === index ? 1 : 0.35
-                      }
-                      style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
-                    />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-slate-50/50 rounded-full border border-slate-100 text-xs font-semibold text-slate-400">
-                Loading...
-              </div>
-            )}
-
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center px-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 leading-none mb-1 font-sans">
-                {activeTrap ? activeTrap.name : 'Top Trap'}
-              </span>
-              <span
-                className="font-sans font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wider leading-tight transition-all duration-200"
-                style={{ color: activeTrap ? activeTrap.color : '#0f172a' }}
-              >
-                {activeTrap ? `${activeTrap.pct}%` : periodStats.topLabel}
-              </span>
-            </div>
-          </div>
-
-          {/* Hover-synced legend */}
-          <div className="w-full space-y-2.5">
-            {trapData.map((row, index) => (
-              <div
-                key={`${row.name}-${preset}`}
-                onMouseEnter={() => setActiveTrapIndex(index)}
-                onMouseLeave={() => setActiveTrapIndex(null)}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-150 cursor-default ${
-                  activeTrapIndex === index
-                    ? 'border-slate-800 bg-slate-50 shadow-sm translate-x-1'
-                    : 'border-slate-100 bg-slate-50/50 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
-                    style={{ backgroundColor: row.color }}
-                  />
-                  <span className="text-sm sm:text-base font-bold text-slate-800">
-                    {row.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-slate-400">{row.pct}%</span>
-                  <span className="text-sm font-black text-slate-900 bg-white px-2.5 py-0.5 rounded border border-slate-200 shadow-sm">
-                    {row.count}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </div>
+      <ThinkingTrapChart records={activeRecords} />
 
     </div>
   );

@@ -113,6 +113,7 @@ export default function CBTJournal() {
   const [selectedLens, setSelectedLens] = useState<LensType>("friend");
   const [wasAssistedApplied, setWasAssistedApplied] = useState(false);
   const [assistedCopiedToast, setAssistedCopiedToast] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<number | null>(null);
 
   // Heuristic Highlights
   const [localDistortions, setLocalDistortions] = useState<DistortionType[]>(
@@ -955,11 +956,14 @@ export default function CBTJournal() {
 
       const savedData = await response.json().catch(() => ({}));
 
+      const createdId = savedData?.data?.[0]?.id ?? Date.now();
+      setSavedEntryId(createdId);
+
       // Persist to localStorage so WellnessGraphs and other components can read it
       try {
         const existing = JSON.parse(localStorage.getItem("momentum_journal_entries") || "[]");
         const newEntry = {
-          id: savedData?.data?.[0]?.id ?? Date.now(),
+          id: createdId,
           createdAt: new Date().toISOString(),
           entryType,
           situation,
@@ -2896,7 +2900,10 @@ export default function CBTJournal() {
                     <button type="button" onClick={() => { setShowCompletion(false); setStep(1); router.push('/'); router.refresh(); }} style={{ flex: 2 }}>
                       Go to Dashboard
                     </button>
-                    <Link href="/toolkit" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0.65rem 1rem", borderRadius: "var(--radius)", border: "1px solid #e2e8f0", color: "#2563eb", textDecoration: "none", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>
+                    <Link
+                      href={savedEntryId ? `/toolkit?focus=triangle&entryId=${savedEntryId}` : `/toolkit?focus=triangle`}
+                      style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0.65rem 1rem", borderRadius: "var(--radius)", border: "1px solid #e2e8f0", color: "#2563eb", textDecoration: "none", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}
+                    >
                       Explore Triangle →
                     </Link>
                   </div>

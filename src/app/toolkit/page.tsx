@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import WellnessGraphs from '@/components/WellnessGraphs';
 import CbtTriangleSandbox from '@/components/CbtTriangleSandbox';
 import CbtGlossary from '@/components/CbtGlossary';
@@ -11,65 +12,86 @@ import SupportContactsCard from '@/components/SupportContactsCard';
 import { safeGetAllItems } from '@/utils/storage';
 
 // ============================================================
-// TOOLKIT PAGE
-// Dynamic CBT Utility Hub with 4 interactive feature modals:
-// 1. Decision Assistant (Multi-step dilemma & pros/cons weighting)
-// 2. Support Contact Quick-Dialer (+ Add Contact / Call + Edit)
-// 3. Therapy Integration (Print / Save as PDF summary)
-// 4. Secure Vault Backup (Client-side JSON data exporter + Toast)
+// TOOLKIT PAGE CONTENT
 // ============================================================
-export default function Toolkit() {
+function ToolkitContent() {
+  const searchParams = useSearchParams();
+  const focus = searchParams?.get('focus');
+  const entryId = searchParams?.get('entryId');
+
   // Modal states
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Thought records state check
+  // Stored thought records state
+  const [thoughtRecords, setThoughtRecords] = useState<any[]>([]);
   const [hasThoughtRecords, setHasThoughtRecords] = useState(false);
   const [isRecordsChecked, setIsRecordsChecked] = useState(false);
 
+  // Deep-link auto-scroll to "How It Works"
   useEffect(() => {
-    async function checkRecords() {
-      try {
-        const localRaw = localStorage.getItem('momentum_journal_entries');
-        let count = 0;
-        if (localRaw) {
-          const parsed = JSON.parse(localRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            count = parsed.length;
-          }
+    if (focus === 'triangle') {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('cbt-triangle-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-        if (count === 0 && typeof fetch === 'function') {
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [focus]);
+
+  useEffect(() => {
+    async function loadRecords() {
+      try {
+        const local1 = localStorage.getItem('momentum_journal_entries');
+        const local2 = localStorage.getItem('cbt_thought_records');
+        const list1 = local1 ? JSON.parse(local1) : [];
+        const list2 = local2 ? JSON.parse(local2) : [];
+        let combined: any[] = [
+          ...(Array.isArray(list1) ? list1 : []),
+          ...(Array.isArray(list2) ? list2 : []),
+        ];
+
+        if (combined.length === 0 && typeof fetch === 'function') {
           const res = await fetch('/api/journal').catch(() => null);
           if (res && res.ok) {
             const data = await res.json().catch(() => null);
-            if (data?.entries && Array.isArray(data.entries) && data.entries.length > 0) {
-              count = data.entries.length;
+            if (data?.entries && Array.isArray(data.entries)) {
+              combined = data.entries;
             }
           }
         }
-        setHasThoughtRecords(count > 0);
+
+        const map = new Map<any, any>();
+        combined.forEach((e) => {
+          if (e && e.id !== undefined && e.id !== null) {
+            map.set(e.id, e);
+          }
+        });
+        const records = Array.from(map.values());
+        setThoughtRecords(records);
+        setHasThoughtRecords(records.length > 0);
       } catch (_) {
+        setThoughtRecords([]);
         setHasThoughtRecords(false);
       } finally {
         setIsRecordsChecked(true);
       }
     }
-    checkRecords();
+    loadRecords();
   }, []);
 
   // Backup Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
 
-
   // Handler for Secure Vault Backup
   async function handleCreateBackup() {
     setIsBackingUp(true);
     try {
-      // 1. Collect all localStorage keys
       const localData = safeGetAllItems();
 
-      // 2. Try fetching server records for complete offline backup
       let apiBackupData: any = {};
       try {
         if (typeof fetch === 'function') {
@@ -82,7 +104,6 @@ export default function Toolkit() {
         console.warn('API backup fetch skipped (offline fallback):', err);
       }
 
-      // 3. Combine into comprehensive export payload
       const allUserData = {
         app: 'Momentum Mental Wellness Toolkit',
         version: '1.0.0',
@@ -91,7 +112,6 @@ export default function Toolkit() {
         databaseRecords: apiBackupData,
       };
 
-      // 4. Format and trigger client-side file download
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allUserData, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
@@ -100,7 +120,6 @@ export default function Toolkit() {
       downloadAnchor.click();
       downloadAnchor.remove();
 
-      // 5. Display success toast notification
       setToastMessage("✅ Vault backup downloaded successfully");
       setTimeout(() => {
         setToastMessage(null);
@@ -141,7 +160,7 @@ export default function Toolkit() {
       {/* ── 📊 Wellness trends & analytics or Empty State ── */}
       {isRecordsChecked && (
         hasThoughtRecords ? (
-          <WellnessGraphs />
+          <WellnessGraphs thoughtRecords={thoughtRecords} />
         ) : (
           <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-slate-200/80 text-center flex flex-col items-center justify-center my-2 animate-fadeIn">
             <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-3xl mb-4 text-emerald-800 shadow-2xs">
@@ -224,8 +243,10 @@ export default function Toolkit() {
 
       </div>
 
-      {/* ── 🔄 Interactive CBT triangle ── */}
-      <CbtTriangleSandbox />
+      {/* ── 🔄 Interactive CBT triangle (How The Triangle Works) ── */}
+      <div id="cbt-triangle-section" className="w-full scroll-mt-6">
+        <CbtTriangleSandbox initialEntryId={entryId ? Number(entryId) : undefined} />
+      </div>
 
       {/* ── 📖 CBT concept glossary ── */}
       <CbtGlossary />
@@ -236,12 +257,19 @@ export default function Toolkit() {
         onClose={() => setIsDecisionOpen(false)}
       />
 
-
       <TherapyExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
       />
 
     </div>
+  );
+}
+
+export default function Toolkit() {
+  return (
+    <Suspense fallback={<div className="w-full min-h-screen bg-slate-50/50 flex items-center justify-center text-slate-400">Loading Toolkit...</div>}>
+      <ToolkitContent />
+    </Suspense>
   );
 }
