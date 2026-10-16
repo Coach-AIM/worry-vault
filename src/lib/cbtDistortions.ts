@@ -36,6 +36,8 @@ export const DISTORTIONS: DistortionType[] = [
       "he must not like",
       "she must not like",
       "they must not like",
+      "not want to chill",
+      "not wanted to chill",
     ],
   },
   {
@@ -104,24 +106,45 @@ export const DISTORTIONS: DistortionType[] = [
   },
 ];
 
+export const MIND_READING_REGEX =
+  /(\b(he|she|they|everyone|everybody|someone|nobody)\b\s+(must|probably|must\s+not\s+(?:of|have)?|didn'?t|doesn'?t|does\s+not)\s+(want|care|like|think|feel|hate|dislike|chill))/i;
+
+export const INTERPERSONAL_ASSUMPTION_PATTERNS = [
+  MIND_READING_REGEX,
+  /\b(he|she|they)\b\s+must\s+not\s+(?:of|have)?/i,
+  /\b(?:he|she|they|everyone|everybody|people|someone|nobody)\s+(?:must\s+)?(?:not\s+like|hate|dislike|think|be\s+mad|be\s+angry|be\s+annoyed)\b/i,
+  /\bmust\s+(?:not\s+like|hate|dislike|think|be\s+mad|be\s+angry|be\s+annoyed|despise)\b/i,
+  /\b(?:he|she|they|everyone|everybody)\s+must\b/i,
+  /\b(?:not\s+like\s+me|doesn'?t\s+like\s+me|does\s+not\s+like\s+me|must\s+hate\s+me|mad\s+at\s+me|angry\s+at\s+me)\b/i,
+];
+
 export function isInterpersonalAssumption(text: string): boolean {
   const clean = text.toLowerCase();
-  const interpersonalPatterns = [
-    /\b(?:he|she|they|everyone|everybody|people|someone|nobody)\s+(?:must\s+)?(?:not\s+like|hate|dislike|think|be\s+mad|be\s+angry|be\s+annoyed)\b/i,
-    /\bmust\s+(?:not\s+like|hate|dislike|think|be\s+mad|be\s+angry|be\s+annoyed|despise)\b/i,
-    /\b(?:he|she|they|everyone|everybody)\s+must\b/i,
-    /\b(?:not\s+like\s+me|doesn't\s+like\s+me|does\s+not\s+like\s+me|must\s+hate\s+me|mad\s+at\s+me|angry\s+at\s+me)\b/i,
-  ];
-  return interpersonalPatterns.some((pattern) => pattern.test(clean));
+  return INTERPERSONAL_ASSUMPTION_PATTERNS.some((pattern) => pattern.test(clean));
+}
+
+export function isMindReadingDetected(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  if (isInterpersonalAssumption(lowerText)) return true;
+  const mrDistortion = DISTORTIONS.find((d) => d.id === "mind-reading");
+  if (mrDistortion) {
+    return mrDistortion.keywords.some((k) => lowerText.includes(k));
+  }
+  return false;
 }
 
 export function findDistortions(text: string): DistortionType[] {
   const lowerText = text.toLowerCase();
   const found: DistortionType[] = [];
   const interpersonal = isInterpersonalAssumption(lowerText);
+  const mindReadingMatch = isMindReadingDetected(lowerText);
 
   for (const distortion of DISTORTIONS) {
-    if (distortion.id === "should-statements") {
+    if (distortion.id === "mind-reading") {
+      if (mindReadingMatch) {
+        found.push(distortion);
+      }
+    } else if (distortion.id === "should-statements") {
       // Check if keywords other than "must" match (e.g. should, ought to, have to, supposed to)
       const nonMustKeywords = distortion.keywords.filter((k) => k !== "must");
       const hasNonMust = nonMustKeywords.some((k) => lowerText.includes(k));
@@ -157,22 +180,7 @@ export function detectThinkingTraps(text: string): string[] {
   const interpersonal = isInterpersonalAssumption(cleanText);
 
   // 1. Mind Reading Checks (prioritized first)
-  if (
-    cleanText.includes("not like me") ||
-    cleanText.includes("doesn't like me") ||
-    cleanText.includes("does not like me") ||
-    cleanText.includes("they think") ||
-    cleanText.includes("he thinks") ||
-    cleanText.includes("she thinks") ||
-    cleanText.includes("must hate me") ||
-    cleanText.includes("mad at me") ||
-    cleanText.includes("angry at me") ||
-    cleanText.includes("annoyed") ||
-    cleanText.includes("probably don't") ||
-    cleanText.includes("probably thinks") ||
-    cleanText.includes("thinks i'm") ||
-    interpersonal
-  ) {
+  if (isMindReadingDetected(cleanText)) {
     identifiedTraps.push("Mind Reading");
   }
 

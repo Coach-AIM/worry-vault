@@ -37,6 +37,52 @@ type SelectedEmotion = {
   weight: number;
 };
 
+export type LensType = "friend" | "fact" | "reset" | "freeform";
+
+export const LENS_CONFIG: Record<
+  LensType,
+  {
+    id: LensType;
+    label: string;
+    icon: string;
+    prompt: string;
+    starter: string;
+  }
+> = {
+  friend: {
+    id: "friend",
+    label: "The Friend Test",
+    icon: "👥",
+    prompt:
+      "What compassionate, realistic advice would you give a close friend facing this exact worry?",
+    starter: "If a close friend were in my shoes, I would tell them: ",
+  },
+  fact: {
+    id: "fact",
+    label: "Fact Checking",
+    icon: "⚖️",
+    prompt:
+      "What concrete facts support this thought, and what objective evidence contradicts it?",
+    starter:
+      "Looking at the facts objectively: what supports this thought is [ ], but what contradicts it is [ ].",
+  },
+  reset: {
+    id: "reset",
+    label: "Worst-Case Reset",
+    icon: "💭",
+    prompt:
+      "If the worst-case scenario actually happened, what concrete step would you take to cope?",
+    starter: "Even if the worst-case scenario happened, I could cope by: ",
+  },
+  freeform: {
+    id: "freeform",
+    label: "Freeform / Blank",
+    icon: "✨",
+    prompt: "What is a more balanced, grounded way to view this situation?",
+    starter: "A more grounded and balanced perspective is: ",
+  },
+};
+
 export default function CBTJournal() {
   const router = useRouter();
   const [entryType, setEntryType] = useState<"negative" | "positive">(
@@ -63,6 +109,10 @@ export default function CBTJournal() {
   const [selectedExercise, setSelectedExercise] = useState<
     "friend" | "fact" | "reset" | null
   >(null);
+  const [reframeMode, setReframeMode] = useState<"self" | "assisted">("self");
+  const [selectedLens, setSelectedLens] = useState<LensType>("friend");
+  const [wasAssistedApplied, setWasAssistedApplied] = useState(false);
+  const [assistedCopiedToast, setAssistedCopiedToast] = useState(false);
 
   // Heuristic Highlights
   const [localDistortions, setLocalDistortions] = useState<DistortionType[]>(
@@ -353,6 +403,115 @@ export default function CBTJournal() {
     return getHeuristicReframe();
   };
 
+  const getAssistedPreview = (lens: LensType = selectedLens): string => {
+    const hasMindReading = selectedDistortions.includes("mind-reading");
+    const hasCatastrophizing = selectedDistortions.includes("catastrophizing");
+    const hasAllOrNothing = selectedDistortions.includes("all-or-nothing");
+    const hasShould = selectedDistortions.includes("should-statements");
+    const hasEmotional = selectedDistortions.includes("emotional-reasoning");
+    const hasOvergeneralization = selectedDistortions.includes("overgeneralization");
+
+    if (lens === "friend") {
+      if (insightsData?.friend_test_reframe) return insightsData.friend_test_reframe;
+      if (hasMindReading) {
+        return "If a close friend shared this worry with me, I'd remind them: You cannot read their mind. People get busy, tired, or caught up in their own worlds, and silence or delay is rarely about you.";
+      }
+      if (hasCatastrophizing) {
+        return "I'd tell a friend: Take a deep breath. You are treating a worst-case worry as an absolute certainty, but you have handled difficult days before and you will handle this too.";
+      }
+      if (hasAllOrNothing) {
+        return "I'd tell a friend: Nothing is all-or-nothing. Even if things didn't go flawlessly, your effort still counts and there is plenty of workable middle ground.";
+      }
+      if (hasShould) {
+        return "I would tell a friend: Release the rigid pressure. You're holding yourself to unrealistic standards; give yourself permission to be human.";
+      }
+      if (hasEmotional) {
+        return "I'd tell a friend: Just because you feel intense distress doesn't mean the situation is truly hopeless. Feelings are valid signals, not objective verdicts.";
+      }
+      if (hasOvergeneralization) {
+        return "I'd tell a friend: This was one isolated event, not a forever pattern. Don't let one hard moment eclipse everything else.";
+      }
+      return "If a close friend were facing this, I'd offer them compassion: This is one moment in time, not a definition of who you are or what you're capable of.";
+    }
+
+    if (lens === "fact") {
+      if (insightsData?.fact_checking_reframe) return insightsData.fact_checking_reframe;
+      if (hasMindReading) {
+        return "Objective facts: I only have observable behavior, not proof of their internal thoughts. Past positive interactions and ordinary human distractions contradict the idea that they dislike me.";
+      }
+      if (hasCatastrophizing) {
+        return "Objective facts: The feared worst-case scenario is an anxiety prediction, not reality. Concrete past experience shows that most imagined emergencies turn out to be completely manageable.";
+      }
+      if (hasAllOrNothing) {
+        return "Objective facts: A single flaw or mixed outcome does not equal total failure. There are concrete elements that went well alongside areas for growth.";
+      }
+      if (hasShould) {
+        return "Objective facts: Things often deviate from how we wish they would be. Reality doesn't follow rigid demands, and adaptation is more productive than self-criticism.";
+      }
+      if (hasEmotional) {
+        return "Objective facts: Emotional intensity fluctuates based on stress, sleep, and adrenaline, not because external reality has collapsed.";
+      }
+      if (hasOvergeneralization) {
+        return "Objective facts: There have been times when things turned out fine or even exceeded expectations; one setback does not create an unbroken chain of defeat.";
+      }
+      return "Objective facts: Strong emotions make worries feel true, but looking at concrete evidence, the actual situation is far more neutral than my automatic thought assumed.";
+    }
+
+    if (lens === "reset") {
+      if (insightsData?.perspective_reset_reframe) return insightsData.perspective_reset_reframe;
+      if (hasMindReading) {
+        return "Worst-case reset: Even if they are temporarily upset, I can communicate openly to clarify things, and my self-worth is not dependent on immediate external validation.";
+      }
+      if (hasCatastrophizing) {
+        return "Worst-case reset: If the worst-case scenario actually happened, I would step back, break down the problem into single actionable steps, and lean on my coping tools.";
+      }
+      if (hasAllOrNothing) {
+        return "Worst-case reset: Even if this effort falls short of my hopes, it is valuable learning data that will make my next attempt stronger.";
+      }
+      if (hasShould) {
+        return "Worst-case reset: Even if things don't go according to my ideal timeline, I will accept the delay and calmly navigate what is in my control.";
+      }
+      if (hasEmotional) {
+        return "Worst-case reset: Even when my emotions feel overwhelming, I know the physical surge will crest and subside within 20 minutes if I breathe and stay grounded.";
+      }
+      return "Worst-case reset: Even in the toughest outcome, I have the resilience, resourcefulness, and support systems to work through it.";
+    }
+
+    // freeform
+    if (hasMindReading) {
+      return "I choose not to jump to conclusions about what others think. I will focus on my own well-being and let them speak for themselves.";
+    }
+    if (hasCatastrophizing) {
+      return "Anxiety turns possibilities into catastrophes. In reality, this situation is manageable and I can handle it calmly.";
+    }
+    if (hasAllOrNothing) {
+      return "Growth happens in gray areas. Doing something imperfectly is infinitely better than giving up completely.";
+    }
+    if (hasShould) {
+      return "Preferences are healthier than rigid rules. I will do my best without demanding perfection from myself or others.";
+    }
+    return "My automatic thoughts are hypotheses, not proven truths. A more grounded perspective is that I am doing my best and can take things one step at a time.";
+  };
+
+  const handleInsertStarter = () => {
+    const starter = LENS_CONFIG[selectedLens]?.starter || "";
+    setAlternativeThought((prev) => {
+      if (!prev.trim()) return starter;
+      if (prev.endsWith("\n") || prev.endsWith(" ")) {
+        return `${prev}${starter}`;
+      }
+      return `${prev}\n\n${starter}`;
+    });
+  };
+
+  const handleApplyAssisted = () => {
+    const preview = getAssistedPreview(selectedLens);
+    setAlternativeThought(preview);
+    setWasAssistedApplied(true);
+    setAssistedCopiedToast(true);
+    setTimeout(() => setAssistedCopiedToast(false), 2500);
+  };
+
   const [loading, setLoading] = useState(false);
   const [loadingEmotions, setLoadingEmotions] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -494,11 +653,13 @@ export default function CBTJournal() {
         selectedDistortions,
         alternativeThought,
         selectedExercise,
+        reframeMode,
+        selectedLens,
         updatedAt: Date.now(),
       };
       localStorage.setItem('momentum_journal_draft', JSON.stringify(draftPayload));
     } catch { /* best-effort */ }
-  }, [step, entryType, situation, selectedEmotions, thought, selectedDistortions, alternativeThought, selectedExercise, showCompletion]);
+  }, [step, entryType, situation, selectedEmotions, thought, selectedDistortions, alternativeThought, selectedExercise, reframeMode, selectedLens, showCompletion]);
 
   // Dynamic Counter-Evidence Hook
   useEffect(() => {
@@ -629,6 +790,9 @@ export default function CBTJournal() {
     setThought(''); setSelectedDistortions([]); setSuggestedTraps([]);
     setAlternativeThought(''); setInsightsData(null);
     setSelectedExercise(null);
+    setReframeMode("self");
+    setSelectedLens("friend");
+    setWasAssistedApplied(false);
     router.push('/');
   }
 
@@ -807,8 +971,11 @@ export default function CBTJournal() {
         localStorage.setItem("momentum_journal_entries", JSON.stringify([newEntry, ...existing].slice(0, 100)));
       } catch { /* best-effort */ }
 
-      // Award +25 resilience points for journal thought record
-      awardPoints(POINT_VALUES.JOURNAL_THOUGHT_RECORD);
+      // Award points: +25 resilience points for journal thought record + fortitude bonus (+10 for self-directed, +5 for assisted)
+      const reframeBonus = entryType === "negative"
+        ? (wasAssistedApplied ? POINT_VALUES.REFRAME_ASSISTED : POINT_VALUES.REFRAME_SELF_DIRECTED)
+        : 0;
+      awardPoints(POINT_VALUES.JOURNAL_THOUGHT_RECORD + reframeBonus);
 
       // Clear any pending reframe reminder (it's now complete)
       safeRemoveItem('momentum_pending_reframe');
@@ -844,6 +1011,9 @@ export default function CBTJournal() {
       setAlternativeThought("");
       setInsightsData(null);
       setSelectedExercise(null);
+      setReframeMode("self");
+      setSelectedLens("friend");
+      setWasAssistedApplied(false);
       setShowAiOverride(false);
       setAiError(null);
       setShowManualPicker(false);
@@ -1088,6 +1258,8 @@ export default function CBTJournal() {
                         if (Array.isArray(d.selectedDistortions)) setSelectedDistortions(d.selectedDistortions);
                         if (d.alternativeThought !== undefined) setAlternativeThought(d.alternativeThought);
                         if (d.selectedExercise !== undefined) setSelectedExercise(d.selectedExercise);
+                        if (d.reframeMode !== undefined) setReframeMode(d.reframeMode);
+                        if (d.selectedLens !== undefined) setSelectedLens(d.selectedLens);
                         if (d.step) setStep(d.step);
                       }
                       setDraftRecoveryBanner(null);
@@ -2121,291 +2293,296 @@ export default function CBTJournal() {
               </p>
             )}
 
-            {/* Alternative Thought Suggestions */}
+            {/* Step 5 Dual-Mode Cognitive Restructuring */}
             {entryType === "negative" && (
-              <>
+              <div style={{ marginBottom: "1.5rem" }}>
+                {/* ── Primary Mode Switch (Top Segment Toggle) ── */}
                 <div
                   style={{
-                    marginBottom: "1.5rem",
-                    animation: "fadeIn 0.3s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#f1f5f9",
+                    padding: "4px",
+                    borderRadius: "10px",
+                    marginBottom: "1rem",
+                    border: "1px solid #e2e8f0",
                   }}
                 >
-                  <span
+                  <button
+                    type="button"
+                    onClick={() => setReframeMode("self")}
                     style={{
-                      fontSize: "0.95rem",
-                      fontWeight: 600,
-                      color: "#444",
-                      display: "block",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    Context-based Sample Alternative Thoughts (Click to use and
-                    modify):
-                  </span>
-                  <div
-                    style={{
+                      flex: 1,
+                      padding: "0.6rem 1rem",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor:
+                        reframeMode === "self" ? "#ffffff" : "transparent",
+                      color: reframeMode === "self" ? "#0f172a" : "#64748b",
+                      fontWeight: reframeMode === "self" ? 600 : 500,
+                      fontSize: "0.92rem",
+                      boxShadow:
+                        reframeMode === "self"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
                       display: "flex",
-                      flexDirection: "column",
-                      gap: "0.5rem",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
                     }}
                   >
-                    {/* AI Reframes — gated by soft limit */}
-                    {insightsData?.reframeSuggestions && insightsData.reframeSuggestions.length > 0 && (
-                      autoReframeCount < 3 || showAiOverride ? (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-                            <span style={{ fontSize: "0.78rem", color: "#888" }}>AI Suggestion</span>
-                            <span style={{ fontSize: "0.75rem", color: autoReframeCount >= 2 ? "#f59e0b" : "#aaa", fontWeight: 600 }}>
-                              {autoReframeCount}/3 AI reframes used this streak
-                            </span>
-                          </div>
-                          {insightsData.reframeSuggestions.map((suggestion, idx) => (
-                            <button
-                              key={`ai-${idx}`}
-                              type="button"
-                              onClick={() => { setAlternativeThought(suggestion); incrementReframeCount(); }}
-                              style={{ textAlign: "left", padding: "0.8rem 1rem", borderRadius: "var(--radius)", backgroundColor: "#f0f7f4", border: "1px solid #c2e0c6", color: "#2b5a2b", cursor: "pointer", transition: "all 0.2s", fontSize: "0.95rem", lineHeight: "1.4" }}
-                            >
-                              "{suggestion}"{" "}
-                              <span style={{ float: "right", fontSize: "0.75rem", opacity: 0.6 }}>AI Option</span>
-                            </button>
-                          ))}
-                        </>
-                      ) : (
-                        <div style={{ padding: "1rem 1.25rem", backgroundColor: "#faf5ff", border: "1px solid #e9d5ff", borderLeft: "4px solid #a855f7", borderRadius: "var(--radius)", animation: "fadeIn 0.3s ease" }}>
-                          <strong style={{ display: "block", color: "#6b21a8", fontSize: "0.9rem", marginBottom: "0.4rem" }}>
-                            🧠 Build the skill yourself first
-                          </strong>
-                          <p style={{ margin: "0 0 0.75rem 0", color: "#581c87", fontSize: "0.88rem", lineHeight: "1.5" }}>
-                            You've used AI reframe 3 times in a row. Writing your own reframe builds the neural pathway faster — try it in the box below. Once you've written something, you can optionally check it against the AI.
-                          </p>
-                          {alternativeThought.trim().length >= 20 && (
-                            <button type="button" onClick={() => setShowAiOverride(true)} style={{ fontSize: "0.82rem", color: "#7c3aed", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-                              ✨ Show me AI's take anyway
-                            </button>
-                          )}
-                        </div>
-                      )
-                    )}
-
-                    {/* Heuristic Reframe */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const rawSample = getExerciseSample(selectedExercise);
-                        // Clean up quotes, questions, or recursive prompt text
-                        const cleanSample = rawSample
-                          .replace(/^["'\s]+|["'\s]+$/g, "")
-                          .replace(/\.+$/g, "");
-
-                        if (selectedExercise === "friend") {
-                          setAlternativeThought(
-                            `If a close friend came to me and said "${thought}", I would remind them that: ${cleanSample}.`,
-                          );
-                        } else if (selectedExercise === "fact") {
-                          setAlternativeThought(
-                            `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- ${cleanSample}.`,
-                          );
-                        } else if (selectedExercise === "reset") {
-                          setAlternativeThought(
-                            `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan to handle it: I will step back, verify the facts calmly, and remember that ${cleanSample.charAt(0).toLowerCase() + cleanSample.slice(1)}.`,
-                          );
-                        } else {
-                          setAlternativeThought(cleanSample.endsWith(".") ? cleanSample : `${cleanSample}.`);
-                        }
-                      }}
+                    <span>✍️ Write My Own</span>
+                    <span
                       style={{
-                        textAlign: "left",
-                        padding: "0.8rem 1rem",
-                        borderRadius: "var(--radius)",
-                        backgroundColor: "#f0f4f8",
-                        border: "1px solid #bcd0f7",
-                        color: "#1e40af",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        fontSize: "0.95rem",
-                        lineHeight: "1.4",
+                        fontSize: "0.72rem",
+                        padding: "1px 6px",
+                        borderRadius: "12px",
+                        backgroundColor:
+                          reframeMode === "self" ? "#dcfce7" : "#e2e8f0",
+                        color: reframeMode === "self" ? "#15803d" : "#64748b",
+                        fontWeight: 600,
                       }}
                     >
-                      "{getExerciseSample()}"{" "}
-                      <span
+                      +10 pts
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setReframeMode("assisted")}
+                    style={{
+                      flex: 1,
+                      padding: "0.6rem 1rem",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor:
+                        reframeMode === "assisted" ? "#ffffff" : "transparent",
+                      color: reframeMode === "assisted" ? "#0f172a" : "#64748b",
+                      fontWeight: reframeMode === "assisted" ? 600 : 500,
+                      fontSize: "0.92rem",
+                      boxShadow:
+                        reframeMode === "assisted"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+                    }}
+                  >
+                    <span>💡 Need Inspiration?</span>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        padding: "1px 6px",
+                        borderRadius: "12px",
+                        backgroundColor:
+                          reframeMode === "assisted" ? "#e0f2fe" : "#e2e8f0",
+                        color:
+                          reframeMode === "assisted" ? "#0369a1" : "#64748b",
+                        fontWeight: 600,
+                      }}
+                    >
+                      +5 pts
+                    </span>
+                  </button>
+                </div>
+
+                {/* ── Strategy Lens Pills (4 options in a clean horizontal row) ── */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
+                    gap: "0.5rem",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  {(Object.keys(LENS_CONFIG) as LensType[]).map((key) => {
+                    const lens = LENS_CONFIG[key];
+                    const isSelected = selectedLens === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setSelectedLens(key);
+                          setSelectedExercise(key === "freeform" ? null : key);
+                        }}
                         style={{
-                          float: "right",
-                          fontSize: "0.75rem",
-                          opacity: 0.6,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.35rem",
+                          padding: "0.55rem 0.65rem",
+                          borderRadius: "9999px",
+                          border: isSelected
+                            ? "2px solid #059669"
+                            : "1px solid #cbd5e1",
+                          backgroundColor: isSelected ? "#ecfdf5" : "#ffffff",
+                          color: isSelected ? "#065f46" : "#475569",
+                          fontSize: "0.85rem",
+                          fontWeight: isSelected ? 600 : 500,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        Coping Option
-                      </span>
-                    </button>
-                  </div>
+                        <span>{lens.icon}</span>
+                        <span>{lens.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* CBT Prompts to Unlock Deeper Thinking */}
-                <div
-                  style={{
-                    marginBottom: "1.5rem",
-                    padding: "1.25rem",
-                    backgroundColor: "#fafaf9",
-                    borderRadius: "var(--radius)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.95rem",
-                      fontWeight: 600,
-                      color: "#4a5d4e",
-                      display: "block",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    💡 CBT Prompts to Unlock Deeper Thinking (Click to copy as
-                    template):
-                  </span>
+                {/* ── Mode-Specific Scaffolding ── */}
+                {reframeMode === "self" ? (
+                  /* Write My Own (Self-Directed) */
                   <div
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
+                      padding: "0.9rem 1rem",
+                      backgroundColor: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                      marginBottom: "1rem",
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedExercise("friend");
-                        const fullText = `If a close friend came to me and said "${thought}", I would remind them that: `;
-                        setAlternativeThought(fullText);
-                      }}
+                    <div
                       style={{
-                        textAlign: "left",
-                        padding: "0.75rem",
-                        borderRadius: "6px",
-                        backgroundColor:
-                          selectedExercise === "friend" ? "#f0fdf4" : "#fff",
-                        border:
-                          selectedExercise === "friend"
-                            ? "2px solid var(--sage-green)"
-                            : "1px solid #e2e8f0",
-                        cursor: "pointer",
-                        fontSize: "0.88rem",
-                        color: "#555",
-                        transition: "all 0.2s",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: "0.5rem",
+                        flexWrap: "wrap",
                       }}
-                      className="prompt-card"
                     >
-                      <strong>👥 The Friend Test:</strong> What would you tell a
-                      friend who had this exact thought?
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedExercise("fact");
-                        const fullText = `Objective facts that support "${thought}": \n- \n\nConcrete facts that contradict it: \n- `;
-                        setAlternativeThought(fullText);
-                      }}
-                      style={{
-                        textAlign: "left",
-                        padding: "0.75rem",
-                        borderRadius: "6px",
-                        backgroundColor:
-                          selectedExercise === "fact" ? "#f0fdf4" : "#fff",
-                        border:
-                          selectedExercise === "fact"
-                            ? "2px solid var(--sage-green)"
-                            : "1px solid #e2e8f0",
-                        cursor: "pointer",
-                        fontSize: "0.88rem",
-                        color: "#555",
-                        transition: "all 0.2s",
-                      }}
-                      className="prompt-card"
-                    >
-                      <strong>⚖️ Fact Checking:</strong> What is the objective
-                      evidence for and against this automatic thought?
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedExercise("reset");
-                        const rawSample = getExerciseSample("reset");
-                        const cleanSample = rawSample
-                          .replace(/^["'\s]+|["'\s]+$/g, "")
-                          .replace(/\.+$/g, "");
-                        const fullText = `Regarding the situation: "${situation}"—if the absolute worst-case scenario happens, my plan to handle it: I will step back, verify the facts calmly, and remember that ${cleanSample.charAt(0).toLowerCase() + cleanSample.slice(1)}.`;
-                        setAlternativeThought(fullText);
-                      }}
-                      style={{
-                        textAlign: "left",
-                        padding: "0.75rem",
-                        borderRadius: "6px",
-                        backgroundColor:
-                          selectedExercise === "reset" ? "#f0fdf4" : "#fff",
-                        border:
-                          selectedExercise === "reset"
-                            ? "2px solid var(--sage-green)"
-                            : "1px solid #e2e8f0",
-                        cursor: "pointer",
-                        fontSize: "0.88rem",
-                        color: "#555",
-                        transition: "all 0.2s",
-                      }}
-                      className="prompt-card"
-                    >
-                      <strong>💭 Perspective Reset:</strong> If the worst-case
-                      scenario happened, how would you cope?
-                    </button>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.92rem",
+                          color: "#334155",
+                          fontWeight: 500,
+                          lineHeight: "1.4",
+                          flex: 1,
+                        }}
+                      >
+                        {LENS_CONFIG[selectedLens].prompt}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleInsertStarter}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#059669",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          padding: "2px 4px",
+                          textDecoration: "underline",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        + Insert Starter Template
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                {selectedExercise && (
+                ) : (
+                  /* Need Inspiration? (Assisted Auto-Reframe Preview) */
                   <div
                     style={{
-                      marginBottom: "1.5rem",
-                      padding: "1.25rem",
+                      padding: "1rem 1.15rem",
                       backgroundColor: "#f0fdf4",
-                      border: "1px solid #bcf0da",
-                      borderRadius: "var(--radius)",
-                      borderLeft: "5px solid var(--sage-green)",
-                      animation: "fadeIn 0.3s ease",
+                      border: "1px solid #bbf7d0",
+                      borderRadius: "10px",
+                      marginBottom: "1rem",
+                      animation: "fadeIn 0.2s ease",
                     }}
                   >
-                    <strong
+                    <div
                       style={{
-                        display: "block",
-                        fontSize: "0.9rem",
-                        color: "#166534",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                         marginBottom: "0.5rem",
                       }}
                     >
-                      {selectedExercise === "friend" &&
-                        "👥 Active Exercise: The Friend Test"}
-                      {selectedExercise === "fact" &&
-                        "⚖️ Active Exercise: Fact Checking"}
-                      {selectedExercise === "reset" &&
-                        "💭 Active Exercise: Perspective Reset"}
-                    </strong>
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          color: "#166534",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        Preview: {LENS_CONFIG[selectedLens].label}
+                      </span>
+                      {insightsData?.reframeSuggestions && autoReframeCount < 3 && (
+                        <span style={{ fontSize: "0.75rem", color: "#15803d" }}>
+                          AI-Assisted
+                        </span>
+                      )}
+                    </div>
+
                     <p
                       style={{
-                        margin: 0,
-                        fontSize: "1rem",
+                        margin: "0 0 0.85rem 0",
+                        fontSize: "0.95rem",
                         color: "#14532d",
                         lineHeight: "1.5",
-                        fontWeight: 500,
+                        fontStyle: "italic",
                       }}
                     >
-                      {selectedExercise === "friend" &&
-                        `If a close friend came to you and said: '${thought}', what realistic advice would you give them?`}
-                      {selectedExercise === "fact" &&
-                        `What are the concrete facts that support '${thought}'? What concrete facts contradict it?`}
-                      {selectedExercise === "reset" &&
-                        `Regarding the situation: '${situation}'—if the absolute worst-case scenario happens, what is your plan to handle it?`}
+                      "{getAssistedPreview(selectedLens)}"
                     </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleApplyAssisted}
+                        style={{
+                          padding: "0.5rem 0.9rem",
+                          borderRadius: "6px",
+                          backgroundColor: "#059669",
+                          color: "#ffffff",
+                          border: "none",
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.35rem",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        }}
+                      >
+                        ✨ Apply to My Reflection
+                      </button>
+                      {assistedCopiedToast && (
+                        <span
+                          style={{
+                            fontSize: "0.82rem",
+                            color: "#166534",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ✓ Transferred to reflection below
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Positive CBT Prompts for Savoring */}
@@ -2556,13 +2733,7 @@ export default function CBTJournal() {
               placeholder={
                 entryType === "positive"
                   ? "Describe your strengths, who you are grateful for, or how you want to remember this win."
-                  : selectedExercise === "friend"
-                    ? "Based on the Friend Test, my alternative thought is..."
-                    : selectedExercise === "fact"
-                      ? "Based on Fact Checking, my alternative thought is..."
-                      : selectedExercise === "reset"
-                        ? "Based on Perspective Reset, my alternative thought is..."
-                        : "Type your reframed, realistic thought here..."
+                  : `Type your reframed, realistic thought here (${LENS_CONFIG[selectedLens].label})...`
               }
               rows={4}
               required

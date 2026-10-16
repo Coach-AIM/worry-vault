@@ -28,6 +28,10 @@ export const USER_SCOPED_STORAGE_KEYS = [
   "pinLockEnabled",
   "momentum_pin_lock_enabled",
   "momentum_pin_session_unlocked",
+  "momentum_disclaimer_accepted",
+  "momentum_disclaimer_accepted_at",
+  "momentum_profile",
+  "momentum_user_profile",
 ] as const;
 
 export function safeGetItem(key: string): string | null {
@@ -212,6 +216,9 @@ export function initializeCleanUserState(
     if (options?.disclaimerAccepted) {
       window.localStorage.setItem('momentum_disclaimer_accepted', 'true');
       window.localStorage.setItem('momentum_disclaimer_accepted_at', timestamp);
+    } else {
+      window.localStorage.removeItem('momentum_disclaimer_accepted');
+      window.localStorage.removeItem('momentum_disclaimer_accepted_at');
     }
 
     const profileData = {
@@ -249,7 +256,7 @@ export function switchActiveUser(newUsername: string): void {
 
   const restored = restoreUserStorage(cleanUsername);
   if (!restored) {
-    initializeCleanUserState(cleanUsername, { disclaimerAccepted: true });
+    initializeCleanUserState(cleanUsername, { disclaimerAccepted: false });
   } else {
     window.localStorage.setItem('momentum_active_user', cleanUsername);
     dispatchStateSyncEvents();

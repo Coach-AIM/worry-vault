@@ -33,7 +33,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           username,
           password,
-          disclaimerAccepted: true,
+          disclaimerAccepted: false,
         }),
       });
 
@@ -44,7 +44,7 @@ export default function RegisterPage() {
 
       // Ensure clean state: wipe prior session leaks, zero habits & metrics, isolate user reflections
       try {
-        initializeCleanUserState(username, { disclaimerAccepted: true });
+        initializeCleanUserState(username, { disclaimerAccepted: false });
       } catch (_) {}
 
       setSuccess(true);

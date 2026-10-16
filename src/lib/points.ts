@@ -17,6 +17,8 @@ export const POINT_VALUES = {
   DAILY_HABIT: 5,
   JOURNAL_THOUGHT_RECORD: 25,
   CLOSED_LOOP: 40,
+  REFRAME_SELF_DIRECTED: 10,
+  REFRAME_ASSISTED: 5,
   highDiscomfortAction: (discomfort: number) =>
     10 + Math.round(Math.max(1, Math.min(10, discomfort)) * 2),
 } as const;

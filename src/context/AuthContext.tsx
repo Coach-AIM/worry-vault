@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import PinLockModal from '@/components/PinLockModal';
+import WelcomeModal from '@/components/WelcomeModal';
 import {
   initializeCleanUserState,
   switchActiveUser,
@@ -27,6 +28,7 @@ interface AuthContextValue {
   isLocked: boolean;
   modalMode: PinModalMode;
   activeUsername: string | null;
+  isWelcomeModalOpen: boolean;
   lockNow: () => void;
   unlockWithPin: (pin: string) => Promise<boolean>;
   enablePinLock: (pin: string) => Promise<void>;
@@ -34,6 +36,7 @@ interface AuthContextValue {
   changePin: (currentPin: string, newPin: string) => Promise<boolean>;
   openPinModal: (mode: Exclude<PinModalMode, null>) => void;
   closePinModal: () => void;
+  acceptDisclaimer: () => void;
   handleSignOut: () => Promise<void>;
   initializeNewUser: (username: string, options?: { disclaimerAccepted?: boolean }) => void;
   switchUser: (username: string) => void;
@@ -73,6 +76,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState(false);
   const [modalMode, setModalMode] = useState<PinModalMode>(null);
   const [activeUsername, setActiveUsername] = useState<string | null>(null);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+
+  const checkDisclaimerStatus = useCallback(() => {
+    try {
+      const direct = localStorage.getItem('momentum_disclaimer_accepted');
+      if (direct === 'true') return true;
+      const profileRaw = localStorage.getItem('momentum_profile') || localStorage.getItem('momentum_user_profile');
+      if (profileRaw) {
+        const p = JSON.parse(profileRaw);
+        if (p?.disclaimerAccepted === true) return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }, []);
+
+  const syncWelcomeModalState = useCallback(() => {
+    const isAuthRoute =
+      pathname === '/login' ||
+      pathname === '/login/' ||
+      pathname === '/register' ||
+      pathname === '/register/';
+
+    if (isAuthRoute) {
+      setIsWelcomeModalOpen(false);
+      return;
+    }
+
+    const accepted = checkDisclaimerStatus();
+    setIsWelcomeModalOpen(!accepted);
+  }, [pathname, checkDisclaimerStatus]);
 
   const syncPinStateFromStorage = useCallback(() => {
     try {
@@ -95,15 +130,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     syncPinStateFromStorage();
+    syncWelcomeModalState();
 
-    const handleStorage = () => syncPinStateFromStorage();
+    const handleStorage = () => {
+      syncPinStateFromStorage();
+      syncWelcomeModalState();
+    };
     window.addEventListener('storage', handleStorage);
     window.addEventListener('momentum:pin-updated', handleStorage);
+    window.addEventListener('momentum:disclaimer-accepted', handleStorage);
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('momentum:pin-updated', handleStorage);
+      window.removeEventListener('momentum:disclaimer-accepted', handleStorage);
     };
-  }, [syncPinStateFromStorage]);
+  }, [syncPinStateFromStorage, syncWelcomeModalState]);
 
   const isSensitiveRoute = Boolean(
     pathname && SENSITIVE_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
@@ -215,17 +256,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setModalMode(null);
   }, []);
 
+  const acceptDisclaimer = useCallback(() => {
+    try {
+      const timestamp = new Date().toISOString();
+      localStorage.setItem('momentum_disclaimer_accepted', 'true');
+      localStorage.setItem('momentum_disclaimer_accepted_at', timestamp);
+      const profileRaw = localStorage.getItem('momentum_profile') || localStorage.getItem('momentum_user_profile');
+      if (profileRaw) {
+        const p = JSON.parse(profileRaw);
+        p.disclaimerAccepted = true;
+        p.disclaimerAcceptedAt = timestamp;
+        localStorage.setItem('momentum_profile', JSON.stringify(p));
+        localStorage.setItem('momentum_user_profile', JSON.stringify(p));
+      }
+      archiveUserStorage();
+      setIsWelcomeModalOpen(false);
+      window.dispatchEvent(new Event('momentum:disclaimer-accepted'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (_) {
+      setIsWelcomeModalOpen(false);
+    }
+  }, []);
+
   const initializeNewUser = useCallback((username: string, options?: { disclaimerAccepted?: boolean }) => {
     initializeCleanUserState(username, options);
     setActiveUsername(username.trim().toLowerCase());
     syncPinStateFromStorage();
-  }, [syncPinStateFromStorage]);
+    syncWelcomeModalState();
+  }, [syncPinStateFromStorage, syncWelcomeModalState]);
 
   const switchUser = useCallback((username: string) => {
     switchActiveUser(username);
     setActiveUsername(username.trim().toLowerCase());
     syncPinStateFromStorage();
-  }, [syncPinStateFromStorage]);
+    syncWelcomeModalState();
+  }, [syncPinStateFromStorage, syncWelcomeModalState]);
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -260,6 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLocked,
         modalMode: activeModalMode,
         activeUsername,
+        isWelcomeModalOpen,
         lockNow,
         unlockWithPin,
         enablePinLock,
@@ -267,6 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         changePin,
         openPinModal,
         closePinModal,
+        acceptDisclaimer,
         handleSignOut,
         initializeNewUser,
         switchUser,
@@ -274,6 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
       <PinLockModal />
+      <WelcomeModal />
     </AuthContext.Provider>
   );
 }

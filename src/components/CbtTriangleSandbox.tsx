@@ -51,15 +51,17 @@ function normalizeJournalEntries(parsed: any[], idBase = 0): JournalEntry[] {
     const situation = String(e.situation || e.trigger || '').trim();
     const thought = String(e.automaticThought || e.thought || '').trim();
     if (!situation || !thought) return;
+    const rawEmotions = e.emotionsJson ?? e.selectedEmotions ?? e.emotions;
     const emotionsJson =
-      typeof e.emotionsJson === 'string'
-        ? e.emotionsJson
-        : JSON.stringify(Array.isArray(e.emotions) ? e.emotions : []);
+      typeof rawEmotions === 'string'
+        ? rawEmotions
+        : JSON.stringify(rawEmotions || []);
+    const rawDistortions = e.distortionsJson ?? e.selectedDistortions ?? e.distortions;
     const distortionsJson =
-      typeof e.distortionsJson === 'string'
-        ? e.distortionsJson
-        : Array.isArray(e.distortions)
-          ? JSON.stringify(e.distortions)
+      typeof rawDistortions === 'string'
+        ? rawDistortions
+        : rawDistortions
+          ? JSON.stringify(rawDistortions)
           : null;
     const numericId = Number(e.id);
     out.push({
@@ -262,24 +264,93 @@ const SCENARIOS: Record<ScenarioKey, ScenarioData> = {
 // JOURNAL → STAGE MAPPER
 // ============================================================
 function journalEntryToStages(entry: JournalEntry): Record<StepNumber, StageInfo> {
-  // Parse emotions
+  // Parse emotions (both array and object formats)
   let emotionLabel = 'Emotional distress';
   try {
-    const emotions: { name: string; weight: number }[] = JSON.parse(entry.emotionsJson || '[]');
-    if (emotions.length > 0) {
-      const top = emotions.sort((a, b) => b.weight - a.weight)[0];
-      emotionLabel = `${top.name} (${top.weight}% intensity)`;
+    const raw = typeof entry.emotionsJson === 'string'
+      ? JSON.parse(entry.emotionsJson || '[]')
+      : entry.emotionsJson;
+
+    let items: { name: string; weight: number }[] = [];
+    if (Array.isArray(raw)) {
+      items = raw.map((item: any) => {
+        if (typeof item === 'string') return { name: item, weight: 100 };
+        return {
+          name: item?.name || item?.label || item?.emotion || 'Emotion',
+          weight: typeof item?.weight === 'number'
+            ? item.weight
+            : (typeof item?.intensity === 'number' ? item.intensity : 100),
+        };
+      });
+    } else if (raw && typeof raw === 'object') {
+      items = Object.entries(raw).map(([key, val]: [string, any]) => {
+        const weight = typeof val === 'number'
+          ? val
+          : (typeof val?.weight === 'number'
+              ? val.weight
+              : (typeof val?.intensity === 'number' ? val.intensity : 100));
+        return { name: key, weight };
+      });
+    }
+
+    if (items.length > 0) {
+      emotionLabel = items.map((em) => `${em.name} ${em.weight}%`).join(', ');
     }
   } catch (_) { /* ignore parse error */ }
 
   // Parse distortions
   let distortionLabel = '';
+  let parsedDistortions: string[] = [];
   try {
-    const distortions: string[] = JSON.parse(entry.distortionsJson || '[]');
-    if (distortions.length > 0) {
-      distortionLabel = ` · Tagged traps: ${distortions.slice(0, 3).join(', ')}`;
+    const rawDist = typeof entry.distortionsJson === 'string'
+      ? JSON.parse(entry.distortionsJson || '[]')
+      : entry.distortionsJson;
+    if (Array.isArray(rawDist)) {
+      parsedDistortions = rawDist.map((d: any) => typeof d === 'string' ? d : (d?.name || ''));
+    } else if (rawDist && typeof rawDist === 'object') {
+      parsedDistortions = Object.keys(rawDist);
+    }
+    parsedDistortions = parsedDistortions.filter(Boolean);
+    if (parsedDistortions.length > 0) {
+      distortionLabel = ` · Tagged traps: ${parsedDistortions.slice(0, 3).join(', ')}`;
     }
   } catch (_) { /* ignore parse error */ }
+
+  // Dynamic behavioral reaction and reflection prompt tailored to identified distortion
+  const primaryTrap = parsedDistortions[0]?.toLowerCase() || '';
+  let behaviorTitle = 'Avoidance, tension, or rumination triggered by this belief';
+  let behaviorText = 'Without intervention, this thought-feeling pair tends to produce avoidance, reassurance-seeking, or shutdown behavior.';
+  let behaviorNote = 'Reflection prompt: What specific reaction or avoidance did this automatic thought trigger in that moment, and how did it reinforce the thought loop?';
+
+  if (primaryTrap.includes('mind reading') || primaryTrap.includes('mind-reading')) {
+    behaviorTitle = 'Withdrawing, reassurance-seeking, or over-analyzing interactions';
+    behaviorText = 'Mind reading prompts you to react to assumed intentions. Common responses include pre-emptive withdrawal, scanning for subtle signs of rejection, or seeking repeated reassurance.';
+    behaviorNote = 'Reflection prompt: How did acting on an assumed thought change your behavior? Notice if protective distance created the very separation you feared.';
+  } else if (primaryTrap.includes('catastroph')) {
+    behaviorTitle = 'Emergency avoidance, freezing, or hyper-vigilant scanning';
+    behaviorText = 'Predicting the worst imaginable outcome drives high urgency: dodging tasks, calling off plans, or freezing in paralysis to stay safe.';
+    behaviorNote = 'Reflection prompt: What actions did you take to escape the imagined disaster? Notice how avoiding the situation prevents you from discovering you can handle it.';
+  } else if (primaryTrap.includes('all-or-nothing') || primaryTrap.includes('black-and-white')) {
+    behaviorTitle = 'Giving up entirely, perfectionistic paralysis, or total withdrawal';
+    behaviorText = 'Viewing situations as either flawless or ruined prompts binary behavior: quitting midway, postponing, or discarding progress.';
+    behaviorNote = 'Reflection prompt: Did you hold back or abandon effort because it couldn’t be done perfectly? Where can you find a workable middle step?';
+  } else if (primaryTrap.includes('should')) {
+    behaviorTitle = 'Resentment, procrastination, or rigid self-punishment';
+    behaviorText = 'Demanding absolute "shoulds" builds intense pressure, leading to passive rebellion, procrastination, or irritable conflict.';
+    behaviorNote = 'Reflection prompt: How did rigid rules dictate your actions? Notice how replacing "must" with "I prefer" releases behavioral paralysis.';
+  } else if (primaryTrap.includes('emotional reasoning') || primaryTrap.includes('emotional-reasoning')) {
+    behaviorTitle = 'Treating distressing feelings as facts and retreating';
+    behaviorText = 'Allowing the intensity of emotion to govern decisions results in staying away from challenges under the assumption that feeling overwhelmed equals danger.';
+    behaviorNote = 'Reflection prompt: Did you hold back simply because it felt uncomfortable? Remember that emotions are internal signals, not external facts.';
+  } else if (primaryTrap.includes('overgeneraliz')) {
+    behaviorTitle = 'Reluctance to try again and defeatist withdrawal';
+    behaviorText = 'Believing that one setback means "it always happens" leads to preemptive resignation and refusing to re-engage.';
+    behaviorNote = 'Reflection prompt: Did one bad outcome stop you from trying? What opposite action would challenge the idea of a never-ending pattern?';
+  } else if (parsedDistortions.length > 0) {
+    behaviorTitle = `Protective reaction shaped by ${parsedDistortions[0]}`;
+    behaviorText = `Operating under ${parsedDistortions[0]} often causes compensatory habits, hesitation, or emotional withdrawal.`;
+    behaviorNote = `Reflection prompt: What specific reaction or avoidance did ${parsedDistortions[0]} trigger in that moment, and how did it reinforce the thought loop?`;
+  }
 
   const situationSnippet = entry.situation.length > 120
     ? entry.situation.slice(0, 120) + '…'
@@ -346,11 +417,11 @@ function journalEntryToStages(entry: JournalEntry): Record<StepNumber, StageInfo
     4: {
       step: 4,
       stageName: 'Avoidance Pattern (Behavior)',
-      title: 'Avoidance, tension, or rumination triggered by this belief',
+      title: behaviorTitle,
       nodeFocus: 'behaviors',
       badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
-      text: 'Without intervention, this thought-feeling pair tends to produce avoidance, reassurance-seeking, or shutdown behavior.',
-      clinicalNote: 'Reactive behavior locks in the loop — each avoidance confirms the threat hypothesis for next time.',
+      text: behaviorText,
+      clinicalNote: behaviorNote,
     },
     5: {
       step: 5,

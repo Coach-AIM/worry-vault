@@ -1,4 +1,15 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 export default function Footer() {
+  const pathname = usePathname();
+  const isRegister = pathname === "/register" || pathname === "/register/";
+
+  if (isRegister) {
+    return null;
+  }
+
   return (
     <footer
       className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto"

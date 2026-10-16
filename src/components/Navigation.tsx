@@ -13,7 +13,11 @@ export default function Navigation() {
   const { points } = useResiliencePoints();
   const [closedLoops, setClosedLoops] = useState(0);
   const { pinLockEnabled, lockNow, handleSignOut } = useAuth();
-  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/login/" ||
+    pathname === "/register" ||
+    pathname === "/register/";
 
   // Closed-loop count is published by the Home page; read it on mount and on updates
   useEffect(() => {
@@ -31,6 +35,10 @@ export default function Navigation() {
       window.removeEventListener("storage", readStats);
     };
   }, []);
+
+  if (isAuthPage) {
+    return null;
+  }
 
   const tabs = [
     {
