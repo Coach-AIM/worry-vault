@@ -4,6 +4,21 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import PinLockModal from '@/components/PinLockModal';
+import {
+  initializeCleanUserState,
+  switchActiveUser,
+  archiveUserStorage,
+  restoreUserStorage,
+  getActiveUsername,
+} from '@/utils/storage';
+
+export {
+  initializeCleanUserState,
+  switchActiveUser,
+  archiveUserStorage,
+  restoreUserStorage,
+  getActiveUsername,
+};
 
 export type PinModalMode = 'unlock' | 'setup' | 'change' | 'disable' | null;
 
@@ -11,6 +26,7 @@ interface AuthContextValue {
   pinLockEnabled: boolean;
   isLocked: boolean;
   modalMode: PinModalMode;
+  activeUsername: string | null;
   lockNow: () => void;
   unlockWithPin: (pin: string) => Promise<boolean>;
   enablePinLock: (pin: string) => Promise<void>;
@@ -19,6 +35,8 @@ interface AuthContextValue {
   openPinModal: (mode: Exclude<PinModalMode, null>) => void;
   closePinModal: () => void;
   handleSignOut: () => Promise<void>;
+  initializeNewUser: (username: string, options?: { disclaimerAccepted?: boolean }) => void;
+  switchUser: (username: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,9 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pinLockEnabled, setPinLockEnabled] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [modalMode, setModalMode] = useState<PinModalMode>(null);
+  const [activeUsername, setActiveUsername] = useState<string | null>(null);
 
   const syncPinStateFromStorage = useCallback(() => {
     try {
+      setActiveUsername(getActiveUsername());
       const enabled =
         localStorage.getItem(PIN_ENABLED_KEY) === 'true' ||
         localStorage.getItem('momentum_pin_lock_enabled') === 'true';
@@ -195,9 +215,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setModalMode(null);
   }, []);
 
+  const initializeNewUser = useCallback((username: string, options?: { disclaimerAccepted?: boolean }) => {
+    initializeCleanUserState(username, options);
+    setActiveUsername(username.trim().toLowerCase());
+    syncPinStateFromStorage();
+  }, [syncPinStateFromStorage]);
+
+  const switchUser = useCallback((username: string) => {
+    switchActiveUser(username);
+    setActiveUsername(username.trim().toLowerCase());
+    syncPinStateFromStorage();
+  }, [syncPinStateFromStorage]);
+
   const handleSignOut = useCallback(async () => {
     try {
-      // Clear only session/unlock flags — never touch user journal entries, tasks, or fortitude points
+      // Archive current user's state to preserve personal reflections and drafts safely in their vault
+      archiveUserStorage();
       sessionStorage.removeItem(SESSION_UNLOCKED_KEY);
       localStorage.removeItem('momentum_session_token');
       localStorage.removeItem('momentum_active_session');
@@ -226,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         pinLockEnabled,
         isLocked,
         modalMode: activeModalMode,
+        activeUsername,
         lockNow,
         unlockWithPin,
         enablePinLock,
@@ -234,6 +268,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         openPinModal,
         closePinModal,
         handleSignOut,
+        initializeNewUser,
+        switchUser,
       }}
     >
       {children}

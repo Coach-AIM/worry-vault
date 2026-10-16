@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { switchActiveUser } from "@/utils/storage";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -27,6 +28,9 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid username or password.");
       } else {
+        try {
+          switchActiveUser(username);
+        } catch (_) {}
         router.push("/");
         router.refresh();
       }

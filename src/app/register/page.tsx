@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { initializeCleanUserState } from "@/utils/storage";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -41,18 +42,9 @@ export default function RegisterPage() {
         throw new Error(data.error || "Registration failed.");
       }
 
-      // Persist acceptance and local profile in localStorage
+      // Ensure clean state: wipe prior session leaks, zero habits & metrics, isolate user reflections
       try {
-        const timestamp = new Date().toISOString();
-        const profileData = {
-          username: username.trim(),
-          disclaimerAccepted: true,
-          disclaimerAcceptedAt: timestamp,
-        };
-        localStorage.setItem("momentum_profile", JSON.stringify(profileData));
-        localStorage.setItem("momentum_user_profile", JSON.stringify(profileData));
-        localStorage.setItem("momentum_disclaimer_accepted", "true");
-        localStorage.setItem("momentum_disclaimer_accepted_at", timestamp);
+        initializeCleanUserState(username, { disclaimerAccepted: true });
       } catch (_) {}
 
       setSuccess(true);
@@ -67,7 +59,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-80px)] bg-[#f8faf9] px-4 py-8">
+    <div className="flex justify-center items-center min-h-screen bg-[#f8faf9] px-4 py-8">
       <div className="max-w-md w-full bg-white p-7 sm:p-9 rounded-3xl shadow-xl border border-stone-200/80">
         
         {/* Brand Header */}
