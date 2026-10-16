@@ -934,61 +934,23 @@ export default function CBTJournal() {
 
   return (
     <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6" style={{ paddingTop: "2rem", paddingBottom: "10rem" }}>
-      <header style={{ marginBottom: "2.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
-          <div>
-            <h1
-              style={{
-                color: "var(--sage-green)",
-                marginBottom: "0.5rem",
-                fontSize: "2.5rem",
-                fontWeight: 600,
-              }}
-            >
-              CBT Journal
-            </h1>
-            <p style={{ fontSize: "1.1rem", color: "#555", margin: 0 }}>
-              Gently analyze difficult moments using Cognitive Behavioral Therapy,
-              or log positive victories.
-            </p>
-          </div>
-
-          <div
+      <header style={{ marginBottom: "2rem" }}>
+        <div>
+          <h1
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.6rem",
-              padding: "0.5rem 1rem",
-              backgroundColor: "#f0fdf4",
-              border: "1px solid #bbf7d0",
-              borderRadius: "14px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              color: "var(--sage-green)",
+              marginBottom: "0.5rem",
+              fontSize: "2.25rem",
+              fontWeight: 600,
             }}
           >
-            <span style={{ fontSize: "1.25rem" }}>🏆</span>
-            <div>
-              <span style={{ display: "block", fontSize: "0.68rem", fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Resilience Points
-              </span>
-              <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#15803d" }}>
-                {pointsLoaded ? resiliencePoints : 0} pts
-              </span>
-            </div>
-          </div>
+            CBT Journal
+          </h1>
+          <p style={{ fontSize: "1.05rem", color: "#555", margin: 0 }}>
+            Gently analyze difficult moments using Cognitive Behavioral Therapy,
+            or log positive victories.
+          </p>
         </div>
-
-        <Link
-          href="/"
-          style={{
-            color: "var(--soft-blue)",
-            textDecoration: "none",
-            fontWeight: 600,
-            display: "inline-block",
-            marginTop: "1rem",
-          }}
-        >
-          &larr; Back to Dashboard
-        </Link>
       </header>
 
       {crisis && (
@@ -1008,7 +970,7 @@ export default function CBTJournal() {
           We noticed you might be in distress. Momentum is a self-help tool.
           Please contact professional help immediately. <br />
           <br />
-          <strong>Call or text 988, or text HOME to 741741 for free, 24/7 crisis support.</strong>
+          <strong>Free, confidential 24/7 support. Call or text 988 (Suicide &amp; Crisis Lifeline), or text 741741 (Crisis Text Line).</strong>
         </div>
       )}
 

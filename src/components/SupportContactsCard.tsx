@@ -43,7 +43,103 @@ const EMPTY: Omit<MultiSupportContact, 'id'> = {
 const clean = (p: string) => p.replace(/[^0-9+]/g, '');
 
 const btn =
-  'min-h-[40px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer no-underline';
+  'rounded-xl px-4 py-2 font-medium text-sm border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 shadow-sm transition-all flex items-center gap-2 no-underline';
+
+function Pencil({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}
+
+function Trash2({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" x2="10" y1="11" y2="17" />
+      <line x1="14" x2="14" y1="11" y2="17" />
+    </svg>
+  );
+}
+
+function Phone({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
+}
+
+function MessageSquare({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function Mail({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+}
 
 export default function SupportContactsCard() {
   const [isMounted, setIsMounted] = useState(false);
@@ -183,7 +279,7 @@ export default function SupportContactsCard() {
             <span>Crisis Support Available 24/7</span>
           </div>
           <p className="text-xs sm:text-sm text-rose-100 font-medium mt-0.5">
-            Call or text 988, or text HOME to 741741 for free, 24/7 crisis support.
+            Free, confidential 24/7 support. Call or text 988 (Suicide &amp; Crisis Lifeline), or text 741741 (Crisis Text Line).
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
@@ -196,8 +292,9 @@ export default function SupportContactsCard() {
           <a
             href="sms:741741?body=HOME"
             className="flex-1 sm:flex-none text-xs font-bold px-3.5 py-2 bg-rose-950/40 hover:bg-rose-950/60 text-white border border-rose-300/40 rounded-xl whitespace-nowrap text-center transition-colors no-underline shadow-xs"
+            title="Text HOME to 741741 for free, confidential 24/7 crisis support"
           >
-            Text HOME
+            Text Crisis Line
           </a>
         </div>
       </div>
@@ -330,18 +427,18 @@ export default function SupportContactsCard() {
                     <button
                       type="button"
                       onClick={() => openEdit(c)}
-                      className="min-w-[36px] min-h-[36px] rounded-lg hover:bg-white text-sm cursor-pointer"
+                      className="p-2 rounded-lg bg-transparent border-0 shadow-none text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors cursor-pointer"
                       aria-label="Edit contact"
                     >
-                      ✏️
+                      <Pencil className="w-5 h-5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDelete(c.id)}
-                      className="min-w-[36px] min-h-[36px] rounded-lg hover:bg-white text-sm cursor-pointer"
+                      className="p-2 rounded-lg bg-transparent border-0 shadow-none text-stone-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                       aria-label="Delete contact"
                     >
-                      🗑️
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -350,28 +447,33 @@ export default function SupportContactsCard() {
 
                 <div className="flex flex-wrap gap-2">
                   {hasCall1 && (
-                    <a href={`tel:${clean(c.phone1)}`} className={`${btn} bg-slate-900 hover:bg-slate-800 text-white`}>
-                      📞 Call
+                    <a href={`tel:${clean(c.phone1)}`} className={btn}>
+                      <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Call</span>
                     </a>
                   )}
                   {hasText1 && (
-                    <a href={`sms:${clean(c.phone1)}`} className={`${btn} bg-blue-600 hover:bg-blue-700 text-white`}>
-                      💬 Text
+                    <a href={`sms:${clean(c.phone1)}`} className={btn}>
+                      <MessageSquare className="w-4 h-4 text-sky-600 shrink-0" />
+                      <span>Text</span>
                     </a>
                   )}
                   {hasCall2 && (
-                    <a href={`tel:${clean(c.phone2!)}`} className={`${btn} bg-slate-700 hover:bg-slate-800 text-white`}>
-                      📞 Call (2nd)
+                    <a href={`tel:${clean(c.phone2!)}`} className={btn}>
+                      <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Call (2nd)</span>
                     </a>
                   )}
                   {hasText2 && (
-                    <a href={`sms:${clean(c.phone2!)}`} className={`${btn} bg-blue-500 hover:bg-blue-600 text-white`}>
-                      💬 Text (2nd)
+                    <a href={`sms:${clean(c.phone2!)}`} className={btn}>
+                      <MessageSquare className="w-4 h-4 text-sky-600 shrink-0" />
+                      <span>Text (2nd)</span>
                     </a>
                   )}
                   {hasEmail && (
-                    <a href={`mailto:${c.email!.trim()}`} className={`${btn} bg-emerald-600 hover:bg-emerald-700 text-white`}>
-                      ✉️ Email
+                    <a href={`mailto:${c.email!.trim()}`} className={btn}>
+                      <Mail className="w-4 h-4 text-violet-600 shrink-0" />
+                      <span>Email</span>
                     </a>
                   )}
                 </div>

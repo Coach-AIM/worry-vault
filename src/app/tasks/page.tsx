@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { awardPoints, POINT_VALUES } from "@/lib/points";
 
 type Task = {
@@ -839,6 +838,141 @@ export default function TasksTab() {
     );
   }
 
+  function TaskMoreMenu({
+    task,
+    onEdit,
+    onAddSub,
+  }: {
+    task: Task;
+    onEdit?: () => void;
+    onAddSub?: () => void;
+  }) {
+    const [open, setOpen] = useState(false);
+    const urls = getCalendarUrls(task);
+    const isFocused = todayFocusIds.includes(String(task.id));
+
+    return (
+      <div className="relative inline-block">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="More actions"
+          title="More actions"
+          className="p-1.5 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 border border-transparent hover:border-stone-200 transition-colors cursor-pointer flex items-center justify-center bg-transparent"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="1.2" />
+            <circle cx="12" cy="5" r="1.2" />
+            <circle cx="12" cy="19" r="1.2" />
+          </svg>
+        </button>
+
+        {open && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setOpen(false)}
+            />
+            <div className="absolute right-0 mt-1.5 w-48 bg-white border border-stone-200 rounded-xl shadow-lg z-20 py-1.5 flex flex-col text-xs font-medium text-stone-700">
+              <button
+                type="button"
+                onClick={() => {
+                  toggleTodayFocus(task);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3.5 py-2 hover:bg-stone-50 flex items-center gap-2 cursor-pointer bg-transparent border-0 text-stone-700 font-semibold"
+              >
+                <span>{isFocused ? "⭐ Remove from Focus" : "☆ Pin to Today's Focus"}</span>
+              </button>
+
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onEdit();
+                    setOpen(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-stone-50 flex items-center gap-2 cursor-pointer bg-transparent border-0 text-stone-700 font-semibold"
+                >
+                  <span>✏️ Edit Action</span>
+                </button>
+              )}
+
+              {onAddSub && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAddSub();
+                    setOpen(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-stone-50 flex items-center gap-2 cursor-pointer bg-transparent border-0 text-stone-700 font-semibold"
+                >
+                  <span>➕ Add Sub-step</span>
+                </button>
+              )}
+
+              <div className="my-1 border-t border-stone-100" />
+              <span className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                Add to Calendar
+              </span>
+              <a
+                href={urls.googleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="px-3.5 py-1.5 hover:bg-stone-50 text-stone-700 no-underline block"
+              >
+                📅 Google Calendar
+              </a>
+              <a
+                href={urls.outlookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="px-3.5 py-1.5 hover:bg-stone-50 text-stone-700 no-underline block"
+              >
+                📅 Outlook Calendar
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadAppleIcs(task);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3.5 py-1.5 hover:bg-stone-50 text-stone-700 cursor-pointer bg-transparent border-0 font-medium"
+              >
+                📅 Apple Calendar (.ics)
+              </button>
+
+              <div className="my-1 border-t border-stone-100" />
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  handleDeleteTask(task.id);
+                }}
+                className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 font-bold flex items-center gap-2 cursor-pointer bg-transparent border-0"
+              >
+                <span>🗑️ Delete</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   // Filter Helpers for views
   const isDateToday = (dateStr: string | null | undefined) => {
     if (!dateStr) return true; // Tasks without explicit due date appear in today's view by default
@@ -938,7 +1072,7 @@ export default function TasksTab() {
     <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6" style={{ paddingTop: "2rem", paddingBottom: "2rem", boxSizing: "border-box" }}>
       <header
         style={{
-          marginBottom: "2rem",
+          marginBottom: "1.25rem",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -968,18 +1102,6 @@ export default function TasksTab() {
             Manage, reorder, and schedule the gentle steps generated from your
             worries.
           </p>
-          <Link
-            href="/"
-            style={{
-              color: "var(--soft-blue)",
-              textDecoration: "none",
-              fontWeight: 600,
-              display: "inline-block",
-              marginTop: "1rem",
-            }}
-          >
-            &larr; Back to Dashboard
-          </Link>
         </div>
         {tasks.some((t) => t.completed) && (
           <button
@@ -1001,70 +1123,41 @@ export default function TasksTab() {
         )}
       </header>
 
-      {/* View Switcher Menu & New Action Toggle */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-          borderBottom: "1px solid var(--border)",
-          paddingBottom: "1rem",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-        }}
-      >
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      {/* View Switcher Segmented Pill Bar & New Action Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-3 mb-2.5 border-b border-stone-200">
+        <div className="flex flex-row overflow-x-auto gap-2 no-scrollbar py-1 items-center">
           <button
             type="button"
             onClick={() => setActiveView("today")}
-            style={{
-              padding: "0.5rem 1rem",
-              fontSize: "0.9rem",
-              backgroundColor:
-                activeView === "today" ? "var(--sage-green)" : "transparent",
-              color: activeView === "today" ? "#fff" : "#666",
-              border: activeView === "today" ? "none" : "1px solid var(--border)",
-              borderRadius: "8px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer border ${
+              activeView === "today"
+                ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+            }`}
           >
-            📅 Today's View
+            📅 Today&apos;s View
           </button>
           <button
             type="button"
             onClick={() => setActiveView("week")}
-            style={{
-              padding: "0.5rem 1rem",
-              fontSize: "0.9rem",
-              backgroundColor:
-                activeView === "week" ? "var(--sage-green)" : "transparent",
-              color: activeView === "week" ? "#fff" : "#666",
-              border: activeView === "week" ? "none" : "1px solid var(--border)",
-              borderRadius: "8px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer border ${
+              activeView === "week"
+                ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+            }`}
           >
-            🗓️ Weekly Agenda View
+            🗓️ Weekly Agenda
           </button>
           <button
             type="button"
             onClick={() => setActiveView("all")}
-            style={{
-              padding: "0.5rem 1rem",
-              fontSize: "0.9rem",
-              backgroundColor:
-                activeView === "all" ? "var(--sage-green)" : "transparent",
-              color: activeView === "all" ? "#fff" : "#666",
-              border: activeView === "all" ? "none" : "1px solid var(--border)",
-              borderRadius: "8px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer border ${
+              activeView === "all"
+                ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+            }`}
           >
-            📋 All Actions (List)
+            📋 All Actions
           </button>
         </div>
 
@@ -1072,40 +1165,21 @@ export default function TasksTab() {
           type="button"
           onClick={() => {
             if (!isFormOpen) {
-              // Always open the drawer defaulting to One-Off
               setActionType("oneoff");
               setRecurrence("none");
             }
             setIsFormOpen(!isFormOpen);
           }}
-          style={{
-            padding: "0.55rem 1.1rem",
-            fontSize: "0.9rem",
-            backgroundColor: isFormOpen ? "#475569" : "#0f172a",
-            color: "#fff",
-            border: "none",
-            borderRadius: "10px",
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-          }}
+          className={`shrink-0 whitespace-nowrap px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-xs ${
+            isFormOpen ? "bg-slate-600 hover:bg-slate-700" : "bg-slate-900 hover:bg-slate-800"
+          }`}
         >
           <span>{isFormOpen ? "✕ Close Form" : "+ New Action"}</span>
         </button>
       </div>
 
       {/* Task Type Filter Strip */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.4rem",
-          marginBottom: "1.25rem",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="flex flex-row overflow-x-auto gap-2 no-scrollbar py-1 mb-3 items-center">
         {(["all", "habit", "oneoff"] as TaskTypeFilter[]).map((f) => {
           const labels: Record<TaskTypeFilter, string> = {
             all: "All Actions",
@@ -1117,17 +1191,11 @@ export default function TasksTab() {
               key={f}
               type="button"
               onClick={() => setTaskTypeFilter(f)}
-              style={{
-                padding: "0.3rem 0.85rem",
-                fontSize: "0.8rem",
-                backgroundColor: taskTypeFilter === f ? "#0f172a" : "transparent",
-                color: taskTypeFilter === f ? "#fff" : "#64748b",
-                border: taskTypeFilter === f ? "none" : "1px solid #e2e8f0",
-                borderRadius: "20px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s",
-              }}
+              className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+                taskTypeFilter === f
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-transparent text-slate-500 border-slate-200 hover:bg-stone-50"
+              }`}
             >
               {labels[f]}
             </button>
@@ -1790,192 +1858,105 @@ export default function TasksTab() {
                             </div>
                           </div>
                         ) : (
-                          /* Display Layout */
-                          <div
-                            style={{
-                              flex: 1,
-                              minWidth: 0,
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              flexWrap: "wrap",
-                              gap: "1rem",
-                            }}
-                          >
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <span
-                                style={{
-                                  fontSize: "1.15rem",
-                                  fontWeight: 600,
-                                  display: "block",
-                                  marginBottom: "0.2rem",
-                                  textDecoration: effDone(pt)
-                                    ? "line-through"
-                                    : "none",
-                                  color: effDone(pt)
-                                    ? "#888"
-                                    : "var(--foreground)",
-                                }}
-                              >
-                                {pt.title}
+                          /* Display Layout: Top Row + Bottom Row/Meta */
+                          <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+                            {/* Top Row: Task name + small duration badge */}
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="min-w-0 flex-1">
+                                <span
+                                  className={`text-sm sm:text-base font-semibold leading-snug block break-words ${
+                                    effDone(pt) ? "line-through text-stone-400" : "text-stone-900"
+                                  }`}
+                                >
+                                  {pt.title}
+                                </span>
+                                {pt.description && (
+                                  <p className="mt-1 text-xs text-stone-500 leading-relaxed whitespace-pre-wrap">
+                                    {pt.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200/80 whitespace-nowrap">
+                                {pt.estimatedTime || "15 mins"}
                               </span>
-                              {pt.description && (
-                                <p
-                                  style={{
-                                    margin: "0 0 0.5rem 0",
-                                    fontSize: "0.92rem",
-                                    color: "#555",
-                                    lineHeight: "1.4",
-                                    whiteSpace: "pre-wrap",
-                                  }}
-                                >
-                                  {pt.description}
-                                </p>
-                              )}
-                              <div
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: "#666",
-                                  display: "flex",
-                                  gap: "0.75rem",
-                                  flexWrap: "wrap",
-                                  alignItems: "center",
-                                }}
-                              >
+                            </div>
+
+                            {/* Bottom Row / Meta: Difficulty badge, status pill, and three-dot menu */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <span
-                                  style={{
-                                    backgroundColor: "#f0f4f8",
-                                    padding: "0.2rem 0.6rem",
-                                    borderRadius: "12px",
-                                  }}
+                                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                                    pt.emotionalIntensity === "High"
+                                      ? "bg-rose-50 text-rose-700 border-rose-200/80"
+                                      : pt.emotionalIntensity === "Medium"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200/80"
+                                      : "bg-stone-100 text-stone-600 border-stone-200/70"
+                                  }`}
                                 >
-                                  ⏱ {pt.estimatedTime || "N/A"}
+                                  {pt.emotionalIntensity || "Low"}
                                 </span>
-                                <span
-                                  style={{
-                                    backgroundColor: "#edf2f7",
-                                    padding: "0.2rem 0.6rem",
-                                    borderRadius: "12px",
-                                  }}
-                                >
-                                  Intensity: {pt.emotionalIntensity || "N/A"}
-                                </span>
-                                {pt.dueDate && (
-                                  <span
-                                    style={{
-                                      backgroundColor: "#fff0f0",
-                                      padding: "0.2rem 0.6rem",
-                                      borderRadius: "12px",
-                                    }}
-                                  >
-                                    📅 By{" "}
-                                    {new Date(pt.dueDate).toLocaleString(
-                                      undefined,
-                                      {
-                                        dateStyle: "medium",
-                                        timeStyle: "short",
-                                      },
-                                    )}
+
+                                {(() => {
+                                  const kind = getTaskKind(pt);
+                                  return (
+                                    <span
+                                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                                        kind === "habit"
+                                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70"
+                                          : "bg-sky-50 text-sky-800 border border-sky-200/70"
+                                      }`}
+                                    >
+                                      {kind === "habit" ? "🔁 Habit" : "📌 One-Off"}
+                                    </span>
+                                  );
+                                })()}
+
+                                {pt.recurrence && pt.recurrence !== "none" && (
+                                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50/80 text-amber-800 border border-amber-200/60">
+                                    {pt.recurrence === "daily" ? "Daily" : pt.recurrence}
                                   </span>
                                 )}
-                                {pt.recurrence && pt.recurrence !== "none" && (
-                                  <span
-                                    style={{
-                                      backgroundColor: "#fdf4e3",
-                                      padding: "0.2rem 0.6rem",
-                                      borderRadius: "12px",
-                                      color: "#b45309",
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    🔁{" "}
-                                    {pt.recurrence === "daily"
-                                      ? "Daily"
-                                      : "Weekly"}
+
+                                {pt.dueDate && (
+                                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-stone-50 text-stone-500 border border-stone-200/60">
+                                    📅 {new Date(pt.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                  </span>
+                                )}
+
+                                {todayFocusIds.includes(String(pt.id)) && (
+                                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-300/80">
+                                    ⭐ Focused
                                   </span>
                                 )}
                               </div>
 
-                              {/* Action type pill — All Actions view */}
-                              {(() => {
-                                const kind = getTaskKind(pt);
-                                return (
-                                  <span
-                                    style={{
-                                      display: "inline-block",
-                                      marginTop: "0.4rem",
-                                      fontSize: "0.72rem",
-                                      backgroundColor: kind === 'habit' ? "#ecfdf5" : "#f0f9ff",
-                                      padding: "0.15rem 0.5rem",
-                                      borderRadius: "8px",
-                                      color: kind === 'habit' ? "#065f46" : "#0369a1",
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {kind === 'habit' ? '🔁 Habit' : '📌 One-Off'}
-                                  </span>
-                                );
-                              })()}
+                              <div className="shrink-0 flex items-center gap-1">
+                                <TaskMoreMenu
+                                  task={pt}
+                                  onEdit={() => startEdit(pt)}
+                                  onAddSub={() => {
+                                    setAddingSubToTaskId(addingSubToTaskId === pt.id ? null : pt.id);
+                                    setSubTaskTitle("");
+                                  }}
+                                />
+                              </div>
+                            </div>
 
-                              {/* Completion rating badge — All Actions view */}
-                              {renderRecurringBadge(pt)}
-                              {!isRecurringTask(pt) && !!pt.completed && (() => {
-                                const meta = taskMeta[String(pt.id)];
-                                const actualRelief = actualReliefs[String(pt.id)];
-                                const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
-                                const delta = (predicted !== null && actualRelief !== undefined) ? actualRelief - predicted : null;
-                                if (predicted !== null && actualRelief !== undefined) {
-                                  return (
-                                    <div style={{ marginTop: "0.4rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                                      <button
-                                        type="button"
-                                        onClick={() => setRatingPopoverId(pt.id)}
-                                        style={{
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "0.35rem",
-                                          fontSize: "0.75rem",
-                                          fontWeight: 700,
-                                          backgroundColor: "#f0fdf4",
-                                          border: "1px solid #bbf7d0",
-                                          borderRadius: "20px",
-                                          padding: "0.2rem 0.7rem",
-                                          color: "#15803d",
-                                          cursor: "pointer",
-                                          width: "fit-content",
-                                        }}
-                                      >
-                                        <span style={{ color: "#94a3b8", fontWeight: 600 }}>Predicted: {predicted}/10</span>
-                                        <span style={{ color: "#94a3b8" }}>➔</span>
-                                        <span>Actual Relief: {actualRelief}/10</span>
-                                        <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>✏️</span>
-                                      </button>
-                                      {delta !== null && delta >= 0 && (
-                                        <span style={{
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "0.25rem",
-                                          fontSize: "0.72rem",
-                                          fontWeight: 800,
-                                          color: "#059669",
-                                          backgroundColor: "#ecfdf5",
-                                          border: "1px solid #a7f3d0",
-                                          borderRadius: "20px",
-                                          padding: "0.15rem 0.6rem",
-                                          width: "fit-content",
-                                        }}>
-                                          🎉 Overcame Dread
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                } else if (actualRelief !== undefined) {
-                                  return (
+                            {/* Completion rating badge — All Actions view */}
+                            {renderRecurringBadge(pt)}
+                            {!isRecurringTask(pt) && !!pt.completed && (() => {
+                              const meta = taskMeta[String(pt.id)];
+                              const actualRelief = actualReliefs[String(pt.id)];
+                              const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
+                              const delta = (predicted !== null && actualRelief !== undefined) ? actualRelief - predicted : null;
+                              if (predicted !== null && actualRelief !== undefined) {
+                                return (
+                                  <div style={{ marginTop: "0.2rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                                     <button
                                       type="button"
                                       onClick={() => setRatingPopoverId(pt.id)}
                                       style={{
-                                        marginTop: "0.4rem",
                                         display: "inline-flex",
                                         alignItems: "center",
                                         gap: "0.35rem",
@@ -1990,14 +1971,40 @@ export default function TasksTab() {
                                         width: "fit-content",
                                       }}
                                     >
-                                      Completed (Rating: {actualRelief}/10) ✏️
+                                      <span style={{ color: "#94a3b8", fontWeight: 600 }}>Predicted: {predicted}/10</span>
+                                      <span style={{ color: "#94a3b8" }}>➔</span>
+                                      <span>Actual Relief: {actualRelief}/10</span>
+                                      <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>✏️</span>
                                     </button>
-                                  );
-                                } else {
-                                  return (
-                                    <span style={{
-                                      marginTop: "0.4rem",
+                                    {delta !== null && delta >= 0 && (
+                                      <span style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.25rem",
+                                        fontSize: "0.72rem",
+                                        fontWeight: 800,
+                                        color: "#059669",
+                                        backgroundColor: "#ecfdf5",
+                                        border: "1px solid #a7f3d0",
+                                        borderRadius: "20px",
+                                        padding: "0.15rem 0.6rem",
+                                        width: "fit-content",
+                                      }}>
+                                        🎉 Overcame Dread
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              } else if (actualRelief !== undefined) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRatingPopoverId(pt.id)}
+                                    style={{
+                                      marginTop: "0.2rem",
                                       display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.35rem",
                                       fontSize: "0.75rem",
                                       fontWeight: 700,
                                       backgroundColor: "#f0fdf4",
@@ -2005,90 +2012,31 @@ export default function TasksTab() {
                                       borderRadius: "20px",
                                       padding: "0.2rem 0.7rem",
                                       color: "#15803d",
-                                    }}>
-                                      ✅ Completed
-                                    </span>
-                                  );
-                                }
-                              })()}
-                            </div>
-
-                            {/* Parent Actions */}
-                            {!effDone(pt) && (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: "0.5rem",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setAddingSubToTaskId(
-                                      addingSubToTaskId === pt.id
-                                        ? null
-                                        : pt.id,
-                                    );
-                                    setSubTaskTitle("");
-                                  }}
-                                  className="secondary"
-                                  style={{
-                                    padding: "0.35rem 0.6rem",
+                                      cursor: "pointer",
+                                      width: "fit-content",
+                                    }}
+                                  >
+                                    Completed (Rating: {actualRelief}/10) ✏️
+                                  </button>
+                                );
+                              } else {
+                                return (
+                                  <span style={{
+                                    marginTop: "0.2rem",
+                                    display: "inline-flex",
                                     fontSize: "0.75rem",
-                                  }}
-                                >
-                                  + Add Sub-step
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleTodayFocus(pt)}
-                                  title={todayFocusIds.includes(String(pt.id)) ? "Remove from Today's Focus" : "Pin to Today's Focus"}
-                                  style={{
-                                    backgroundColor: todayFocusIds.includes(String(pt.id)) ? "#fef3c7" : "#f1f5f9",
-                                    border: todayFocusIds.includes(String(pt.id)) ? "1px solid #f59e0b" : "1px solid #cbd5e1",
-                                    color: todayFocusIds.includes(String(pt.id)) ? "#b45309" : "#475569",
-                                    borderRadius: "8px",
-                                    padding: "0.35rem 0.6rem",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  {todayFocusIds.includes(String(pt.id)) ? "⭐ Focused" : "☆ Focus"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => startEdit(pt)}
-                                  className="secondary"
-                                  style={{
-                                    padding: "0.35rem 0.6rem",
-                                    fontSize: "0.75rem",
-                                  }}
-                                >
-                                  ✏️ Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteTask(pt.id)}
-                                  title="Delete action"
-                                  style={{
-                                    background: "none",
-                                    border: "1px solid #fecaca",
-                                    backgroundColor: "#fef2f2",
-                                    color: "#dc2626",
-                                    borderRadius: "8px",
-                                    padding: "0.35rem 0.6rem",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  🗑️ Delete
-                                </button>
-                                <CalendarDropdown task={pt} />
-                              </div>
-                            )}
+                                    fontWeight: 700,
+                                    backgroundColor: "#f0fdf4",
+                                    border: "1px solid #bbf7d0",
+                                    borderRadius: "20px",
+                                    padding: "0.2rem 0.7rem",
+                                    color: "#15803d",
+                                  }}>
+                                    ✅ Completed
+                                  </span>
+                                );
+                              }
+                            })()}
                           </div>
                         )}
                       </div>
@@ -2874,7 +2822,8 @@ export default function TasksTab() {
                     color: "#4a5d4e",
                     borderBottom: "1px solid var(--border)",
                     paddingBottom: "0.5rem",
-                    marginBottom: "1rem",
+                    marginTop: 0,
+                    marginBottom: "0.5rem",
                   }}
                 >
                   Today's Agenda (
@@ -2887,166 +2836,148 @@ export default function TasksTab() {
                   const parentTask = t.parentId
                     ? tasks.find((pt) => pt.id === t.parentId)
                     : null;
+                  const kind = getTaskKind(t);
 
                   return (
                     <div
                       key={t.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                        padding: "1.25rem 1.5rem",
-                        backgroundColor: "#fff",
-                        borderRadius: "var(--radius)",
-                        border: "1px solid var(--border)",
-                        opacity: effDone(t) ? 0.6 : 1,
-                      }}
+                      className={`p-3.5 sm:p-4 bg-white rounded-2xl border border-stone-200/80 shadow-2xs flex flex-col gap-2.5 transition-opacity ${
+                        effDone(t) ? "opacity-65" : "opacity-100"
+                      }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={effDone(t)}
-                        onChange={() => toggleComplete(t.id, t.completed)}
-                        style={{
-                          width: "1.4rem",
-                          height: "1.4rem",
-                          cursor: "pointer",
-                          accentColor: "var(--sage-green)",
-                        }}
-                      />
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <span
-                          style={{
-                            fontSize: "1.1rem",
-                            fontWeight: 600,
-                            display: "block",
-                            marginBottom: "0.3rem",
-                            textDecoration: effDone(t)
-                              ? "line-through"
-                              : "none",
-                            color: effDone(t) ? "#888" : "var(--foreground)",
-                          }}
-                        >
-                          {parentTask ? `${parentTask.title} ➜ ` : ""}
-                          {t.title}
-                        </span>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#777",
-                            display: "flex",
-                            gap: "0.75rem",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span
-                            style={{
-                              backgroundColor: "#f0f4f8",
-                              padding: "0.15rem 0.5rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            ⏱ {t.estimatedTime}
-                          </span>
-                          <span
-                            style={{
-                              backgroundColor: "#edf2f7",
-                              padding: "0.15rem 0.5rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Intensity: {t.emotionalIntensity}
-                          </span>
-                          {t.recurrence && t.recurrence !== "none" && (
+                      {/* Top Row: Checkbox, task name, and small duration badge */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={effDone(t)}
+                            onChange={() => toggleComplete(t.id, t.completed)}
+                            className="mt-1 h-5 w-5 rounded border-stone-300 accent-emerald-700 cursor-pointer shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
                             <span
-                              style={{
-                                backgroundColor: "#fdf4e3",
-                                padding: "0.15rem 0.5rem",
-                                borderRadius: "8px",
-                                color: "#b45309",
-                                fontWeight: 600,
-                              }}
+                              className={`text-sm sm:text-base font-semibold leading-snug block break-words ${
+                                effDone(t) ? "line-through text-stone-400" : "text-stone-900"
+                              }`}
                             >
-                              🔁 {t.recurrence}
+                              {parentTask ? `${parentTask.title} ➜ ` : ""}
+                              {t.title}
+                            </span>
+                            {t.description && (
+                              <p className="mt-1 text-xs text-stone-500 leading-relaxed whitespace-pre-wrap">
+                                {t.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200/80 whitespace-nowrap">
+                          {t.estimatedTime || "15 mins"}
+                        </span>
+                      </div>
+
+                      {/* Bottom Row / Meta: Difficulty badge, status pill, and three-dot menu */}
+                      <div className="flex items-center justify-between gap-2 pl-7">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                              t.emotionalIntensity === "High"
+                                ? "bg-rose-50 text-rose-700 border-rose-200/80"
+                                : t.emotionalIntensity === "Medium"
+                                ? "bg-amber-50 text-amber-700 border-amber-200/80"
+                                : "bg-stone-100 text-stone-600 border-stone-200/70"
+                            }`}
+                          >
+                            {t.emotionalIntensity || "Low"}
+                          </span>
+
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                              kind === "habit"
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70"
+                                : "bg-sky-50 text-sky-800 border border-sky-200/70"
+                            }`}
+                          >
+                            {kind === "habit" ? "🔁 Habit" : "📌 One-Off"}
+                          </span>
+
+                          {t.recurrence && t.recurrence !== "none" && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50/80 text-amber-800 border border-amber-200/60">
+                              {t.recurrence}
                             </span>
                           )}
-                          {/* Action type pill */}
-                          {(() => {
-                            const kind = getTaskKind(t);
-                            return (
-                              <span
-                                style={{
-                                  backgroundColor: kind === 'habit' ? "#ecfdf5" : "#f0f9ff",
-                                  padding: "0.15rem 0.5rem",
-                                  borderRadius: "8px",
-                                  color: kind === 'habit' ? "#065f46" : "#0369a1",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {kind === 'habit' ? '🔁 Habit' : '📌 One-Off'}
-                              </span>
-                            );
-                          })()}
+
+                          {todayFocusIds.includes(String(t.id)) && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-300/80">
+                              ⭐ Focused
+                            </span>
+                          )}
                         </div>
-                        {/* Completion rating badge — Today's View */}
-                        {renderRecurringBadge(t)}
-                        {!isRecurringTask(t) && !!t.completed && (() => {
-                          const meta = taskMeta[String(t.id)];
-                          const actualRelief = actualReliefs[String(t.id)];
-                          const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
-                          const delta = (predicted !== null && actualRelief !== undefined) ? actualRelief - predicted : null;
-                          if (predicted !== null && actualRelief !== undefined) {
-                            return (
-                              <div style={{ marginTop: "0.4rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setRatingPopoverId(t.id)}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "0.35rem",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 700,
-                                    backgroundColor: "#f0fdf4",
-                                    border: "1px solid #bbf7d0",
-                                    borderRadius: "20px",
-                                    padding: "0.2rem 0.7rem",
-                                    color: "#15803d",
-                                    cursor: "pointer",
-                                    width: "fit-content",
-                                  }}
-                                >
-                                  <span style={{ color: "#94a3b8", fontWeight: 600 }}>Predicted: {predicted}/10</span>
-                                  <span style={{ color: "#94a3b8" }}>➔</span>
-                                  <span>Actual Relief: {actualRelief}/10</span>
-                                  <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>✏️</span>
-                                </button>
-                                {delta !== null && delta >= 0 && (
-                                  <span style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "0.25rem",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 800,
-                                    color: "#059669",
-                                    backgroundColor: "#ecfdf5",
-                                    border: "1px solid #a7f3d0",
-                                    borderRadius: "20px",
-                                    padding: "0.15rem 0.6rem",
-                                    width: "fit-content",
-                                  }}>
-                                    🎉 Overcame Dread (+{delta} Relief)
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          } else if (actualRelief !== undefined) {
-                            return (
+
+                        <div className="shrink-0 flex items-center gap-1">
+                          <TaskMoreMenu task={t} />
+                        </div>
+                      </div>
+
+                      {/* Completion rating badge — Today's View */}
+                      {renderRecurringBadge(t)}
+                      {!isRecurringTask(t) && !!t.completed && (() => {
+                        const meta = taskMeta[String(t.id)];
+                        const actualRelief = actualReliefs[String(t.id)];
+                        const predicted = (meta?.predictedDifficulty !== undefined && meta?.predictedDifficulty !== null) ? meta.predictedDifficulty : null;
+                        const delta = (predicted !== null && actualRelief !== undefined) ? actualRelief - predicted : null;
+                        if (predicted !== null && actualRelief !== undefined) {
+                          return (
+                            <div className="pl-7 flex flex-col gap-1">
                               <button
                                 type="button"
                                 onClick={() => setRatingPopoverId(t.id)}
                                 style={{
-                                  marginTop: "0.4rem",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "0.35rem",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  backgroundColor: "#f0fdf4",
+                                  border: "1px solid #bbf7d0",
+                                  borderRadius: "20px",
+                                  padding: "0.2rem 0.7rem",
+                                  color: "#15803d",
+                                  cursor: "pointer",
+                                  width: "fit-content",
+                                }}
+                              >
+                                <span style={{ color: "#94a3b8", fontWeight: 600 }}>Predicted: {predicted}/10</span>
+                                <span style={{ color: "#94a3b8" }}>➔</span>
+                                <span>Actual Relief: {actualRelief}/10</span>
+                                <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>✏️</span>
+                              </button>
+                              {delta !== null && delta >= 0 && (
+                                <span style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "0.25rem",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 800,
+                                  color: "#059669",
+                                  backgroundColor: "#ecfdf5",
+                                  border: "1px solid #a7f3d0",
+                                  borderRadius: "20px",
+                                  padding: "0.15rem 0.6rem",
+                                  width: "fit-content",
+                                }}>
+                                  🎉 Overcame Dread (+{delta} Relief)
+                                </span>
+                              )}
+                            </div>
+                          );
+                        } else if (actualRelief !== undefined) {
+                          return (
+                            <div className="pl-7">
+                              <button
+                                type="button"
+                                onClick={() => setRatingPopoverId(t.id)}
+                                style={{
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "0.35rem",
@@ -3063,11 +2994,12 @@ export default function TasksTab() {
                               >
                                 Completed (Rating: {actualRelief}/10) ✏️
                               </button>
-                            );
-                          } else {
-                            return (
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="pl-7">
                               <span style={{
-                                marginTop: "0.4rem",
                                 display: "inline-flex",
                                 fontSize: "0.75rem",
                                 fontWeight: 700,
@@ -3079,51 +3011,10 @@ export default function TasksTab() {
                               }}>
                                 ✅ Completed
                               </span>
-                            );
-                          }
-                        })()}
-                      </div>
-
-                      {!effDone(t) && (
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => toggleTodayFocus(t)}
-                            title={todayFocusIds.includes(String(t.id)) ? "Remove from Today's Focus" : "Pin to Today's Focus"}
-                            style={{
-                              backgroundColor: todayFocusIds.includes(String(t.id)) ? "#fef3c7" : "#f1f5f9",
-                              border: todayFocusIds.includes(String(t.id)) ? "1px solid #f59e0b" : "1px solid #cbd5e1",
-                              color: todayFocusIds.includes(String(t.id)) ? "#b45309" : "#475569",
-                              borderRadius: "8px",
-                              padding: "0.35rem 0.6rem",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                            }}
-                          >
-                            {todayFocusIds.includes(String(t.id)) ? "⭐ Focused" : "☆ Focus"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTask(t.id)}
-                            title="Delete action"
-                            style={{
-                              background: "none",
-                              border: "1px solid #fecaca",
-                              backgroundColor: "#fef2f2",
-                              color: "#dc2626",
-                              borderRadius: "8px",
-                              padding: "0.35rem 0.6rem",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                            }}
-                          >
-                            🗑️
-                          </button>
-                          <CalendarDropdown task={t} />
-                        </div>
-                      )}
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   );
                 })}

@@ -12,6 +12,10 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
   const [backupRemindersEnabled, setBackupRemindersEnabled] = useState(false);
   const [showSecondaryWipeModal, setShowSecondaryWipeModal] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState<string | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   // Request non-evictable storage on mount
   useEffect(() => {
@@ -153,6 +157,108 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
       localStorage.clear();
     } catch (_) {}
     window.location.href = '/';
+  }
+
+  function getDiagnosticData() {
+    let storageKeyCount = 0;
+    let journalCount = 0;
+    let actionsCount = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('momentum')) storageKeyCount++;
+      }
+      const j = JSON.parse(localStorage.getItem('momentum_journal_entries') || '[]');
+      if (Array.isArray(j)) journalCount = j.length;
+      const a = JSON.parse(localStorage.getItem('momentum_actions') || '[]');
+      if (Array.isArray(a)) actionsCount = a.length;
+    } catch (_) {}
+
+    return {
+      appVersion: 'v1.0 (Alpha Build)',
+      timestamp: new Date().toLocaleString(),
+      isoTimestamp: new Date().toISOString(),
+      route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+      viewport: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'unknown',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      storageSummary: {
+        momentumKeys: storageKeyCount,
+        journalEntriesCount: journalCount,
+        plannerActionsCount: actionsCount,
+      },
+    };
+  }
+
+  async function handleSubmitFeedback(e: React.FormEvent) {
+    e.preventDefault();
+    const userFeedbackText = feedbackText.trim();
+    if (!userFeedbackText || isSubmittingFeedback) return;
+
+    setIsSubmittingFeedback(true);
+    setFeedbackToast(null);
+    setFeedbackError(null);
+
+    const diagnosticData = getDiagnosticData();
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: '9f828efe-6966-47bd-a63e-5562646003ff',
+          subject: 'Momentum Alpha Feedback & Bug Report',
+          from_name: 'Momentum Tester',
+          message: userFeedbackText,
+          diagnostics: JSON.stringify(diagnosticData, null, 2),
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok || (result && result.success === false)) {
+        throw new Error(result?.message || 'Submission failed');
+      }
+
+      try {
+        const existing = JSON.parse(localStorage.getItem('momentum_alpha_feedback_logs') || '[]');
+        const entry = {
+          id: Date.now(),
+          message: userFeedbackText,
+          timestamp: diagnosticData.isoTimestamp,
+          path: diagnosticData.route,
+        };
+        localStorage.setItem(
+          'momentum_alpha_feedback_logs',
+          JSON.stringify([entry, ...(Array.isArray(existing) ? existing : [])])
+        );
+      } catch (_) {}
+
+      setFeedbackText('');
+      setFeedbackToast('Feedback sent successfully! Thank you for helping build Momentum.');
+    } catch (_) {
+      setFeedbackError("Could not send report. Please click 'Copy Diagnostic Info' to share it manually.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  }
+
+  async function handleCopyDiagnostics() {
+    try {
+      const diag = {
+        ...getDiagnosticData(),
+        testerNote: feedbackText.trim() || undefined,
+      };
+      const text = JSON.stringify(diag, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      setFeedbackToast('Diagnostic info copied to clipboard!');
+      setTimeout(() => setFeedbackToast(null), 3500);
+    } catch (_) {
+      setFeedbackError('Could not copy automatically — please check browser permissions.');
+    }
   }
 
   return (
@@ -307,6 +413,9 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
               </div>
 
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+                  Free, confidential 24/7 support. Call or text 988 (Suicide &amp; Crisis Lifeline), or text 741741 (Crisis Text Line).
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <a
                     href="tel:988"
@@ -317,8 +426,9 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                   <a
                     href="sms:741741?body=HOME"
                     className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center gap-1.5 no-underline"
+                    title="Text HOME to 741741 for free, confidential 24/7 crisis support"
                   >
-                    <span>💬 Text HOME to 741741</span>
+                    <span>💬 Text Crisis Line</span>
                   </a>
                 </div>
 
@@ -328,6 +438,63 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                     Momentum v1.0 (Alpha Web Build)
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Section D: Alpha Feedback & Bug Report */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🛠️</span>
+                <h4 className="text-sm font-extrabold uppercase tracking-wider text-slate-900">
+                  Section D: Alpha Feedback &amp; Bug Report
+                </h4>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                  Spot a layout glitch or have a suggestion? Send feedback below or copy privacy-safe diagnostic metadata (no personal journal text is ever included) to share with the team.
+                </p>
+                <form onSubmit={handleSubmitFeedback} className="space-y-2.5">
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => {
+                      setFeedbackText(e.target.value);
+                      if (feedbackError) setFeedbackError(null);
+                    }}
+                    disabled={isSubmittingFeedback}
+                    placeholder="Describe what happened or share a suggestion..."
+                    rows={2}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600/30 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="submit"
+                      disabled={!feedbackText.trim() || isSubmittingFeedback}
+                      className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>💬</span>
+                      <span>{isSubmittingFeedback ? 'Sending...' : 'Submit Feedback'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyDiagnostics}
+                      className="py-2.5 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>📋</span>
+                      <span>Copy Diagnostic Info</span>
+                    </button>
+                  </div>
+                </form>
+                {feedbackToast && (
+                  <p className="text-xs font-bold text-emerald-700 animate-fadeIn">
+                    ✓ {feedbackToast}
+                  </p>
+                )}
+                {feedbackError && (
+                  <p className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5 animate-fadeIn" role="alert">
+                    ⚠️ {feedbackError}
+                  </p>
+                )}
               </div>
             </div>
 
