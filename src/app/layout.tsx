@@ -3,6 +3,7 @@ import { Lora, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import { AuthProvider } from "@/context/AuthContext";
 
 const lora = Lora({
   subsets: ["latin"],
@@ -29,9 +30,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakartaSans.variable} ${lora.variable}`}>
       <body className="app-body bg-[#f8faf9] text-stone-900 min-h-screen">
-        <Navigation />
-        <main className="app-main w-full">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <Navigation />
+          <main className="app-main w-full">{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

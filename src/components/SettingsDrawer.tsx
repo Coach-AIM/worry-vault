@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface SettingsDrawerProps {
 }
 
 export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
+  const { pinLockEnabled, lockNow, openPinModal, handleSignOut } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backupRemindersEnabled, setBackupRemindersEnabled] = useState(false);
   const [showSecondaryWipeModal, setShowSecondaryWipeModal] = useState(false);
@@ -301,6 +303,103 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
           {/* Content */}
           <div className="p-6 space-y-6">
+
+            {/* Privacy & Security + Account / Session */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🔒</span>
+                <h4 className="text-sm font-extrabold uppercase tracking-wider text-slate-900">
+                  Privacy, Security &amp; Session
+                </h4>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-4">
+                {/* Require PIN Lock Toggle */}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 block">
+                      Require PIN Lock
+                    </span>
+                    <span className="text-[11px] sm:text-xs text-slate-500 font-medium leading-snug block mt-0.5">
+                      Guard sensitive views (Journal, Planner, Toolkit) with a 4-digit on-device PIN.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={pinLockEnabled}
+                    aria-label="Require PIN Lock"
+                    onClick={() => {
+                      if (pinLockEnabled) {
+                        openPinModal('disable');
+                      } else {
+                        openPinModal('setup');
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      pinLockEnabled ? 'bg-emerald-600' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                        pinLockEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Quick Actions when PIN Lock is Enabled */}
+                {pinLockEnabled && (
+                  <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        lockNow();
+                      }}
+                      className="py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>🔒</span>
+                      <span>Lock Now</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openPinModal('change')}
+                      className="py-2 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    >
+                      Change PIN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openPinModal('disable')}
+                      className="py-2 px-3 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Disable PIN
+                    </button>
+                  </div>
+                )}
+
+                {/* Account / Session: Sign Out */}
+                <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                      Account / Session
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium leading-snug block mt-0.5">
+                      Ends your active session and returns to login. Your journal entries and tasks remain safely stored on this device.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="shrink-0 py-2 px-3.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
             
             {/* Section A: Backup & Recovery */}
             <div className="space-y-3">
