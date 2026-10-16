@@ -688,34 +688,34 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
       </div>
 
       {/* ── Responsive SVG Triangle (viewBox 0 0 400 360, scaled) ── */}
-      <div className="w-full max-w-[440px] sm:max-w-[480px] min-h-[340px] sm:min-h-[360px] mx-auto relative bg-slate-50/70 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-2 sm:p-4 flex items-center justify-center overflow-hidden">
+      <div className="w-full max-w-md mx-auto h-[360px] sm:h-[400px] flex items-center justify-center py-2 relative bg-slate-50/70 border border-slate-200/80 rounded-2xl sm:rounded-3xl overflow-hidden">
         <svg
           viewBox="0 0 400 360"
           preserveAspectRatio="xMidYMid meet"
-          className="w-full h-[340px] sm:h-[360px] select-none block"
+          className="w-full h-full max-h-[380px] select-none block"
         >
           <defs>
-            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
             </marker>
-            <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
             </marker>
-            <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
             </marker>
-            <marker id="arrow-slate" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker id="arrow-slate" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8" />
             </marker>
           </defs>
 
           {/* Connecting Lines */}
-          {/* Left Edge: Thoughts (200, 55) to Feelings (75, 255) */}
+          {/* Left Edge: Thoughts (200, 55) to Feelings (80, 290) */}
           <line
-            x1="178"
-            y1="91"
-            x2="97"
-            y2="219"
+            x1="181"
+            y1="92"
+            x2="99"
+            y2="253"
             stroke={leftLineHighlight ? (activeStep === 5 ? '#10b981' : '#3b82f6') : '#cbd5e1'}
             strokeWidth={leftLineHighlight ? '4' : '2.5'}
             strokeDasharray={leftLineHighlight ? 'none' : '5 5'}
@@ -723,12 +723,12 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
             className="transition-all duration-300"
           />
 
-          {/* Bottom Edge: Feelings (75, 255) to Behaviors (325, 255) */}
+          {/* Bottom Edge: Feelings (80, 290) to Behaviors (320, 290) */}
           <line
-            x1="117"
-            y1="255"
-            x2="283"
-            y2="255"
+            x1="122"
+            y1="290"
+            x2="278"
+            y2="290"
             stroke={bottomLineHighlight ? (activeStep === 5 ? '#10b981' : '#f59e0b') : '#cbd5e1'}
             strokeWidth={bottomLineHighlight ? '4' : '2.5'}
             strokeDasharray={bottomLineHighlight ? 'none' : '5 5'}
@@ -736,12 +736,12 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
             className="transition-all duration-300"
           />
 
-          {/* Right Edge: Behaviors (325, 255) to Thoughts (200, 55) */}
+          {/* Right Edge: Behaviors (320, 290) to Thoughts (200, 55) */}
           <line
-            x1="303"
-            y1="219"
-            x2="222"
-            y2="91"
+            x1="301"
+            y1="253"
+            x2="219"
+            y2="92"
             stroke={rightLineHighlight ? (activeStep === 5 ? '#10b981' : '#10b981') : '#cbd5e1'}
             strokeWidth={rightLineHighlight ? '4' : '2.5'}
             strokeDasharray={rightLineHighlight ? 'none' : '5 5'}
@@ -750,11 +750,11 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
           />
 
           {/* Central Loop Indicator */}
-          <circle cx="200" cy="188" r="26" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" />
-          <text x="200" y="186" textAnchor="middle" fontSize="15" fill="#64748b">
+          <circle cx="200" cy="205" r="28" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" />
+          <text x="200" y="203" textAnchor="middle" fontSize="16" fill="#64748b">
             {activeStep === 5 ? '⚡' : '🔄'}
           </text>
-          <text x="200" y="200" textAnchor="middle" fontSize="8" fontWeight="700" fill="#64748b">
+          <text x="200" y="218" textAnchor="middle" fontSize="8" fontWeight="700" fill="#64748b">
             {activeStep === 5 ? 'BROKEN' : 'THE LOOP'}
           </text>
 
@@ -771,25 +771,25 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
             <circle
               cx="200"
               cy="55"
-              r="36"
+              r="38"
               fill={isThoughtActive ? '#3b82f6' : '#ffffff'}
               stroke={isThoughtActive ? '#2563eb' : '#cbd5e1'}
               strokeWidth={isThoughtActive ? '3.5' : '2'}
               className="transition-all duration-200 drop-shadow-sm group-hover:scale-105"
             />
-            <text x="200" y="50" textAnchor="middle" fontSize="18" fill={isThoughtActive ? '#ffffff' : '#334155'}>
+            <text x="200" y="50" textAnchor="middle" fontSize="19" fill={isThoughtActive ? '#ffffff' : '#334155'}>
               💭
             </text>
-            <text x="200" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill={isThoughtActive ? '#ffffff' : '#1e293b'}>
+            <text x="200" y="68" textAnchor="middle" fontSize="11" fontWeight="800" fill={isThoughtActive ? '#ffffff' : '#1e293b'}>
               Thoughts
             </text>
-            <rect x="135" y="98" width="130" height="18" rx="9" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />
-            <text x="200" y="110" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#047857">
+            <rect x="135" y="100" width="130" height="18" rx="9" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />
+            <text x="200" y="112" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#047857">
               🟢 Controllable Lever
             </text>
           </g>
 
-          {/* ❤️ Bottom-Left: Feelings (75, 255) */}
+          {/* ❤️ Bottom-Left: Feelings (80, 290) */}
           <g
             onClick={() => {
               setSelectedNode('feelings');
@@ -798,29 +798,29 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
             className="cursor-pointer group"
           >
             {/* Enlarged touch target circle (>44px equivalent) */}
-            <circle cx="75" cy="255" r="48" fill="transparent" />
+            <circle cx="80" cy="290" r="48" fill="transparent" />
             <circle
-              cx="75"
-              cy="255"
-              r="36"
+              cx="80"
+              cy="290"
+              r="38"
               fill={isFeelingActive ? '#f59e0b' : '#ffffff'}
               stroke={isFeelingActive ? '#d97706' : '#cbd5e1'}
               strokeWidth={isFeelingActive ? '3.5' : '2'}
               className="transition-all duration-200 drop-shadow-sm group-hover:scale-105"
             />
-            <text x="75" y="250" textAnchor="middle" fontSize="18" fill={isFeelingActive ? '#ffffff' : '#334155'}>
+            <text x="80" y="285" textAnchor="middle" fontSize="19" fill={isFeelingActive ? '#ffffff' : '#334155'}>
               ❤️
             </text>
-            <text x="75" y="266" textAnchor="middle" fontSize="11" fontWeight="800" fill={isFeelingActive ? '#ffffff' : '#1e293b'}>
+            <text x="80" y="303" textAnchor="middle" fontSize="11" fontWeight="800" fill={isFeelingActive ? '#ffffff' : '#1e293b'}>
               Feelings
             </text>
-            <rect x="10" y="298" width="130" height="18" rx="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
-            <text x="75" y="310" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#b45309">
+            <rect x="15" y="334" width="130" height="18" rx="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
+            <text x="80" y="346" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#b45309">
               ⚠️ Involuntary Output
             </text>
           </g>
 
-          {/* 🏃 Bottom-Right: Behaviors (325, 255) */}
+          {/* 🏃 Bottom-Right: Behaviors (320, 290) */}
           <g
             onClick={() => {
               setSelectedNode('behaviors');
@@ -829,24 +829,24 @@ export default function CbtTriangleSandbox({ initialEntryId }: CbtTriangleSandbo
             className="cursor-pointer group"
           >
             {/* Enlarged touch target circle (>44px equivalent) */}
-            <circle cx="325" cy="255" r="48" fill="transparent" />
+            <circle cx="320" cy="290" r="48" fill="transparent" />
             <circle
-              cx="325"
-              cy="255"
-              r="36"
+              cx="320"
+              cy="290"
+              r="38"
               fill={isBehaviorActive ? '#10b981' : '#ffffff'}
               stroke={isBehaviorActive ? '#059669' : '#cbd5e1'}
               strokeWidth={isBehaviorActive ? '3.5' : '2'}
               className="transition-all duration-200 drop-shadow-sm group-hover:scale-105"
             />
-            <text x="325" y="250" textAnchor="middle" fontSize="18" fill={isBehaviorActive ? '#ffffff' : '#334155'}>
+            <text x="320" y="285" textAnchor="middle" fontSize="19" fill={isBehaviorActive ? '#ffffff' : '#334155'}>
               🏃
             </text>
-            <text x="325" y="266" textAnchor="middle" fontSize="11" fontWeight="800" fill={isBehaviorActive ? '#ffffff' : '#1e293b'}>
+            <text x="320" y="303" textAnchor="middle" fontSize="11" fontWeight="800" fill={isBehaviorActive ? '#ffffff' : '#1e293b'}>
               Behaviors
             </text>
-            <rect x="260" y="298" width="130" height="18" rx="9" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />
-            <text x="325" y="310" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#047857">
+            <rect x="255" y="334" width="130" height="18" rx="9" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="1" />
+            <text x="320" y="346" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#047857">
               🟢 Controllable Lever
             </text>
           </g>

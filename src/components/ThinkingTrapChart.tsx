@@ -107,6 +107,7 @@ export default function ThinkingTrapChart({
   const trapData = useMemo(() => calculateThinkingTraps(records), [records]);
   const activeTrap = activeTrapIndex !== null ? trapData[activeTrapIndex] : null;
   const topTrap = trapData[0] ?? null;
+  const topTrapName = topTrap ? topTrap.name : 'None';
 
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80">
@@ -143,8 +144,8 @@ export default function ThinkingTrapChart({
                   data={trapData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
+                  innerRadius={65}
+                  outerRadius={92}
                   paddingAngle={trapData.length > 1 ? 4 : 0}
                   dataKey="count"
                   onMouseEnter={(_, index) => setActiveTrapIndex(index)}
@@ -166,15 +167,15 @@ export default function ThinkingTrapChart({
               </PieChart>
             </ResponsiveContainer>
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center px-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 leading-none mb-1 font-sans">
-                {activeTrap ? activeTrap.name : 'Top Trap'}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 pointer-events-none select-none text-center px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                Top Trap
               </span>
               <span
-                className="font-sans font-bold text-xs sm:text-sm uppercase tracking-wider leading-tight transition-all duration-200"
-                style={{ color: activeTrap ? activeTrap.color : (topTrap?.color ?? '#0f172a') }}
+                className="text-xs font-semibold text-stone-800 text-center max-w-[90px] leading-tight truncate"
+                title={topTrapName}
               >
-                {activeTrap ? `${activeTrap.pct}%` : (topTrap ? `${topTrap.name} (${topTrap.pct}%)` : 'ACTIVE')}
+                {topTrapName}
               </span>
             </div>
           </div>

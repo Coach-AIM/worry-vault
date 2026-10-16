@@ -98,41 +98,42 @@ export default function CbtTriangle() {
         Thoughts, feelings, and behaviors reinforce each other. Tap any apex point to trace the circuit.
       </p>
 
-      {/* Triangle workspace — 288 × 256 px logical grid */}
-      <div className="relative w-72 h-64 flex items-center justify-center mb-8">
+      {/* Triangle workspace — 400 × 360 px logical grid */}
+      <div className="w-full max-w-md mx-auto h-[360px] sm:h-[400px] flex items-center justify-center py-2 relative mb-8">
 
         {/* SVG overlay — connection loop arrows */}
         <svg
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          viewBox="0 0 288 256"
+          className="w-full h-full max-h-[380px] pointer-events-none"
+          viewBox="0 0 400 360"
+          preserveAspectRatio="xMidYMid meet"
         >
           {/* dashed triangle outline */}
           <polygon
-            points="144,30 40,210 248,210"
+            points="200,55 80,290 320,290"
             fill="transparent"
             stroke="#e2e8f0"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeDasharray="6 6"
           />
           {/* Thoughts → Feelings edge (amber when either is active) */}
           <path
-            d="M 144 45 L 60 200"
+            d="M 200 55 L 80 290"
             stroke={edgeStroke(activeNode, 'thoughts', 'feelings', '#f59e0b')}
-            strokeWidth="2"
+            strokeWidth="2.5"
             fill="none"
           />
           {/* Feelings → Behaviors edge (emerald when either is active) */}
           <path
-            d="M 60 210 L 230 210"
+            d="M 80 290 L 320 290"
             stroke={edgeStroke(activeNode, 'feelings', 'behaviors', '#10b981')}
-            strokeWidth="2"
+            strokeWidth="2.5"
             fill="none"
           />
           {/* Behaviors → Thoughts edge (blue when either is active) */}
           <path
-            d="M 230 200 L 144 45"
+            d="M 320 290 L 200 55"
             stroke={edgeStroke(activeNode, 'behaviors', 'thoughts', '#3b82f6')}
-            strokeWidth="2"
+            strokeWidth="2.5"
             fill="none"
           />
         </svg>

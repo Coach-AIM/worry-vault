@@ -223,3 +223,159 @@ export function detectThinkingTraps(text: string): string[] {
 
   return identifiedTraps;
 }
+
+export interface ContextAwareReframeParams {
+  thought: string;
+  situation: string;
+  lens: "friend" | "fact" | "reset" | "freeform";
+  distortions: string[];
+}
+
+export function getContextAwareReframe({
+  thought,
+  situation,
+  lens,
+  distortions,
+}: ContextAwareReframeParams): string {
+  const fullText = `${situation} ${thought}`.toLowerCase();
+  const normDistortions = distortions.map((d) => d.toLowerCase().replace(/[^a-z]/g, ""));
+  const hasMindReading = normDistortions.some((d) => d.includes("mindreading"));
+  const hasCatastrophizing = normDistortions.some((d) => d.includes("catastroph"));
+  const hasAllOrNothing = normDistortions.some((d) => d.includes("allornothing"));
+  const hasShould = normDistortions.some((d) => d.includes("should"));
+  const hasEmotional = normDistortions.some((d) => d.includes("emotional"));
+  const hasOvergeneralization = normDistortions.some((d) => d.includes("overgeneral"));
+
+  // Theme A: Competence / Failure / Family
+  const isCompetenceOrFamily =
+    fullText.includes("screw up") ||
+    fullText.includes("screwed up") ||
+    fullText.includes("failure") ||
+    fullText.includes("fail") ||
+    fullText.includes("mess up") ||
+    fullText.includes("messed up") ||
+    fullText.includes("family") ||
+    fullText.includes("parents") ||
+    fullText.includes("work") ||
+    fullText.includes("job") ||
+    fullText.includes("boss") ||
+    fullText.includes("career");
+
+  // Theme B: Communication / Social Delay / Rejection
+  const isCommunicationDelay =
+    fullText.includes("didn't text") ||
+    fullText.includes("did not text") ||
+    fullText.includes("didn't message") ||
+    fullText.includes("did not message") ||
+    fullText.includes("didn't reply") ||
+    fullText.includes("did not reply") ||
+    fullText.includes("left on read") ||
+    fullText.includes("no reply") ||
+    fullText.includes("no response") ||
+    fullText.includes("ghost") ||
+    fullText.includes("chill") ||
+    fullText.includes("text") ||
+    fullText.includes("message");
+
+  if (lens === "friend") {
+    if (hasMindReading) {
+      if (isCompetenceOrFamily) {
+        return "If a close friend told me their family viewed them as a screw up, I'd remind them that individual mistakes don't define their identity or worth, and people's reactions rarely mean they see us as a failure.";
+      }
+      if (isCommunicationDelay) {
+        return "If a close friend shared this worry with me, I'd remind them: You cannot read their mind. People get busy, tired, or caught up in their own worlds, and silence or delay is rarely about you.";
+      }
+      return "If a close friend worried that others were thinking negatively of them, I'd remind them that we cannot assume another person's inner monologue without direct confirmation.";
+    }
+    if (hasCatastrophizing) {
+      return "I'd tell a friend: Take a deep breath. You are treating a worst-case worry as an absolute certainty, but you have handled difficult days before and you will handle this too.";
+    }
+    if (hasAllOrNothing) {
+      return "I'd tell a friend: Nothing is all-or-nothing. Even if things didn't go flawlessly, your effort still counts and there is plenty of workable middle ground.";
+    }
+    if (hasShould) {
+      return "I would tell a friend: Release the rigid pressure. You're holding yourself to unrealistic standards; give yourself permission to be human.";
+    }
+    if (hasEmotional) {
+      return "I'd tell a friend: Just because you feel intense distress doesn't mean the situation is truly hopeless. Feelings are valid signals, not objective verdicts.";
+    }
+    if (hasOvergeneralization) {
+      return "I'd tell a friend: This was one isolated event, not a forever pattern. Don't let one hard moment eclipse everything else.";
+    }
+    return "If a close friend were facing this, I'd offer them compassion: This is one moment in time, not a definition of who you are or what you're capable of.";
+  }
+
+  if (lens === "fact") {
+    if (hasMindReading) {
+      if (isCompetenceOrFamily) {
+        return "What concrete facts prove they see me as a screw up versus my own internal fear of falling short? One difficult situation is not proof of total failure.";
+      }
+      if (isCommunicationDelay) {
+        return "Objective facts: I only have observable behavior, not proof of their internal thoughts. Past positive interactions and ordinary human distractions contradict the idea that they dislike me.";
+      }
+      return "Objective facts: What concrete evidence do I have of their thoughts versus what I am guessing? My assumptions are hypotheses, not verified facts.";
+    }
+    if (hasCatastrophizing) {
+      return "Objective facts: The feared worst-case scenario is an anxiety prediction, not reality. Concrete past experience shows that most imagined emergencies turn out to be completely manageable.";
+    }
+    if (hasAllOrNothing) {
+      return "Objective facts: A single flaw or mixed outcome does not equal total failure. There are concrete elements that went well alongside areas for growth.";
+    }
+    if (hasShould) {
+      return "Objective facts: Things often deviate from how we wish they would be. Reality doesn't follow rigid demands, and adaptation is more productive than self-criticism.";
+    }
+    if (hasEmotional) {
+      return "Objective facts: Emotional intensity fluctuates based on stress, sleep, and adrenaline, not because external reality has collapsed.";
+    }
+    if (hasOvergeneralization) {
+      return "Objective facts: There have been times when things turned out fine or even exceeded expectations; one setback does not create an unbroken chain of defeat.";
+    }
+    return "Objective facts: Strong emotions make worries feel true, but looking at concrete evidence, the actual situation is far more neutral than my automatic thought assumed.";
+  }
+
+  if (lens === "reset") {
+    if (hasMindReading) {
+      if (isCompetenceOrFamily) {
+        return "Even if someone in my family is currently disappointed or critical, I can handle their disapproval without letting it define who I am.";
+      }
+      if (isCommunicationDelay) {
+        return "Worst-case reset: Even if they are temporarily upset, I can communicate openly to clarify things, and my self-worth is not dependent on immediate external validation.";
+      }
+      return "Worst-case reset: Even if someone is forming a critical opinion, I cannot control everyone's thoughts, and I can stay grounded in my own values.";
+    }
+    if (hasCatastrophizing) {
+      return "Worst-case reset: If the worst-case scenario actually happened, I would step back, break down the problem into single actionable steps, and lean on my coping tools.";
+    }
+    if (hasAllOrNothing) {
+      return "Worst-case reset: Even if this effort falls short of my hopes, it is valuable learning data that will make my next attempt stronger.";
+    }
+    if (hasShould) {
+      return "Worst-case reset: Even if things don't go according to my ideal timeline, I will accept the delay and calmly navigate what is in my control.";
+    }
+    if (hasEmotional) {
+      return "Worst-case reset: Even when my emotions feel overwhelming, I know the physical surge will crest and subside within 20 minutes if I breathe and stay grounded.";
+    }
+    return "Worst-case reset: Even in the toughest outcome, I have the resilience, resourcefulness, and support systems to work through it.";
+  }
+
+  // freeform
+  if (hasMindReading) {
+    if (isCompetenceOrFamily) {
+      return "One mistake or difficult interaction does not define my worth or future. I can separate other people's reactions from my core identity.";
+    }
+    if (isCommunicationDelay) {
+      return "Silence or delayed communication is usually about the other person's schedule and energy, not their opinion of me.";
+    }
+    return "I choose not to jump to conclusions about what others think. I will focus on my own well-being and let them speak for themselves.";
+  }
+  if (hasCatastrophizing) {
+    return "Anxiety turns possibilities into catastrophes. In reality, this situation is manageable and I can handle it calmly.";
+  }
+  if (hasAllOrNothing) {
+    return "Growth happens in gray areas. Doing something imperfectly is infinitely better than giving up completely.";
+  }
+  if (hasShould) {
+    return "Preferences are healthier than rigid rules. I will do my best without demanding perfection from myself or others.";
+  }
+  return "My automatic thoughts are hypotheses, not proven truths. A more grounded perspective is that I am doing my best and can take things one step at a time.";
+}

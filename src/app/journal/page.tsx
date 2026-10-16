@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { checkSafety } from "@/lib/safetyIntercept";
@@ -8,6 +8,7 @@ import {
   findDistortions,
   DistortionType,
   DISTORTIONS,
+  getContextAwareReframe,
 } from "@/lib/cbtDistortions";
 import { EMOTION_WHEEL, PRIMARY_EMOTIONS } from "@/lib/emotionWheel";
 import { safeGetItem, safeSetItem, safeRemoveItem } from "@/utils/storage";
@@ -89,6 +90,7 @@ export default function CBTJournal() {
     "negative",
   );
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Thought Record State
   const [situation, setSituation] = useState("");
@@ -347,7 +349,12 @@ export default function CBTJournal() {
       return "It would be nice if things went exactly as I wished, but it's okay that they didn't. I will do my best without demanding perfection.";
     }
     if (selectedDistortions.includes("mind-reading")) {
-      return "I don't actually know what they are thinking. They might be busy, stressed, or thinking about something else entirely.";
+      return getContextAwareReframe({
+        thought,
+        situation,
+        lens: "freeform",
+        distortions: selectedDistortions,
+      });
     }
     if (selectedDistortions.includes("emotional-reasoning")) {
       return "My feelings are strong right now, but feelings are not facts. Just because I feel this way doesn't mean it's the truth.";
@@ -367,7 +374,12 @@ export default function CBTJournal() {
       return "I am assuming the absolute worst without concrete evidence. Their delay is likely due to ordinary reasons like sleeping or being busy.";
     }
     if (hasMindReading) {
-      return "I cannot read minds. People have their own schedules, distractions, and fatigue that have nothing to do with me.";
+      return getContextAwareReframe({
+        thought,
+        situation,
+        lens: "freeform",
+        distortions: selectedDistortions,
+      });
     }
     if (hasCatastrophizing) {
       return "Jumping to the worst-case scenario is an anxiety reaction, not a guaranteed reality. The most probable outcome is manageable.";
@@ -405,93 +417,22 @@ export default function CBTJournal() {
   };
 
   const getAssistedPreview = (lens: LensType = selectedLens): string => {
-    const hasMindReading = selectedDistortions.includes("mind-reading");
-    const hasCatastrophizing = selectedDistortions.includes("catastrophizing");
-    const hasAllOrNothing = selectedDistortions.includes("all-or-nothing");
-    const hasShould = selectedDistortions.includes("should-statements");
-    const hasEmotional = selectedDistortions.includes("emotional-reasoning");
-    const hasOvergeneralization = selectedDistortions.includes("overgeneralization");
-
-    if (lens === "friend") {
-      if (insightsData?.friend_test_reframe) return insightsData.friend_test_reframe;
-      if (hasMindReading) {
-        return "If a close friend shared this worry with me, I'd remind them: You cannot read their mind. People get busy, tired, or caught up in their own worlds, and silence or delay is rarely about you.";
-      }
-      if (hasCatastrophizing) {
-        return "I'd tell a friend: Take a deep breath. You are treating a worst-case worry as an absolute certainty, but you have handled difficult days before and you will handle this too.";
-      }
-      if (hasAllOrNothing) {
-        return "I'd tell a friend: Nothing is all-or-nothing. Even if things didn't go flawlessly, your effort still counts and there is plenty of workable middle ground.";
-      }
-      if (hasShould) {
-        return "I would tell a friend: Release the rigid pressure. You're holding yourself to unrealistic standards; give yourself permission to be human.";
-      }
-      if (hasEmotional) {
-        return "I'd tell a friend: Just because you feel intense distress doesn't mean the situation is truly hopeless. Feelings are valid signals, not objective verdicts.";
-      }
-      if (hasOvergeneralization) {
-        return "I'd tell a friend: This was one isolated event, not a forever pattern. Don't let one hard moment eclipse everything else.";
-      }
-      return "If a close friend were facing this, I'd offer them compassion: This is one moment in time, not a definition of who you are or what you're capable of.";
+    if (lens === "friend" && insightsData?.friend_test_reframe) {
+      return insightsData.friend_test_reframe;
+    }
+    if (lens === "fact" && insightsData?.fact_checking_reframe) {
+      return insightsData.fact_checking_reframe;
+    }
+    if (lens === "reset" && insightsData?.perspective_reset_reframe) {
+      return insightsData.perspective_reset_reframe;
     }
 
-    if (lens === "fact") {
-      if (insightsData?.fact_checking_reframe) return insightsData.fact_checking_reframe;
-      if (hasMindReading) {
-        return "Objective facts: I only have observable behavior, not proof of their internal thoughts. Past positive interactions and ordinary human distractions contradict the idea that they dislike me.";
-      }
-      if (hasCatastrophizing) {
-        return "Objective facts: The feared worst-case scenario is an anxiety prediction, not reality. Concrete past experience shows that most imagined emergencies turn out to be completely manageable.";
-      }
-      if (hasAllOrNothing) {
-        return "Objective facts: A single flaw or mixed outcome does not equal total failure. There are concrete elements that went well alongside areas for growth.";
-      }
-      if (hasShould) {
-        return "Objective facts: Things often deviate from how we wish they would be. Reality doesn't follow rigid demands, and adaptation is more productive than self-criticism.";
-      }
-      if (hasEmotional) {
-        return "Objective facts: Emotional intensity fluctuates based on stress, sleep, and adrenaline, not because external reality has collapsed.";
-      }
-      if (hasOvergeneralization) {
-        return "Objective facts: There have been times when things turned out fine or even exceeded expectations; one setback does not create an unbroken chain of defeat.";
-      }
-      return "Objective facts: Strong emotions make worries feel true, but looking at concrete evidence, the actual situation is far more neutral than my automatic thought assumed.";
-    }
-
-    if (lens === "reset") {
-      if (insightsData?.perspective_reset_reframe) return insightsData.perspective_reset_reframe;
-      if (hasMindReading) {
-        return "Worst-case reset: Even if they are temporarily upset, I can communicate openly to clarify things, and my self-worth is not dependent on immediate external validation.";
-      }
-      if (hasCatastrophizing) {
-        return "Worst-case reset: If the worst-case scenario actually happened, I would step back, break down the problem into single actionable steps, and lean on my coping tools.";
-      }
-      if (hasAllOrNothing) {
-        return "Worst-case reset: Even if this effort falls short of my hopes, it is valuable learning data that will make my next attempt stronger.";
-      }
-      if (hasShould) {
-        return "Worst-case reset: Even if things don't go according to my ideal timeline, I will accept the delay and calmly navigate what is in my control.";
-      }
-      if (hasEmotional) {
-        return "Worst-case reset: Even when my emotions feel overwhelming, I know the physical surge will crest and subside within 20 minutes if I breathe and stay grounded.";
-      }
-      return "Worst-case reset: Even in the toughest outcome, I have the resilience, resourcefulness, and support systems to work through it.";
-    }
-
-    // freeform
-    if (hasMindReading) {
-      return "I choose not to jump to conclusions about what others think. I will focus on my own well-being and let them speak for themselves.";
-    }
-    if (hasCatastrophizing) {
-      return "Anxiety turns possibilities into catastrophes. In reality, this situation is manageable and I can handle it calmly.";
-    }
-    if (hasAllOrNothing) {
-      return "Growth happens in gray areas. Doing something imperfectly is infinitely better than giving up completely.";
-    }
-    if (hasShould) {
-      return "Preferences are healthier than rigid rules. I will do my best without demanding perfection from myself or others.";
-    }
-    return "My automatic thoughts are hypotheses, not proven truths. A more grounded perspective is that I am doing my best and can take things one step at a time.";
+    return getContextAwareReframe({
+      thought,
+      situation,
+      lens,
+      distortions: selectedDistortions,
+    });
   };
 
   const handleInsertStarter = () => {
@@ -584,6 +525,17 @@ export default function CBTJournal() {
       console.error("Failed to fetch positives:", err);
     }
   }
+
+  useEffect(() => {
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Automatically focus textarea if entering Step 3 or Step 5
+    if (step === 3 || step === 5) {
+      setTimeout(() => {
+        const textarea = document.querySelector("textarea");
+        textarea?.focus();
+      }, 50);
+    }
+  }, [step]);
 
   useEffect(() => {
     fetchHistory();
@@ -1211,6 +1163,7 @@ export default function CBTJournal() {
       )}
 
       <div
+        ref={cardRef}
         style={{
           backgroundColor: "#fff",
           padding: "2rem",
